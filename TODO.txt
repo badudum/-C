@@ -1,0 +1,4 @@
+We have to make a LEXER first ->
+    We will have to write the parser next -> the parser takes the tokens from the lexer and creates an abstract syntax tree(AST)
+        Then we need to write a visitor such that we visit every node in the tree and execute the stuff
+        

@@ -1,15 +1,20 @@
-cmake_minumum_required(3.14)
+exec = minusC.out
+sources = $(wildcard src/*.c)
+objects = $(sources:.c=.o)
+flags = -g 
 
-find_program(CCACHE_PROTRAM ccache)
-if(CCACHE_PROGRAM)
-	set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-endif()
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+$(exec) : $(objects)
+	gcc $(objects) $(flags) -o $(exec)
 
-project(Cminmin C)
+%.o: %.c include/%.h
+	gcc -c $(flags) $< -o $@
 
-add_executable(
-	func
-	src/main.c
-)
+install : 
+	make
+	cp ./minusC.out /usr/local/bin/minusC
+
+clean:
+	-rm *.out
+	-rm *.o
+	-rm *src/.o
