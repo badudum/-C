@@ -62,16 +62,16 @@ token_t *lexer_get_next_token(lexer_t *lexer)
         switch (lexer->c)
         {
         case '=':
-            return lexer_advance_with_token(lexer, init_token(EQUALS, lexer_get_current_char_as_string(lexer)));
+            return lexer_advance_with_token(lexer, init_token(EQUALS_TOKEN, lexer_get_current_char_as_string(lexer)));
             break;
         case ';':
-            return lexer_advance_with_token(lexer, init_token(SEMI, lexer_get_current_char_as_string(lexer)));
+            return lexer_advance_with_token(lexer, init_token(SEMI_TOKEN, lexer_get_current_char_as_string(lexer)));
             break;
         case '(':
-            return lexer_advance_with_token(lexer, init_token(LPAREN, lexer_get_current_char_as_string(lexer)));
+            return lexer_advance_with_token(lexer, init_token(LPAREN_TOKEN, lexer_get_current_char_as_string(lexer)));
             break;
         case ')':
-            return lexer_advance_with_token(lexer, init_token(RPAREN, lexer_get_current_char_as_string(lexer)));
+            return lexer_advance_with_token(lexer, init_token(RPAREN_TOKEN, lexer_get_current_char_as_string(lexer)));
             break;
         }
     }
@@ -79,12 +79,18 @@ token_t *lexer_get_next_token(lexer_t *lexer)
     return (void *)0;
 }
 
+/*
+ *  This function advaces through the lexer while keeping the current token
+ */
 token_t *lexer_advance_with_token(lexer_t *lexer, token_t *token)
 {
     lexer_getter(lexer);
     return token;
 }
 
+/*
+ * This function is here to distinguish between a string and actual code
+ */
 token_t *lexer_collect_string(lexer_t *lexer)
 {
     lexer_getter(lexer);
@@ -102,8 +108,12 @@ token_t *lexer_collect_string(lexer_t *lexer)
     }
 
     lexer_getter(lexer);
-    return init_token(STRING, value);
+    return init_token(STRING_TOKEN, value);
 }
+
+/*
+ * This function creates a token with the ID value
+ */
 
 token_t *lexer_collect_id(lexer_t *lexer)
 {
@@ -120,9 +130,12 @@ token_t *lexer_collect_id(lexer_t *lexer)
     }
 
     lexer_getter(lexer);
-    return init_token(ID, value);
+    return init_token(ID_TOKEN, value);
 }
 
+/*
+ * Gets the current character as a string 
+ */
 char *lexer_get_current_char_as_string(lexer_t *lexer)
 {
     char *str = calloc(2, sizeof(char));

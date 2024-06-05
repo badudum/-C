@@ -1,6 +1,13 @@
 #ifndef LEXER_H
 #define LEXER_H
 #include "token.h"
+
+/*
+ * The Lexer pretty much makes sure that we have tokens that have been divided by the text from the code.
+ * It will ignore whitespace, and only take the values of the needed strings.
+ */
+
+
 typedef struct LEXER_S
 {
     char c; // current character

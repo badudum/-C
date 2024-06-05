@@ -15,6 +15,7 @@ install :
 	cp ./minusC.out /usr/local/bin/minusC
 
 clean:
-	-rm *.out
-	-rm *.o
-	-rm *src/.o
+	-rm $(objects)
+
+	-rm -f *.o
+	-rm -f *src/.o

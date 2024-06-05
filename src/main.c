@@ -4,8 +4,8 @@
 int main(int argc, char* argv[])
 {
     lexer_t * lexer= init_lexer(
-        "var name = \"john do\";\n"
-        "print(name);\n"
+        "str name = \"john do\";\n"
+        "HelloWorld(name);\n"
     );
     token_t * token = (void*)0;
     while ((token = lexer_get_next_token(lexer)) != (void*)0)
