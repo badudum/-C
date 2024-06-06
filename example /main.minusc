@@ -1,3 +1,5 @@
-str name = "john do"; 
 
-HelloWorld(name);
+main(){
+    str name = "john do"; 
+    HelloWorld(name);
+}

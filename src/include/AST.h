@@ -1,40 +1,48 @@
 #ifndef AST_H
 #define AST_H
 #include <stdlib.h>
+#include "types.h"
+#include "list.h"
+#include "stackframe.h"
 
 // struct for the abstract syntax tree
 typedef struct AST_S
 {
     enum 
     {   
-        VARIABLE_DEF_AST,
-        VARIABLE_AST,
-        FUNCTION_CALL_AST,
+        COMP_AST,
+        FUNC_AST,
+        CALL_AST,
+        ASSIGNEMENT_AST = 99,
+        DEF_TYPE_AST,
+        VAR_AST,
+        RETURN_AST,
+        ACCESS_AST,
+        INT_AST,
         STRING_AST,
-        COMPOUND_AST //this is a list of multiple statements
+        BINOP_AST,
+        NOOP_AST,
     }type;
 
-    // AST variable definitions
-    char * var_def_name;
-    struct AST_S* var_def_val;
+    datatype datatype;
 
-    // AST variable 
-    char * var_name;
+    dynamic_list_t * children;
 
-    // AST function call
-    char * func_name;
-    struct AST_S ** func_arg;
-    size_t func_arg_size;
+    char * string_value;
+    char * name;
 
-    // AST string
+    struct AST_S * left;
+    struct AST_S * right;
+    struct AST_S * parent;
 
-    char * str_val;
+    int op;
+    int int_value;
+    int id;
+    int stack_index;
+    int multiplier;
 
-    // AST compound
-
-    struct AST_S ** compound_val;
-    size_t compound_size;
-
+    struct AST_S * (*fptr)(struct VISITOR_S * visitor, struct AST_S * node, dynamic_list_t * list);
+    stackframe_t * stackframe;  
 } AST_t;
 
 AST_t *  init_ast(int type);
