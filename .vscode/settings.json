@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "stackframe.h": "c",
+        "list.h": "c",
+        "visitor.h": "c"
+    }
+}
