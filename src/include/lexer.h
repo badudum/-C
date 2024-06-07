@@ -33,7 +33,7 @@ void lexer_comment(lexer_t* lexer);
 
 token_t * lexer_collect_id(lexer_t* lexer);
 
-token_t * lexer_collect_int(lexer_t* lexer);
+token_t * lexer_collect_number(lexer_t* lexer);
 
 token_t * lexer_collect_string(lexer_t* lexer);
 

@@ -13,4 +13,6 @@ dynamic_list_t* str_to_hex_list(const char* hex);
 
 char* mkstr(const char* str);
 
+char* read_file(const char* filename);
+
 #endif

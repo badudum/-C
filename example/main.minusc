@@ -1,0 +1,9 @@
+
+main() {
+    {name} str = "john do"; 
+    HelloWorld(name);
+} int;
+
+
+
+

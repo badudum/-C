@@ -31,7 +31,7 @@ void lexer_get_next(lexer_t *lexer)
 
 /*
  * This function will return the character at the offset and check
- 
+
  */
 char lexer_peek(lexer_t *lexer, int offset)
 {
@@ -59,10 +59,9 @@ token_t *lexer_get_next_with_type(lexer_t *lexer, int type)
     value[0] = lexer->c;
     value[1] = '\0';
 
-    token_t * token = init_token(type, value);
+    token_t *token = init_token(type, value);
     lexer_get_next(lexer);
     return token;
-
 }
 
 /*
@@ -71,7 +70,7 @@ token_t *lexer_get_next_with_type(lexer_t *lexer, int type)
 void lexer_whitespace(lexer_t *lexer)
 {
     // The ascii code for newline is 10 the ascii code for carriage return is 13, and the ascii code for tab is 9, but im just gonna use "\t"
-    while (lexer->c == ' ' || lexer->c == 10 || lexer->c == 13 || lexer->c == '\t') 
+    while (lexer->c == ' ' || lexer->c == 10 || lexer->c == 13 || lexer->c == '\t')
     {
         lexer_get_next(lexer);
     }
@@ -81,8 +80,8 @@ void lexer_whitespace(lexer_t *lexer)
  * This function will skip the comments (this is fucked up code, ik, but its just for fun)
  */
 void lexer_comment(lexer_t *lexer)
-{   
-    
+{
+
     // if(lexer->c == 'c')
     // {
     //     if(lexer_peek(lexer, 1) == 'o')
@@ -124,26 +123,25 @@ void lexer_comment(lexer_t *lexer)
     //     }
     // }
 
-
     // better code
     int i = 0;
-    char * comment = "comment";
+    char *comment = "comment";
 
-    if(lexer->c == (char)comment[0])
+    if (lexer->c == (char)comment[0])
     {
-        i ++;
-        while(i <= strlen(comment))
+        i++;
+        while (i <= strlen(comment))
         {
-            if(lexer_peek(lexer,i) == comment[i])
+            if (lexer_peek(lexer, i) == comment[i])
             {
                 i++;
-                if(i == strlen(comment)-1)
+                if (i == strlen(comment) - 1)
                 {
-                    if(lexer_peek(lexer, i+1) == ':')
+                    if (lexer_peek(lexer, i + 1) == ':')
                     {
-                        while(1)
+                        while (1)
                         {
-                            if(lexer->c == ';')
+                            if (lexer->c == ';')
                             {
                                 lexer_get_next(lexer);
                                 break;
@@ -151,16 +149,14 @@ void lexer_comment(lexer_t *lexer)
                             lexer_get_next(lexer);
                         }
                     }
-                    else 
+                    else
                     {
-                        while(lexer->c != '\n')
+                        while (lexer->c != '\n')
                         {
                             lexer_get_next(lexer);
                         }
-                    
                     }
                 }
-                
             }
             else
             {
@@ -169,9 +165,8 @@ void lexer_comment(lexer_t *lexer)
         }
     }
 
-   lexer_whitespace(lexer);
+    lexer_whitespace(lexer);
 }
-
 
 /*
  * This function creates a token with the ID value
@@ -193,7 +188,7 @@ token_t *lexer_collect_id(lexer_t *lexer)
         lexer_get_next(lexer);
     }
 
-    if(strcmp(value, "return") == 0)
+    if (strcmp(value, "return") == 0)
     {
         token_type = RETURN_TOKEN;
     }
@@ -203,7 +198,7 @@ token_t *lexer_collect_id(lexer_t *lexer)
 /*
  * This function will collect the integer value
  */
-token_t * lexer_collect_int(lexer_t *lexer)
+token_t *lexer_collect_number(lexer_t *lexer)
 {
     int token_type = INT_TOKEN;
 
@@ -250,9 +245,9 @@ token_t *lexer_collect_string(lexer_t *lexer)
  */
 token_t *lexer_get_next_token(lexer_t *lexer)
 {
-    while(lexer->c != '\0')
+    while (lexer->c != '\0')
     {
-        
+
         lexer_whitespace(lexer);
         lexer_comment(lexer);
 
@@ -263,37 +258,58 @@ token_t *lexer_get_next_token(lexer_t *lexer)
 
         if (isdigit(lexer->c))
         {
-            return lexer_collect_int(lexer);
+            return lexer_collect_number(lexer);
         }
 
-        switch(lexer->c)
+        switch (lexer->c)
         {
-            case '=': return lexer_get_next_with_type(lexer, EQUALS_TOKEN);
-            case ';': return lexer_get_next_with_type(lexer, SEMI_TOKEN);
-            case '(': return lexer_get_next_with_type(lexer, LPAREN_TOKEN);
-            case ')': return lexer_get_next_with_type(lexer, RPAREN_TOKEN);
-            case '{': return lexer_get_next_with_type(lexer, LBRACE_TOKEN);
-            case '}': return lexer_get_next_with_type(lexer, RBRACE_TOKEN);
-            case ',': return lexer_get_next_with_type(lexer, COMMA_TOKEN);
-            case '.': return lexer_get_next_with_type(lexer, DOT_TOKEN);
-            case '>': return lexer_get_next_with_type(lexer, GT_TOKEN);
-            case '<': return lexer_get_next_with_type(lexer, LT_TOKEN);
-            case '+': return lexer_get_next_with_type(lexer, PLUS_TOKEN);
-            case '-': return lexer_get_next_with_type(lexer, MINUS_TOKEN);
-            case '*': return lexer_get_next_with_type(lexer, ASTERISK_TOKEN);
-            case '/': return lexer_get_next_with_type(lexer, SLASH_TOKEN);
-            case '"': return lexer_collect_string(lexer);
-            case '\0':break;
-            default : printf("Unexpected charactertoken: %c\n", lexer->c); exit(1); break;
+        case '=':
+            return lexer_get_next_with_type(lexer, EQUALS_TOKEN);
+        case ';':
+            return lexer_get_next_with_type(lexer, SEMI_TOKEN);
+        case '(':
+            return lexer_get_next_with_type(lexer, LPAREN_TOKEN);
+        case ')':
+            return lexer_get_next_with_type(lexer, RPAREN_TOKEN);
+        case '{':
+            return lexer_get_next_with_type(lexer, LBRACE_TOKEN);
+        case '}':
+            return lexer_get_next_with_type(lexer, RBRACE_TOKEN);
+        case ',':
+            return lexer_get_next_with_type(lexer, COMMA_TOKEN);
+        case '.':
+            return lexer_get_next_with_type(lexer, DOT_TOKEN);
+        case '>':
+            return lexer_get_next_with_type(lexer, GT_TOKEN);
+        case '<':
+            return lexer_get_next_with_type(lexer, LT_TOKEN);
+        case '+':
+            return lexer_get_next_with_type(lexer, PLUS_TOKEN);
+        case '-':
+            return lexer_get_next_with_type(lexer, MINUS_TOKEN);
+        case '*':
+            return lexer_get_next_with_type(lexer, ASTERISK_TOKEN);
+        case '/':
+            return lexer_get_next_with_type(lexer, SLASH_TOKEN);
+        case '[':
+            return lexer_get_next_with_type(lexer, LSQUAREBRKT_TOKEN);
+        case ']':
+            return lexer_get_next_with_type(lexer, RSQUAREBRKT_TOKEN);
+        case '"':
+            return lexer_collect_string(lexer);
+        case '\0':
+            break;
+        default:
+            printf("Unexpected charactertoken: %c\n", lexer->c);
+            exit(1);
+            break;
         }
     }
+    return (void *)0;
 }
 
-
-
-
 /*
- * Gets the current character as a string 
+ * Gets the current character as a string
  */
 char *lexer_get_current_char_as_string(lexer_t *lexer)
 {

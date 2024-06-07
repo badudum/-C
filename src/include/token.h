@@ -17,6 +17,8 @@ typedef struct TOKEN_S
         RPAREN_TOKEN,
         LBRACE_TOKEN,
         RBRACE_TOKEN,
+        LSQUAREBRKT_TOKEN,
+        RSQUAREBRKT_TOKEN,
         COMMA_TOKEN,
         DOT_TOKEN,
 
