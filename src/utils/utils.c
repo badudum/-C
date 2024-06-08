@@ -100,3 +100,35 @@ char * read_file(const char* filename)
 
     return buffer;
 }
+
+
+int compare (const void * a, const void * b) {
+   return ( *(char*)a - *(char*)b );
+}
+
+int is_anagram(const char* str1, const char* str2)
+{
+    int len1 = strlen(str1);
+    int len2 = strlen(str2);
+
+    if(len1 != len2)
+    {
+        return 0;
+    }
+
+    char* sorted1 = calloc(len1 + 1, sizeof(char));
+    char* sorted2 = calloc(len2 + 1, sizeof(char));
+
+    strcpy(sorted1, str1);
+    strcpy(sorted2, str2);
+
+    qsort(sorted1, len1, sizeof(char), compare);
+    qsort(sorted2, len2, sizeof(char), compare);
+
+    if(strcmp(sorted1, sorted2) == 0)
+    {
+        return 1;
+    }
+
+    return 0;
+}

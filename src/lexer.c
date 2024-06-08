@@ -192,7 +192,12 @@ token_t *lexer_collect_id(lexer_t *lexer)
     {
         token_type = RETURN_TOKEN;
     }
-    return init_token(ID_TOKEN, value);
+
+    if(is_anagram(value, "function"))
+    {
+        token_type = FUNCTION_TOKEN;
+    }
+    return init_token(token_type, value);
 }
 
 /*

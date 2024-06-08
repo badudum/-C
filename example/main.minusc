@@ -1,7 +1,9 @@
 
-main() {
-    {name} str = "john do"; 
+main({x} int) functino {
+    {name} str = "john do";     
+    {whatsUp} int = 1 + 2 (3*4)/4;
     HelloWorld(name);
+    return 0;
 } int;
 
 

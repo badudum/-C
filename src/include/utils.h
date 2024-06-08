@@ -15,4 +15,6 @@ char* mkstr(const char* str);
 
 char* read_file(const char* filename);
 
+int is_anagram(const char* str1, const char* str2);
+
 #endif

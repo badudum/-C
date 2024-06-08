@@ -2,6 +2,7 @@
 #define LEXER_H
 #include "token.h"
 #include <stdlib.h>
+#include "utils.h"
 
 /*
  * The Lexer pretty much makes sure that we have tokens that have been divided by the text from the code.
