@@ -29,6 +29,7 @@ parser_t * init_parser(lexer_t * lexer)
 
 token_t * parser_next(parser_t * parser, int token_type)
 {
+    printf("current token : %s", parser->token->type);
     if(parser->token->type == token_type)
     {
         parser->token = lexer_get_next_token(parser->lexer);
@@ -81,6 +82,10 @@ AST_t * parse_factor(parser_t * parser)
             return parse_string(parser);
         case LPAREN_TOKEN:
             return parse_list(parser);
+        case LBRACE_TOKEN:{
+            parser_next(parser, parser->token->type);
+            return parse_id(parser);
+        }
         default:
             printf("Unexpected token %s, expected : %d", parser->token->value, parser->token->type);
             exit(1);
