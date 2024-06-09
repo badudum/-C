@@ -310,7 +310,7 @@ token_t *lexer_get_next_token(lexer_t *lexer)
             break;
         }
     }
-    return (void *)0;
+    return init_token(EOF_TOKEN, 0);
 }
 
 /*

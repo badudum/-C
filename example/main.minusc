@@ -1,4 +1,4 @@
-main({x} int) {
+main({x} int) function {
     {name} str = "john do"; 
     HelloWorld(name);
 } int;
