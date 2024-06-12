@@ -1,6 +1,7 @@
 #ifndef MINUSC_H
 #define MINUSC_H
 #include "utils.h"
+#include "assembly.h"
 #include "lexer.h"
 #include "parser.h"
 #include "AST.h"

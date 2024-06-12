@@ -29,7 +29,7 @@ parser_t * init_parser(lexer_t * lexer)
 
 token_t * parser_next(parser_t * parser, int token_type)
 {
-    printf("[Next]Current token : %s\n", parser->token->value);
+    // printf("[Next]Current token : %s\n", parser->token->value);
     if(parser->token->type == token_type)
     {
         parser->token = lexer_get_next_token(parser->lexer);
@@ -60,7 +60,7 @@ AST_t * parse(parser_t* parser)
 
 AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declaration
 {
-    printf("[ID] Current Token : %s\n", parser->token->value);
+    // printf("[ID] Current Token : %s\n", parser->token->value);
     char * value  = calloc(strlen(parser->token->value) + 1, sizeof(char));
     strcpy(value, parser->token->value);
     parser_next(parser, ID_TOKEN);
@@ -127,7 +127,7 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
 //This is the function used to parse factors
 AST_t * parse_factor(parser_t * parser)
 {
-    printf("[Factor] Current Token : %s\n", parser->token->value);
+    // printf("[Factor] Current Token : %s\n", parser->token->value);
     switch (parser->token->type)
     {
         case INT_TOKEN:
@@ -151,7 +151,7 @@ AST_t * parse_factor(parser_t * parser)
 //this is for multiplication and division
 AST_t * parse_term(parser_t *parser)
 {
-    printf("[Term] Current Token : %s\n", parser->token->value);
+    // printf("[Term] Current Token : %s\n", parser->token->value);
     AST_t * left = parse_factor(parser);
 
     while (parser->token->type == ASTERISK_TOKEN || parser->token->type == SLASH_TOKEN)
@@ -170,7 +170,7 @@ AST_t * parse_term(parser_t *parser)
 //this is for addition and subtraction
 AST_t * parse_expression(parser_t* parser)
 {
-    printf("[Expression] Current Token : %s\n", parser->token->value);
+    // printf("[Expression] Current Token : %s\n", parser->token->value);
     AST_t * left = parse_term(parser); // parse the left side of the expression aka "{x} int"
 
     while (parser->token->type == PLUS_TOKEN || parser->token->type == MINUS_TOKEN)
@@ -189,7 +189,7 @@ AST_t * parse_expression(parser_t* parser)
 //This is the function used to parse return statements
 AST_t * parse_statement(parser_t * parser)
 {
-    printf("[Statement] Current Token : %s\n", parser->token->value);
+    // printf("[Statement] Current Token : %s\n", parser->token->value);
     AST_t * ast = init_ast(RETURN_AST);
     parser_next(parser, RETURN_TOKEN);
     ast->parent = parse_expression(parser);
@@ -202,7 +202,7 @@ AST_t * parse_statement(parser_t * parser)
 //This is the function used to parse lists
 AST_t * parse_list(parser_t * parser)
 {
-    printf("[List] Current Token : %s\n", parser->token->value);
+    // printf("[List] Current Token : %s\n", parser->token->value);
     bool is_bracket = parser->token->type == LSQUAREBRKT_TOKEN;
     bool is_brace = parser->token->type == LBRACE_TOKEN;
 
@@ -296,7 +296,7 @@ AST_t * parse_compound(parser_t * parser)
 
     while (parser->token->type != RBRACE_TOKEN && parser->token->type != EOF_TOKEN)
     {
-        printf("[Compound] Current token: %s\n", parser->token->value);
+        // printf("[Compound] Current token: %s\n", parser->token->value);
 
         if (parser->token->type == RETURN_TOKEN)
         {
