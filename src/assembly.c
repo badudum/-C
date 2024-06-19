@@ -27,10 +27,10 @@
 
 char * assemble_compound(AST_t* ast, dynamic_list_t* list)
 {
-    const char* template = "# compound (%p) \n";
+    const char* template = "\n # compound (%p) \n";
     char * value = calloc(strlen(template) + 128, sizeof(char));
     sprintf(value, template, ast);
-
+    printf("Compound children : %d", ast->children->size);
     for (unsigned int i = 0; i < ast->children->size; i ++)
     {
         AST_t* child = (AST_t*) ast->children->items[i];
@@ -105,7 +105,7 @@ char * assemble_variable(AST_t * ast, dynamic_list_t * list)
 {
     char * s =  calloc(1, sizeof(char));
 
-    const char* template = "# variable (%s)\n"
+    const char* template = "@ variable (%s)\n"
                          "ldr r0, [fp, #%d]\n"
                          "push {r0}\n";
 
@@ -140,7 +140,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
     {
         AST_t* arg = (AST_t*) ast->parent->children->items[i];
 
-        const char* push_template = "# call arg\n"
+        const char* push_template = "@ call arg\n"
                                     "ldr r0, [fp, #%d]\n"
                                     "push {r0}\n";
 
@@ -208,7 +208,7 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
 
     int index = ast->stack_index * 4;
 
-    const char* subl_template = "# %s\n"
+    const char* subl_template = "@ %s\n"
                                 "sub sp, sp, #%d\n";
 
     char * sub = calloc(strlen(subl_template) + 128, sizeof(char));
@@ -391,6 +391,7 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
 
 char * assemble(AST_t * ast, dynamic_list_t * list)
 {
+    printf("Current : %d", ast->type);
     char * value = calloc(1, sizeof(char));
 
     char * next = 0;

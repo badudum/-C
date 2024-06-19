@@ -18,10 +18,10 @@ itos:
   stp x29, x30, [sp, #-16]!
   mov x29, sp
 
-  ldr w0, [sp, #16]           # number
+  ldr w0, [sp, #16]           
   mov w1, #8
-  add x2, sp, w1, lsl #1      # buffer
-  mov w1, #0                  # counter
+  add x2, sp, w1, lsl #1     
+  mov w1, #0 
   mov w3, #0
 
   str wzr, [sp, #-4]!
@@ -44,7 +44,7 @@ itos_loop:
 
 itos_buffer_loop: 
   ldr w2, [sp], #4
-  strb w2, [x2, w3, lsl #1]
+  strb w2, [x2, w3, lsl #2]
 
   cbz w1, itos_end
 
@@ -74,7 +74,7 @@ strlen:
   b strlenloop
 
 strlenloop:
-  ldrb w2, [x0, w1, lsl #1]
+  ldrb w2, [x0, w1, lsl #2]
   cmp w2, #0
   beq strlenend
   add w1, w1, #1

@@ -5,10 +5,7 @@ void compile(char * src)
 {
 
     lexer_t* lexer = init_lexer(src);
-    // while ((token = lexer_get_next_token(lexer)) != (void*)0)
-    // {
-    //     printf("TOKEN(%d, %s)\n", token->type, token->value);
-    // }
+
     parser_t* parser = init_parser(lexer);
     AST_t * root = parse(parser);
 
@@ -22,7 +19,7 @@ void compile(char * src)
     write_file("mc.s.txt", ass);
 
     command("as mc.s -o mc.o");
-    command("ld mc.o -o mc.out -m elf_i386");
+    command("ld -macos_version_min 14.0.0 mc.o -o mc.out -lSystem -syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64 ");
 
     
 }
