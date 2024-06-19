@@ -16,7 +16,14 @@ void compile(char * src)
     visitor_t*  visitor = init_visitor();
     AST_t * optimized_root = visitor_visit(visitor, root, init_list(sizeof(struct AST_S*)), init_stackframe());
 
-    char * ass = assemble(root, init_list(sizeof(struct AST_S*)));
+    char * ass = assemble_root(root, init_list(sizeof(struct AST_S*)));
+
+    write_file("mc.s", ass);
+    write_file("mc.s.txt", ass);
+
+    command("as mc.s -o mc.o");
+    command("ld mc.o -o mc.out -m elf_i386");
+
     
 }
 

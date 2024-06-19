@@ -15,6 +15,10 @@ char* mkstr(const char* str);
 
 char* read_file(const char* filename);
 
+void write_file(const char* filename, const char* output_buffer);
+
+char * command(const char* cmd);
+
 int is_anagram(const char* str1, const char* str2);
 
 #endif

@@ -30,7 +30,7 @@ visitor_t* init_visitor()
 // visit the AST node, then determine what to do with it
 AST_t* visitor_visit(visitor_t* visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
-    printf("Visiting node: %d\n", node->type);
+    // printf("Visiting node: %d\n", node->type);
     switch (node->type)
     {
         case COMP_AST: return visit_compound(visitor, node, list, node->stackframe); break;

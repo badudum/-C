@@ -2,6 +2,9 @@
     "files.associations": {
         "stackframe.h": "c",
         "list.h": "c",
-        "visitor.h": "c"
+        "visitor.h": "c",
+        "stdbool.h": "c",
+        "assembly.h": "c",
+        "assign_call_ass.h": "c"
     }
 }

@@ -3,6 +3,7 @@
 #include "AST.h"
 #include "list.h"
 #include "utils.h"
+#include "token.h"
 
 char * assemble(AST_t * ast, dynamic_list_t * list);
 

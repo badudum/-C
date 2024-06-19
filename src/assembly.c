@@ -12,6 +12,12 @@
 #include "include/assembly/assign_default_ass.h"
 #include "include/assembly/int_ass.h"
 #include "include/assembly/root_ass.h"
+#include "include/assembly/bootstrap_ass.h"
+#include "include/assembly/access_ass.h"
+#include "include/assembly/add_ass.h"
+#include "include/assembly/sub_ass.h"
+#include "include/assembly/mul_ass.h"
+#include "include/assembly/div_ass.h"
 
 
 /*
@@ -277,12 +283,51 @@ char * assemble_root(AST_t* ast, dynamic_list_t * list)
     value = (char *)realloc(value, (strlen(value) + strlen(next) + 1) * sizeof(char));
     strcat(value, next);
 
-    value = realloc(value, (strlen(value) + 1) * sizeof(char));
+    value = realloc(value, (strlen(value) + assembly_bootstrap_aarch64_len + 1) * sizeof(char));
+    strcat(value, (char*) assembly_bootstrap_aarch64);
+
+    return value;
 }
 
 
-char * assemble_binop(AST_t * ast, dynamic_list_t * list){}
-char * assemble_access(AST_t * ast, dynamic_list_t * list){}
+char * assemble_binop(AST_t * ast, dynamic_list_t * list)
+{
+    char * s = calloc(1, sizeof(char));
+
+    char * left_str = assemble(ast->left, list);
+    char * right_str = assemble(ast->right, list);
+
+    s = realloc(s, (strlen(left_str) + strlen(right_str) +1 ) * sizeof(char));
+
+    strcat(s, right_str);
+    strcat(s, left_str);
+    
+
+    char * value = 0;
+
+    switch(ast->op)
+    {
+        case PLUS_TOKEN : value = (char*) assemble_add_aarch64; break;
+        case MINUS_TOKEN : value = (char*) assemble_sub_aarch64; break;
+        case ASTERISK_TOKEN : value = (char*) assemble_mul_aarch64; break;
+        case SLASH_TOKEN : value = (char*) assemble_div_aarch64; break;
+        default : {printf("ASSEMBLER: No front for AST of type `%d`\n", ast->type); exit(1);} break;
+    }
+}
+
+
+char * assemble_access(AST_t * ast, dynamic_list_t * list)
+{
+    int offset = ((ast->stack_index * -1) * 4) - 4;
+    int array_offset = MAX(4, (ast->int_value+1) *4);
+
+    char * s = calloc(assemble_access_aarch64_len + 128, sizeof(char));
+    sprintf(s, (char*) assemble_access_aarch64, offset, array_offset, array_offset, ast->stack_index * 4);
+
+    return s;
+}
+
+
 char * assemble_return(AST_t * ast, dynamic_list_t * list)
 {
     char * s = calloc(1, sizeof(char));
@@ -290,7 +335,7 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
     const char* template = "%s\n"
                             "b return_statement\n";
 
-    char * value = assemble(ast->value, list);
+    char * value = assemble(ast->parent, list);
     char * ret = calloc(strlen(template) + strlen(value) + 128, sizeof(char));
     sprintf(ret, template, value);
 

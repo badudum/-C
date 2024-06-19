@@ -101,6 +101,45 @@ char * read_file(const char* filename)
     return buffer;
 }
 
+void write_file(const char * filename, const char * output_buffer)
+{
+    FILE* fp = fopen(filename, "w");
+
+    if(fp == NULL)
+    {
+        printf("Could not write to file '%s' \n", filename);
+        exit(1);
+    }
+
+    fputs(output_buffer, fp);
+    fclose(fp);
+}
+
+char * command(const char* cmd)
+{
+    char * output = (char*) calloc(1, sizeof(char));
+    output[0] = '\0';
+
+    FILE* fp = popen(cmd, "r");
+    char path[1035];
+
+    if(fp == NULL)
+    {
+        printf("Failed to run command\n");
+        exit(1);
+    }
+
+    while(fgets(path, sizeof(path), fp) != NULL)
+    {
+        output = (char*) realloc(output, (strlen(output) + strlen(path) + 1) * sizeof(char));
+        strcat(output, path);
+    }
+
+    pclose(fp);
+    return output;
+}
+
+
 
 int compare (const void * a, const void * b) {
    return ( *(char*)a - *(char*)b );

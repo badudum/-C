@@ -1,4 +1,12 @@
-print:
+.section .text
+.global _start
+_start:
+    mov fp, sp
+    bl main
+    mov r7, r0
+    mov r0, #1
+    svc #0# compound (0x6503b61fe620) 
+HelloWorld:
     push {fp, lr}
     add fp, sp, #4
     ldr r0, [fp, #8]
