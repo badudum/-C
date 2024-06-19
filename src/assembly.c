@@ -30,7 +30,6 @@ char * assemble_compound(AST_t* ast, dynamic_list_t* list)
     const char* template = "\n # compound (%p) \n";
     char * value = calloc(strlen(template) + 128, sizeof(char));
     sprintf(value, template, ast);
-    printf("Compound children : %d", ast->children->size);
     for (unsigned int i = 0; i < ast->children->size; i ++)
     {
         AST_t* child = (AST_t*) ast->children->items[i];
@@ -105,9 +104,9 @@ char * assemble_variable(AST_t * ast, dynamic_list_t * list)
 {
     char * s =  calloc(1, sizeof(char));
 
-    const char* template = "@ variable (%s)\n"
-                         "ldr r0, [fp, #%d]\n"
-                         "push {r0}\n";
+const char* template = "\n# variable (%s)\n"
+                         "ldr x0, [fp, #%d]\n"
+                         "str x0, [sp, #-16]!\n";
 
     int id = ((ast->stack_index)*4);
     s = realloc(s, (strlen(template) + 8) * sizeof(char));
@@ -140,9 +139,9 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
     {
         AST_t* arg = (AST_t*) ast->parent->children->items[i];
 
-        const char* push_template = "@ call arg\n"
-                                    "ldr r0, [fp, #%d]\n"
-                                    "push {r0}\n";
+        const char* push_template = "\n# call arg\n"
+                                    "ldr x0, [fp, #%d]\n"
+                                    "str x0, [sp, #-16]!\n";
 
         char * push = calloc(strlen(push_template) + 128, sizeof(char));
         sprintf(push, push_template, (arg->stack_index + (arg->type == STRING_AST ? 1 : 0) * 4));
@@ -165,7 +164,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
 
     const char* template = "bl %s\n"
                             "add sp, sp, #%d\n"
-                            "push {r0}\n";
+                            "str x0, [sp, #-16]!\n";
 
     char * ret = calloc(strlen(template) + 128, sizeof(char));
     sprintf(ret, template, ast->name, add_size);
@@ -208,7 +207,7 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
 
     int index = ast->stack_index * 4;
 
-    const char* subl_template = "@ %s\n"
+    const char* subl_template = "\n# %s\n"
                                 "sub sp, sp, #%d\n";
 
     char * sub = calloc(strlen(subl_template) + 128, sizeof(char));
@@ -217,8 +216,8 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
     char * strpush = calloc(strlen(sub)+1, sizeof(char));
     strcat(strpush, sub);
 
-    const char*  push_zero = "mov r0, #0\n"
-                             "str r0, [sp, #%d]\n";
+    const char*  push_zero = "\nmov x0, #0\n"
+                             "str x0, [sp, #%d]\n";
     
     char * zero = calloc(strlen(push_zero) + 128, sizeof(char));
     sprintf(zero, push_zero, byte_counter);
@@ -228,8 +227,8 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
 
     byte_counter -= 4;  
 
-    const char * pushtemplate = "ldr r0, =%s\n"
-                                "str r0, [sp, #%d]\n";
+    const char* pushtemplate = "ldr x0, =0x%s\n"
+                           "str x0, [sp, #%d]\n";
 
     for(unsigned int i = 0; i < chunks->size ; i ++)
     {
@@ -243,8 +242,8 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
         byte_counter -= 4;
     }
 
-    const char * final = "add r0, sp, #%d\n"
-                         "str r0, [fp, #%d]\n";
+    const char * final = "\n add x0, sp, #%d\n" // Adjusted to ARM64 syntax
+                         "str x0, [fp, #%d]\n";
     
     char * fin = calloc(strlen(final) + 128, sizeof(char));
     sprintf(fin, final, 4, index+4);
@@ -332,7 +331,7 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
 {
     char * s = calloc(1, sizeof(char));
 
-    const char* template = "%s\n"
+    const char* template = "\n%s\n"
                             "b return_statement\n";
 
     char * value = assemble(ast->parent, list);
@@ -358,7 +357,7 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
 
     if(ast->stackframe->stack->size)
     {
-        const char* sub_template = "sub sp, sp, #%d\n";
+        const char* sub_template = "\nsub sp, sp, #%d\n";
         char* sub = calloc(strlen(sub_template) + 128, sizeof(char));
         sprintf(sub, sub_template, (1+ ast->stackframe->stack->size) *4);
 
