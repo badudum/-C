@@ -5,7 +5,7 @@ dynamic_list_t * init_list(size_t item_size)
     dynamic_list_t * list = calloc(1, sizeof(struct DYNAMIC_LIST_S));
     list->size = 0;
     list->item_size = item_size;
-    list->items = (void**)0;
+    list->items = 0;
 
     return list;
 }
@@ -13,17 +13,22 @@ dynamic_list_t * init_list(size_t item_size)
 // Adds a new item to the end of the list
 void list_enqueue(dynamic_list_t * list, void * item)
 {
-    list_add_at(list, item, list->size-1);
+    // list_add_at(list, item, list->size-1);
+    list->size += 1;
+
+    if (!list->items)
+        list->items = calloc(1, list->item_size);
+    else
+        list->items = realloc(list->items, (list->size * list->item_size));
+
+    list->items[list->size-1] = item;
 }
 
 
 // Adds a new item to the index of the list
 void list_add_at(dynamic_list_t * list, void * item, size_t index)
 {
-    if(!list || !item || index > list->size)
-    {
-        return;
-    }
+
 
     list->size++;
 
