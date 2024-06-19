@@ -1,81 +1,87 @@
 print:
-    push {fp, lr}
-    add fp, sp, #4
-    ldr r0, [fp, #8]
-    bl strlen
-    add sp, sp, #4
-    ldr r1, [fp, #8]
-    mov r2, r0
-    mov r0, #4
-    mov r7, #1
-    mov sp, fp
-    pop {fp, lr}
-    svc #0
-    bx lr
+  stp x29, x30, [sp, #-16]!
+  mov x29, sp
+  ldr x0, [sp, #16]
+  bl strlen
+  add sp, sp, #8
+  ldr x1, [sp, #8]
+  mov x2, x0
+  mov x8, #4
+  mov x0, #1
+  mov sp, x29
+  ldp x29, x30, [sp], #16
+  svc #0
+  ret
 
-.type itos, %function
+.type itos, @function
 itos:
-    push {fp, lr}
-    add fp, sp, #4
+  stp x29, x30, [sp, #-16]!
+  mov x29, sp
 
-    ldr r0, [fp, #12]           # number
-    mov r1, #8
-    add r3, sp, r1, lsl #1      # buffer
-    mov r1, #0                  # counter
-    mov r2, #0
+  ldr w0, [sp, #16]           # number
+  mov w1, #8
+  add x2, sp, w1, lsl #1      # buffer
+  mov w1, #0                  # counter
+  mov w3, #0
 
-    push {r0}
-    b itos_loop
+  str wzr, [sp, #-4]!
+  b itos_loop
 
 itos_loop:
-    mov r2, #0
-    mov r3, #10
-    udiv r0, r0, r3
-    add r2, r2, #48
-    push {r2}
-    add r1, r1, #1
-    cmp r0, #0
-    beq itos_buffer_loop
-    b itos_loop
+  mov w2, #0
 
-itos_buffer_loop:
-    pop {r2}
-    strb r2, [r3, r1]
-    cmp r1, #0
-    beq itos_end
-    add r1, r1, #1
-    sub r1, r1, #1
-    b itos_buffer_loop
+  mov w4, #10
+  udiv w0, w0, w4
+  
+  add w2, w2, #48
+  str w2, [sp, #-4]!
+  
+  add w1, w1, #1
+
+  cbz w0, itos_buffer_loop
+
+  b itos_loop
+
+itos_buffer_loop: 
+  ldr w2, [sp], #4
+  strb w2, [x2, w3, lsl #1]
+
+  cbz w1, itos_end
+
+  add w3, w3, #1
+  sub w1, w1, #1
+
+  b itos_buffer_loop
 
 itos_end:
-    mov r0, r3
-    mov sp, fp
-    pop {fp, lr}
-    bx lr
+  mov x0, x2
+  mov sp, x29
+  ldp x29, x30, [sp], #16
+  ret
 
 return_statement:
-    pop {r0}
-    mov sp, fp
-    pop {fp, lr}
-    bx lr
+  ldr x0, [sp], #4
+  mov sp, x29
+  ldp x29, x30, [sp], #16
+  ret
 
-.type strlen, %function
+.type strlen, @function
 strlen:
-    push {fp, lr}
-    add fp, sp, #4
-    mov r1, #0
-    ldr r0, [fp, #8]
-    b strlenloop
+  stp x29, x30, [sp, #-16]!
+  mov x29, sp
+  mov w1, #0
+  ldr x0, [sp, #16]
+  b strlenloop
 
 strlenloop:
-    ldrb r2, [r0, r1]
-    cmp r2, #0
-    beq strlenend
-    add r1, r1, #1
-    b strlenloop
+  ldrb w2, [x0, w1, lsl #1]
+  cmp w2, #0
+  beq strlenend
+  add w1, w1, #1
+  b strlenloop
 
 strlenend:
-    mov r0, r1
-    mov sp, fp
-    pop {fp, lr}
-    bx lr
+  mov x0, w1
+  mov sp, x29
+  ldp x29, x30, [sp], #16
+  ret

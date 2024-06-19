@@ -1,6 +1,6 @@
 # division
-pop {r0}
-pop {r1}
-udiv r0, r0, r1
-push {r0}
-ldr r1, [sp]
+ldr w0, [sp], #4
+ldr w1, [sp], #4
+udiv w0, w0, w1
+str w0, [sp, #-4]!
+ldr w1, [sp]

@@ -1,5 +1,5 @@
 # integer
-ldr r0, =%d
-push {r0}
-ldr r1, =%d
-str r1, [fp, %d]
+str w0, [sp, #-4]!
+ldr w1, [sp]
+mov w2, #%d
+str w2, [fp, #%d]

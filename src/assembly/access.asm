@@ -1,7 +1,8 @@
 # access
-mov r1, #d
-add r0, fp, r1
-ldr r2, [r0]
-push {r2}
-ldr sp, [r0]
-str sp, [fp, #-d]
+mov w1, #%d
+add x0, fp, w1
+ldr w2, [%x0, #%d]
+str w2, [sp, #-4]!
+ldr w3, [%x0, #%d]
+mov sp, w3
+str sp, [fp, #%d]

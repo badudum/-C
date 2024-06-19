@@ -1,2 +1,2 @@
 # assign default
-str sp, [fp, #-d]
+mov sp, [fp, -%d]

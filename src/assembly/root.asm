@@ -1,8 +1,8 @@
 .section .text
-.global _start
+.globl _start
 _start:
-    mov fp, sp
-    bl main
-    mov r7, r0
-    mov r0, #1
-    svc #0
+mov sp, fp
+bl main
+mov x1, x0
+mov x0, #1
+svc #0

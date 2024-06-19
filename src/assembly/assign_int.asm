@@ -1,3 +1,3 @@
 # assign (%s)
-pop {r0}
-str r0, [fp, #-d]
+ldr w0, [sp], #4
+str w0, [fp, -%d]

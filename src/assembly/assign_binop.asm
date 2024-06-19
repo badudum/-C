@@ -1,2 +1,2 @@
 # assign binop
-str r0, [fp, #-d]
+str w0, [fp, -%d]

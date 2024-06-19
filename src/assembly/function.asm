@@ -1,6 +1,6 @@
 # start of "%1$s"
-.global %1$s
+.globl %1$s
 %1$s:
-push {fp, lr}
-add fp, sp, #4
-sub sp, sp, #d
+stp x29, x30, [sp, #-16]!
+mov x29, sp
+sub sp, sp, #%2$d
