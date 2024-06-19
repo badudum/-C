@@ -7,6 +7,7 @@
 #include "errors.h"
 #include "utils.h"
 
+
 typedef struct VISITOR_S
 {
     AST_t* object;

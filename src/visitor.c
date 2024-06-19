@@ -33,23 +33,26 @@ AST_t* visitor_visit(visitor_t* visitor, AST_t* node, dynamic_list_t* list, stac
     // printf("Visiting node: %d\n", node->type);
     switch (node->type)
     {
-        case COMP_AST: return visit_compound(visitor, node, list, node->stackframe); break;
-        case ASSIGNEMENT_AST: return visit_assignment(visitor, node, list, node->stackframe);break;
-        case VAR_AST: return visit_var(visitor, node, list, node->stackframe);break;
-        case FUNC_AST: return visit_func(visitor, node, list, node->stackframe);break;
-        case CALL_AST: return visit_caller(visitor, node, list, node->stackframe);break;
-        case INT_AST: return visit_int(visitor, node, list, node->stackframe);break;
-        case STRING_AST: return visit_str(visitor, node, list, node->stackframe);break;
-        case BINOP_AST: return visit_binop(visitor, node, list, node->stackframe);break;
-        case RETURN_AST: return visit_return(visitor, node, list, node->stackframe);break;
-        case ACCESS_AST: return visit_access(visitor, node, list, node->stackframe);break;
+        case COMP_AST: return visit_compound(visitor, node, list, stackframe); break;
+        case ASSIGNEMENT_AST: return visit_assignment(visitor, node, list, stackframe);break;
+        case VAR_AST: return visit_var(visitor, node, list, stackframe);break;
+        case FUNC_AST: return visit_func(visitor, node, list, stackframe);break;
+        case CALL_AST: return visit_caller(visitor, node, list, stackframe);break;
+        case INT_AST: return visit_int(visitor, node, list, stackframe);break;
+        case STRING_AST: return visit_str(visitor, node, list, stackframe);break;
+        case BINOP_AST: return visit_binop(visitor, node, list, stackframe);break;
+        case RETURN_AST: return visit_return(visitor, node, list, stackframe);break;
+        case ACCESS_AST: return visit_access(visitor, node, list, stackframe);break;
         default: {
             printf("Unknown node type: %d\n", node->type);
             exit(1);
-            break;
+            break;  
         }
     }
-    return node;
+
+    return node; 
+
+
 }
 
 // This is the visitor we use when we have a compound statement
@@ -64,12 +67,13 @@ AST_t* visit_compound(visitor_t * visitor, AST_t* node, dynamic_list_t* list, st
         AST_t* new_child = visitor_visit(visitor, child, list, stackframe);
         list_enqueue(compound->children, new_child);
     }
+    return compound;
 }
 
 // this is the visitor we use when we have an assignent going on like a = 5;. This is pretty much copying everything over
 AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
-    AST_t* variable = init_ast(VAR_AST);
+    AST_t* variable = init_ast(ASSIGNEMENT_AST);
     variable->name = node->name;
     variable->datatype = node->datatype;
 
@@ -81,7 +85,7 @@ AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, 
     variable->stack_index = stackframe->stack->size;
     variable->stackframe = stackframe;
 
-    list_enqueue(stackframe->stack, variable);
+    list_enqueue(stackframe->stack, variable->name);
 
     return variable;
 }
@@ -121,10 +125,11 @@ AST_t* visit_func(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackf
     AST_t* func = init_ast(FUNC_AST);
     func->name = node->name;
     func->datatype = node->datatype;
-    func->children =  init_list(sizeof(struct AST_S));
+    func->children =  init_list(sizeof(struct AST_S*));
 
     stackframe_t * new_stackframe = init_stackframe();
-    list_enqueue(stackframe->stack, 0);
+    list_enqueue(new_stackframe->stack, 0);
+    list_enqueue(new_stackframe->stack, 0);
 
     for(int i = 0; i < node->children->size; i++)
     {
@@ -148,13 +153,14 @@ AST_t* visit_func(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackf
 // This is the part of the visitor when we want to handle a function call
 AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
+    // printf("Visiting caller with token : %s \n", node->token);
     AST_t* variable = variable_lookup(visitor->object->children, node->name);
     
     dynamic_list_t * arguments = init_list(sizeof(struct AST_S));
 
-    for(int i = 0; i < node->children->size; i++)
+    for(int i = 0; i < node->parent->children->size; i++)
     {
-        AST_t* child = (AST_t*)node->children->items[i];
+        AST_t* child = (AST_t*)node->parent->children->items[i];
         AST_t* new_child = visitor_visit(visitor, child, list, stackframe);
         list_enqueue(arguments, new_child);
     }

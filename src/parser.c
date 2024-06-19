@@ -42,6 +42,7 @@ token_t * parser_next(parser_t * parser, int token_type)
             parser->token->type,
             token_type
         );
+        exit(1);
     }
 }
 
@@ -245,7 +246,6 @@ AST_t * parse_list(parser_t * parser)
                 parser_next(parser, ID_TOKEN);
                 parser_next(parser, GT_TOKEN);
             }
-
         }
     }
 

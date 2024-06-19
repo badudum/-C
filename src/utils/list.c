@@ -13,7 +13,7 @@ dynamic_list_t * init_list(size_t item_size)
 // Adds a new item to the end of the list
 void list_enqueue(dynamic_list_t * list, void * item)
 {
-    // list_add_at(list, item, list->size-1);
+    // list_add_at(list, item, list->size);
     list->size += 1;
 
     if (!list->items)
@@ -28,8 +28,6 @@ void list_enqueue(dynamic_list_t * list, void * item)
 // Adds a new item to the index of the list
 void list_add_at(dynamic_list_t * list, void * item, size_t index)
 {
-
-
     list->size++;
 
     if(list->items == (void**)0)

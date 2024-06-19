@@ -12,14 +12,14 @@ void assert_not_null(void* ptr)
 
 char* str_to_hex(const char* hex)
 {
-    int len = strlen(hex);
+    unsigned int len = strlen(hex);
     char * hexstring = calloc(1, sizeof(char));
     
-    for (int i = 0; i < len; i++)
+    for (int i = 0; i < len+1; i++)
     {
         char * newhex = calloc(4, sizeof(char));
-        sprintf(newhex, "%02x", hex[(len-i)]);
-        newhex = realloc(hexstring, (strlen(hexstring) + strlen(newhex) + 1) * sizeof(char));
+        sprintf(newhex, "%x", hex[(len-i)]);
+        hexstring = realloc(hexstring, (strlen(hexstring) + strlen(newhex) + 1) * sizeof(char));
         strcat(hexstring, newhex);
         free(newhex);
     }
@@ -30,13 +30,13 @@ dynamic_list_t* str_to_hex_list(const char* hex)
 {
     dynamic_list_t * list = init_list(sizeof(char*));
 
-    int i = 0;
+    unsigned int i = 0;
 
     char* tmp = calloc(1, sizeof(char));
 
-    int len = strlen(hex);
+    unsigned int len = strlen(hex);
 
-    while(hex[i] != '\n')
+    while(hex[i] != '\0')
     {
         tmp = realloc(tmp, (strlen(tmp) + 2) * sizeof(char));
 
@@ -71,7 +71,7 @@ char * read_file(const char* filename)
     char * line = NULL;
     size_t len = 0;
 
-    ssize_t read;
+    size_t read;
 
     fp = fopen(filename, "rb");
 

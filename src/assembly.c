@@ -376,7 +376,7 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
         variable_arg->int_value = (4* assembly_value->children->size) - ( i*4);
     }
 
-    char* assemble_value_value = assemble(assembly_value, list);
+    char* assemble_value_value = assemble(assembly_value->parent, list);
     s = realloc(s, (strlen(s) + strlen(assemble_value_value) +1) * sizeof(char));
     strcat(s, assemble_value_value);
     free(assemble_value_value);
@@ -391,7 +391,7 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
 
 char * assemble(AST_t * ast, dynamic_list_t * list)
 {
-    printf("Current : %d", ast->type);
+    // printf("Current : %d", ast->type);
     char * value = calloc(1, sizeof(char));
 
     char * next = 0;
