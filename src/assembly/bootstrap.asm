@@ -1,19 +1,18 @@
 HelloWorld:
   stp x29, x30, [sp, #-16]!
   mov x29, sp
-  ldr x0, [sp, #16]
+  ldr x0, [x29, #16]
   bl strlen
-  add sp, sp, #8
-  ldr x1, [sp, #8]
+  ldr x1, [x29, #16]
   mov x2, x0
-  mov x8, #4
+  mov x8, #64
   mov x0, #1
+  mov x1, x1
+  mov x2, x2
   mov sp, x29
   ldp x29, x30, [sp], #16
   svc #0
   ret
-
-
 
 itos:
   stp x29, x30, [sp, #-16]!
@@ -25,7 +24,7 @@ itos:
   mov w1, #0 
   mov w3, #0
 
-  str wzr, [sp, #-4]!
+  str wzr, [sp, #-8]!
   b itos_loop
 
 itos_loop:
@@ -35,7 +34,7 @@ itos_loop:
   udiv w0, w0, w4
   
   add w2, w2, #48
-  str w2, [sp, #-4]!
+  str w2, [sp, #-8]!
   
   add w1, w1, #1
 
@@ -44,7 +43,7 @@ itos_loop:
   b itos_loop
 
 itos_buffer_loop: 
-  ldr w2, [sp], #4
+  ldr w2, [sp], #8
   strb w2, [x2, w3, uxtw #0]
 
   cbz w1, itos_end
@@ -61,7 +60,7 @@ itos_end:
   ret
 
 return_statement:
-  ldr x0, [sp], #4
+  ldr x0, [sp], #8
   mov sp, x29
   ldp x29, x30, [sp], #16
   ret
@@ -71,6 +70,7 @@ strlen:
   mov x29, sp
   mov w1, #0
   ldr x0, [sp, #16]
+  cbz x0, strlenend
   b strlenloop
 
 strlenloop:
@@ -85,4 +85,3 @@ strlenend:
   mov sp, x29
   ldp x29, x30, [sp], #16
   ret
-  

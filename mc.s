@@ -6,34 +6,34 @@ bl main
 mov x1, x0
 mov x0, #1
 svc #0
- # compound (0x600001ccc5a0) 
+ # compound (0x6000001a45a0) 
 # start of "main"
 .globl main
 main:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #24
-sub sp, sp, #28
+sub sp, sp, #48
+sub sp, sp, #56
 
- # compound (0x600001ccc720) 
+ # compound (0x6000001a4720) 
 
 # john do
-sub sp, sp, #12
+sub sp, sp, #24
 
 mov x0, #0
-str x0, [sp, #8]
+str x0, [sp, #16]
 ldr x0, =0x06f6420
-str x0, [sp, #4]
+str x0, [sp, #8]
 ldr x0, =0x06e686f6a
 str x0, [sp, #0]
 
- add x0, sp, #4
-str x0, [fp, #-20]
+ add x0, sp, #8
+str x0, [fp, #-40]
 # assign default
-str x0, [x29, #-0x10]
+str x0, [x29, #-0x20]
 
 # variable (name)
-ldr x0, [fp, #-4]
+ldr x0, [fp, #-8]
 str x0, [sp, #-16]!
 
 # call arg
@@ -46,24 +46,23 @@ str x0, [sp, #-16]!
 str x0, [x29, #-0x0]
 
 # variable (int)
-ldr x0, [fp, #-4]
+ldr x0, [fp, #-8]
 str x0, [sp, #-16]!
 HelloWorld:
   stp x29, x30, [sp, #-16]!
   mov x29, sp
-  ldr x0, [sp, #16]
+  ldr x0, [x29, #16]
   bl strlen
-  add sp, sp, #8
-  ldr x1, [sp, #8]
+  ldr x1, [x29, #16]
   mov x2, x0
-  mov x8, #4
+  mov x8, #64
   mov x0, #1
+  mov x1, x1
+  mov x2, x2
   mov sp, x29
   ldp x29, x30, [sp], #16
   svc #0
   ret
-
-
 
 itos:
   stp x29, x30, [sp, #-16]!
@@ -75,7 +74,7 @@ itos:
   mov w1, #0 
   mov w3, #0
 
-  str wzr, [sp, #-4]!
+  str wzr, [sp, #-8]!
   b itos_loop
 
 itos_loop:
@@ -85,7 +84,7 @@ itos_loop:
   udiv w0, w0, w4
   
   add w2, w2, #48
-  str w2, [sp, #-4]!
+  str w2, [sp, #-8]!
   
   add w1, w1, #1
 
@@ -94,7 +93,7 @@ itos_loop:
   b itos_loop
 
 itos_buffer_loop: 
-  ldr w2, [sp], #4
+  ldr w2, [sp], #8
   strb w2, [x2, w3, uxtw #0]
 
   cbz w1, itos_end
@@ -111,7 +110,7 @@ itos_end:
   ret
 
 return_statement:
-  ldr x0, [sp], #4
+  ldr x0, [sp], #8
   mov sp, x29
   ldp x29, x30, [sp], #16
   ret
@@ -121,6 +120,7 @@ strlen:
   mov x29, sp
   mov w1, #0
   ldr x0, [sp, #16]
+  cbz x0, strlenend
   b strlenloop
 
 strlenloop:
@@ -135,4 +135,3 @@ strlenend:
   mov sp, x29
   ldp x29, x30, [sp], #16
   ret
-  
