@@ -9,9 +9,9 @@ HelloWorld:
   mov x0, #1
   mov x1, x1
   mov x2, x2
+  svc #0
   mov sp, x29
   ldp x29, x30, [sp], #16
-  svc #0
   ret
 
 itos:

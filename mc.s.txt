@@ -6,7 +6,7 @@ bl main
 mov x1, x0
 mov x0, #1
 svc #0
- # compound (0x6000001a45a0) 
+ # compound (0x619be5887a60) 
 # start of "main"
 .globl main
 main:
@@ -15,7 +15,7 @@ mov x29, sp
 sub sp, sp, #48
 sub sp, sp, #56
 
- # compound (0x6000001a4720) 
+ # compound (0x619be5887d00) 
 
 # john do
 sub sp, sp, #24
@@ -59,9 +59,9 @@ HelloWorld:
   mov x0, #1
   mov x1, x1
   mov x2, x2
+  svc #0
   mov sp, x29
   ldp x29, x30, [sp], #16
-  svc #0
   ret
 
 itos:
