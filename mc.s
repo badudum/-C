@@ -6,7 +6,7 @@ bl main
 mov x1, x0
 mov x0, #1
 svc #0
- # compound (0x619be5887a60) 
+ # compound (0x12e7066e0) 
 # start of "main"
 .globl main
 main:
@@ -15,7 +15,7 @@ mov x29, sp
 sub sp, sp, #48
 sub sp, sp, #56
 
- # compound (0x619be5887d00) 
+ # compound (0x12e706910) 
 
 # john do
 sub sp, sp, #24
@@ -49,20 +49,21 @@ str x0, [x29, #-0x0]
 ldr x0, [fp, #-8]
 str x0, [sp, #-16]!
 HelloWorld:
-  stp x29, x30, [sp, #-16]!
-  mov x29, sp
-  ldr x0, [x29, #16]
-  bl strlen
-  ldr x1, [x29, #16]
-  mov x2, x0
-  mov x8, #64
-  mov x0, #1
-  mov x1, x1
-  mov x2, x2
-  svc #0
-  mov sp, x29
-  ldp x29, x30, [sp], #16
-  ret
+  stp x29, x30, [sp, #-16]! 
+  mov x29, sp                
+  sub sp, sp, #32       
+  ldr x0, [x29, #16]        
+  bl strlen                 
+  mov x2, x0                
+  ldr x1, [x29, #16]         
+  mov x16, #4                
+  mov x0, #1                 
+  svc #0           
+  mov x16, #1         
+  mov sp, x29               
+  ldp x29, x30, [sp], #16    
+  ret      
+
 
 itos:
   stp x29, x30, [sp, #-16]!
@@ -134,4 +135,4 @@ strlenend:
   mov x0, x1
   mov sp, x29
   ldp x29, x30, [sp], #16
-  ret
+  ret 
