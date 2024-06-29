@@ -77,7 +77,7 @@ void lexer_whitespace(lexer_t *lexer)
 }
 
 /*
- * This function will skip the comments (this is fucked up code, ik, but its just for fun)
+ * This function will skip the comments (this is messed up code, ik, but its just for fun)
  */
 void lexer_comment(lexer_t *lexer)
 {
