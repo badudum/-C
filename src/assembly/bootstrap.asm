@@ -1,18 +1,19 @@
 HelloWorld:
-  stp x29, x30, [sp, #-16]!
-  mov x29, sp
-  ldr x0, [x29, #16]
-  bl strlen
-  ldr x1, [x29, #16]
-  mov x2, x0
-  mov x8, #64
-  mov x0, #1
-  mov x1, x1
-  mov x2, x2
-  svc #0
-  mov sp, x29
-  ldp x29, x30, [sp], #16
-  ret
+  stp x29, x30, [sp, #-16]! 
+  mov x29, sp                
+  sub sp, sp, #32       
+  ldr x0, [x29, #16]        
+  bl strlen                 
+  mov x2, x0                
+  ldr x1, [x29, #16]         
+  mov x16, #4                
+  mov x0, #1                 
+  svc #0           
+  mov x16, #1         
+  mov sp, x29               
+  ldp x29, x30, [sp], #16    
+  ret      
+
 
 itos:
   stp x29, x30, [sp, #-16]!
@@ -84,4 +85,4 @@ strlenend:
   mov x0, x1
   mov sp, x29
   ldp x29, x30, [sp], #16
-  ret
+  ret 
