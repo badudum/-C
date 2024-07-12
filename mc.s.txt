@@ -6,7 +6,7 @@ bl main
 mov x1, x0
 mov x0, #1
 svc #0
- # compound (0x12e7066e0) 
+ # compound (0x600002d2c5a0) 
 # start of "main"
 .globl main
 main:
@@ -15,20 +15,22 @@ mov x29, sp
 sub sp, sp, #48
 sub sp, sp, #56
 
- # compound (0x12e706910) 
+ # compound (0x600002d2c720) 
 
-# john do
-sub sp, sp, #24
+# john do\n
+sub sp, sp, #32
 
 mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x06e
 str x0, [sp, #16]
-ldr x0, =0x06f6420
+ldr x0, =0x05c6f6420
 str x0, [sp, #8]
 ldr x0, =0x06e686f6a
 str x0, [sp, #0]
 
  add x0, sp, #8
-str x0, [fp, #-40]
+str x0, [fp, #-56]
 # assign default
 str x0, [x29, #-0x20]
 

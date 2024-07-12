@@ -1,8 +1,6 @@
 main = ({x} int) function {
-    {name} str = "john do"; 
+    {name} str = "john do\n"; 
     HelloWorld(name);
 } int;
-
-
 
 

@@ -15,7 +15,7 @@ char* str_to_hex(const char* hex)
     unsigned int len = strlen(hex);
     char * hexstring = calloc(1, sizeof(char));
     
-    for (int i = 0; i < len+1; i++)
+    for (unsigned int i = 0; i < len+1; i++)
     {
         char * newhex = calloc(4, sizeof(char));
         sprintf(newhex, "%x", hex[(len-i)]);
@@ -43,7 +43,7 @@ dynamic_list_t* str_to_hex_list(const char* hex)
         // the second part of this line is a trick to convert a char to a string, essentially with a character of hex[i], then the null terminated string
         strcat(tmp, (char[]){hex[i], 0}); 
 
-        if(((i>0 && (strlen(tmp) % 4 == 0)) || i >= len-1) || hex[i] == '\n' || hex[i] == '\t')
+        if( ((i>0 && (strlen(tmp) % 4 == 0)) || i >= len-1) || hex[i] == '\n' || hex[i] == '\t')
         {
             char * hexstring = str_to_hex(tmp);
             free(tmp);
@@ -59,7 +59,7 @@ dynamic_list_t* str_to_hex_list(const char* hex)
 
 char* mkstr(const char* str)
 {
-    char* newstr = calloc(strlen(str) + 1, sizeof(char));
+    char* newstr = (char*) calloc(strlen(str) + 1, sizeof(char));
     strcpy(newstr, str);
     return newstr;
 }
