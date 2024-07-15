@@ -29,7 +29,7 @@ parser_t * init_parser(lexer_t * lexer)
 
 token_t * parser_next(parser_t * parser, int token_type)
 {
-    // printf("[Next]Current token : %s\n", parser->token->value);
+    printf("[Next]Current token : %s, Token type : %d \n", parser->token->value, parser->token->type);
     if(parser->token->type == token_type)
     {
         parser->token = lexer_get_next_token(parser->lexer);

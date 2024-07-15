@@ -104,7 +104,7 @@ char * assemble_variable(AST_t * ast, dynamic_list_t * list)
 {
     char * s =  calloc(1, sizeof(char));
 
-const char* template = "\n# variable (%s)\n"
+    const char* template = "\n# variable (%s)\n"
                          "str x0, [fp, #%d]\n"
                          "str x0, [sp, #-16]!\n";
 
@@ -207,7 +207,7 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
 
     int index = ast->stack_index * 8;
 
-    const char* subl_template = "\n# %s\n"
+    const char* subl_template = "\n/* %s*/\n"
                                 "sub sp, sp, #%d\n";
 
     char * sub = calloc(strlen(subl_template) + 128, sizeof(char));
@@ -349,7 +349,7 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
 char * assemble_function(AST_t* ast, dynamic_list_t* list)
 {
     char * name = ast->name; 
-    int index = ast->stackframe->stack->size * 8;
+    int index = ast->stackframe->stack->size * 16;
 
     char * s = calloc((assembly_function_begin_aarch64_len + (strlen(name)*2)+1), sizeof(char));
 

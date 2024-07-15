@@ -6,34 +6,62 @@ bl main
 mov x1, x0
 mov x0, #1
 svc #0
- # compound (0x6000025d8600) 
+ # compound (0x6000036886c0) 
 # start of "main"
 .globl main
 main:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #56
-sub sp, sp, #64
+sub sp, sp, #144
+sub sp, sp, #80
 
- # compound (0x6000025d8780) 
+ # compound (0x600003688840) 
 
-# john do, yeah
-
-sub sp, sp, #24
+/* Hello World John Do!
+*/
+sub sp, sp, #32
 
 mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x0a216f4420
 str x0, [sp, #16]
-ldr x0, =0x0a6861657920
+ldr x0, =0x06e686f4a20646c72
 str x0, [sp, #8]
-ldr x0, =0x02c6f64206e686f6a
+ldr x0, =0x06f57206f6c6c6548
 str x0, [sp, #0]
 
- add x0, sp, #-40
+ add x0, sp, #-48
 str x0, [fp, #0]
 # assign default
-add x0, sp, #0
+ldr x0, [sp]
 str x0, [fp, #-0x20]
+/* Nice to see you man, I have been 
+ testing this! 
+*/
+sub sp, sp, #64
 
+mov x0, #0
+str x0, [sp, #56]
+ldr x0, =0x0a20217369687420
+str x0, [sp, #48]
+ldr x0, =0x0676e697473657420
+str x0, [sp, #40]
+ldr x0, =0x0a20
+str x0, [sp, #32]
+ldr x0, =0x06e65656220657661
+str x0, [sp, #24]
+ldr x0, =0x0682049202c6e616d
+str x0, [sp, #16]
+ldr x0, =0x020756f7920656573
+str x0, [sp, #8]
+ldr x0, =0x0206f74206563694e
+str x0, [sp, #0]
+
+ add x0, sp, #-96
+str x0, [fp, #0]
+# assign default
+ldr x0, [sp]
+str x0, [fp, #-0x30]
 # variable (name)
 str x0, [fp, #-8]
 str x0, [sp, #-16]!
@@ -53,9 +81,8 @@ str x2, [fp, #0]
 
 b return_statement
 # assign default
-add x0, sp, #0
+ldr x0, [sp]
 str x0, [fp, #-0x0]
-
 # variable (int)
 str x0, [fp, #-8]
 str x0, [sp, #-16]!
