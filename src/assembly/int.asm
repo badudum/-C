@@ -1,5 +1,6 @@
 # integer
-str w0, [sp, #-4]!
-ldr w1, [sp]
-mov w2, #%d
-str w2, [fp, #%d]
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #%d
+str x2, [fp, #%d]
+

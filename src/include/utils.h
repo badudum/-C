@@ -21,4 +21,8 @@ char * command(const char* cmd);
 
 int is_anagram(const char* str1, const char* str2);
 
+char * str_format(char* instr);
+
+char str_to_escape(const char*  instr);
+
 #endif

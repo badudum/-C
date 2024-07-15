@@ -14,7 +14,7 @@ char* str_to_hex(const char* hex)
 {
     unsigned int len = strlen(hex);
     char * hexstring = calloc(1, sizeof(char));
-    
+
     for (unsigned int i = 0; i < len+1; i++)
     {
         char * newhex = calloc(4, sizeof(char));
@@ -25,6 +25,7 @@ char* str_to_hex(const char* hex)
     }
     return hexstring;
 }
+
 
 dynamic_list_t* str_to_hex_list(const char* hex)
 {
@@ -43,7 +44,7 @@ dynamic_list_t* str_to_hex_list(const char* hex)
         // the second part of this line is a trick to convert a char to a string, essentially with a character of hex[i], then the null terminated string
         strcat(tmp, (char[]){hex[i], 0}); 
 
-        if( ((i>0 && (strlen(tmp) % 4 == 0)) || i >= len-1) || hex[i] == '\n' || hex[i] == '\t')
+        if(((i>0 && (strlen(tmp) % 8 == 0)) || i >= len-1) || hex[i] == '\n' || hex[i] == '\t')
         {
             char * hexstring = str_to_hex(tmp);
             free(tmp);
@@ -59,7 +60,7 @@ dynamic_list_t* str_to_hex_list(const char* hex)
 
 char* mkstr(const char* str)
 {
-    char* newstr = (char*) calloc(strlen(str) + 1, sizeof(char));
+    char* newstr = (char*)calloc(strlen(str) + 1, sizeof(char));
     strcpy(newstr, str);
     return newstr;
 }
@@ -170,4 +171,49 @@ int is_anagram(const char* str1, const char* str2)
     }
 
     return 0;
+}
+
+char * str_format(char* instr)
+{
+    char* newstr = calloc(1, sizeof(char));
+    unsigned int len = strlen(instr);
+    unsigned int i = 0;
+
+    while(instr[i] != '\0' && i < len)
+    {
+        newstr = realloc(newstr, (strlen(newstr) + 2) * sizeof(char));
+
+        if(instr[i] == '\\')
+        {
+            char escape = str_to_escape((char[]) {instr[i], instr[MIN(i+1, len)], 0});
+
+            strcat(newstr , (char[]) {escape, 0});
+
+            i += 2;
+        }
+        else 
+        {
+            strcat(newstr, (char[]) {instr[i], 0});
+            i += 1;
+        }
+
+    }
+    return newstr;
+}
+
+char str_to_escape(const char* instr)
+{
+    if ( strlen(instr) <= 1) return 0;
+    if (instr[0] != '\\') return 0;
+    char in_c = instr[1];
+
+    switch (in_c)
+    {
+        case 'n' : return '\n';
+        case 't' : return '\t';
+        case 'r' : return '\r';
+        case '\\': return in_c;
+        default : return in_c;
+    }
+    return in_c;
 }

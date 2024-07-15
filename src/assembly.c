@@ -105,7 +105,7 @@ char * assemble_variable(AST_t * ast, dynamic_list_t * list)
     char * s =  calloc(1, sizeof(char));
 
 const char* template = "\n# variable (%s)\n"
-                         "ldr x0, [fp, #%d]\n"
+                         "str x0, [fp, #%d]\n"
                          "str x0, [sp, #-16]!\n";
 
     int id = ((ast->stack_index)*8);
@@ -140,11 +140,11 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
         AST_t* arg = (AST_t*) ast->parent->children->items[i];
 
         const char* push_template = "\n# call arg\n"
-                                    "ldr x0, [fp, #%d]\n"
-                                    "str x0, [sp, #-16]!\n";
+                                    "ldr x0, [fp, #%d]\n";
 
         char * push = calloc(strlen(push_template) + 128, sizeof(char));
-        sprintf(push, push_template, (arg->stack_index + (arg->type == STRING_AST ? 1 : 0) * 8));
+        sprintf(push, push_template, (arg->stack_index + (arg->type == STRING_AST ? 1 : 0)) * 8);
+        printf(push);
         s = realloc(s, (strlen(s) + strlen(push) + 1) * sizeof(char));
         strcat(s, push);
         free(push);
@@ -199,65 +199,6 @@ char * assemble_int(AST_t * ast, dynamic_list_t * list)
 }
 
 
-// char * assemble_string(AST_t * ast, dynamic_list_t * list)
-// {
-//     dynamic_list_t * chunks = str_to_hex_list(ast->string_value);
-//     unsigned int numb_bytes = ((chunks->size + 1) * 8);
-//     unsigned int byte_counter = numb_bytes - 8;
-
-//     int index = ast->stack_index * 8;
-
-//     const char* subl_template = "\n# %s\n"
-//                                 "sub sp, sp, #%d\n";
-
-//     char * sub = calloc(strlen(subl_template) + 128, sizeof(char));
-//     sprintf(sub, subl_template, ast->string_value, numb_bytes);
-
-//     char * strpush = calloc(strlen(sub)+1, sizeof(char));
-//     strcat(strpush, sub);
-
-//     const char*  push_zero = "\nmov x0, #0\n"
-//                              "str x0, [sp, #%d]\n";
-    
-//     char * zero = calloc(strlen(push_zero) + 128, sizeof(char));
-//     sprintf(zero, push_zero, byte_counter);
-
-//     strpush = realloc(strpush, (strlen(strpush) + strlen(zero) + 1) * sizeof(char));
-//     strcat(strpush, zero);
-
-//     byte_counter -= 8;  
-
-//     const char* pushtemplate = "ldr x0, =0x%s\n"
-//                            "str x0, [sp, #%d]\n";
-
-//     for(unsigned int i = 0; i < chunks->size ; i ++)
-//     {
-//         char * push_hex = (char*) chunks->items[(chunks->size - i)-1];
-//         char * push = calloc(strlen(pushtemplate) + strlen(push_hex) + 1, sizeof(char));
-//         sprintf(push, pushtemplate, push_hex, byte_counter);
-//         strpush = realloc(strpush, (strlen(strpush) + strlen(push) + 1) * sizeof(char));
-//         strcat(strpush, push);
-//         free(push);
-//         free(push_hex);
-//         byte_counter -= 8;
-//     }
-
-//     const char * final = "\n add x0, sp, #%d\n" // Adjusted to ARM64 syntax
-//                          "str x0, [fp, #%d]\n";
-    
-//     char * fin = calloc(strlen(final) + 128, sizeof(char));
-//     sprintf(fin, final, 8, index+8);
-
-//     strpush = realloc(strpush, (strlen(strpush) + strlen(fin) + 1) * sizeof(char));
-
-//     strcat(strpush, fin);
-
-//     free(fin);
-
-//     return strpush;
-
-// }
-
 char * assemble_string(AST_t * ast, dynamic_list_t * list)
 {
     dynamic_list_t * chunks = str_to_hex_list(ast->string_value);
@@ -306,7 +247,7 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
                          "str x0, [fp, #%d]\n";
     
     char * fin = calloc(strlen(final) + 128, sizeof(char));
-    sprintf(fin, final, 8, index);
+    sprintf(fin, final, index + 8);
 
     strpush = realloc(strpush, (strlen(strpush) + strlen(fin) + 1) * sizeof(char));
 

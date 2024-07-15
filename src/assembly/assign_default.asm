@@ -1,2 +1,3 @@
 # assign default
-str x0, [x29, #-0x%x]
+add x0, sp, #0
+str x0, [fp, #-0x%x]

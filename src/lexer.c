@@ -242,7 +242,9 @@ token_t *lexer_collect_string(lexer_t *lexer)
     }
     lexer_get_next(lexer);
 
-    return init_token(STRING_TOKEN, value);
+    char* format = str_format(value);
+    free(value);
+    return init_token(STRING_TOKEN, format);
 }
 
 /*
