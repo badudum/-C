@@ -82,10 +82,10 @@ AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, 
         variable->parent = visitor_visit(visitor, node->parent, list, stackframe);
     }
 
+    list_enqueue(stackframe->stack, variable->name);
     variable->stack_index = stackframe->stack->size;
     variable->stackframe = stackframe;
 
-    list_enqueue(stackframe->stack, variable->name);
 
     return variable;
 }
@@ -97,23 +97,39 @@ AST_t* visit_var(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackfr
     
     int index = 0;
 
-    for (int i = 0; i < list->size; i++)
-    {
-        AST_t * child = (AST_t*)list->items[i];
+    // for (int i = 0; i < list->size; i++)
+    // {
+    //     AST_t * child = (AST_t*)list->items[i];
 
-        if (!child->name)
-        {
-            continue;
-        }
+    //     if (!child->name)
+    //     {
+    //         continue;
+    //     }
 
-        if(strcmp(child->name, node->name) == 0)
-        {
-            index = i +1 ;
+    //     if(strcmp(child->name, node->name) == 0)
+    //     {
+    //         index = i +1 ;
+    //         break;
+    //     }
+    // }
+    for (int i = 0; i < stackframe->stack->size; i++) {
+        char* var_name = (char*)stackframe->stack->items[i];
+        if (var_name && strcmp(var_name, node->name) == 0) {
+            index = i + 1; // +1 because stack_index starts from 1
             break;
         }
     }
 
-    node->stack_index = index ? (index + 1) : list_index_deep(stackframe->stack, node);
+    // node->stack_index = index ? (index + 1) : list_index_deep(stackframe->stack, node);
+    // node->stackframe = stackframe;
+
+    // return node;
+    if (index == -1) {
+        printf("Undefined variable '%s'\n", node->name);
+        exit(1);
+    }
+
+    node->stack_index = index;
     node->stackframe = stackframe;
 
     return node;

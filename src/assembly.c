@@ -108,8 +108,14 @@ const char* template = "\n# variable (%s)\n"
                          "str x0, [fp, #%d]\n"
                          "str x0, [sp, #-16]!\n";
 
-    int id = ((ast->stack_index)*8);
-    s = realloc(s, (strlen(template) + 8) * sizeof(char));
+    // int id = ((ast->stack_index)*8);
+    // s = realloc(s, (strlen(template) + 8) * sizeof(char));
+    // sprintf(s, template, ast->name, id);
+
+
+    // return s;
+    int id = ast->stack_index * -16; // Negative offset
+    s = realloc(s, (strlen(template) + strlen(ast->name) + 8) * sizeof(char));
     sprintf(s, template, ast->name, id);
     return s;
 }
@@ -120,7 +126,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
     char * s = calloc(1, sizeof(char));
 
     char * prefix = calloc(0, sizeof(char));
-
+    
     bool has_prefix = false;
 
     unsigned int i = ast->parent->children->size;
@@ -135,16 +141,30 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
         strcat(s, args);
     }
 
-    for ( i = 0 ; i < ast->parent->children->size; i ++)
-    {
+    // for ( i = 0 ; i < ast->parent->children->size; i ++)
+    // {
+    //     AST_t* arg = (AST_t*) ast->parent->children->items[i];
+
+    //     const char* push_template = "\n# call arg\n"
+    //                                 "ldr x0, [fp, #%d]\n";
+
+    //     char * push = calloc(strlen(push_template) + 128, sizeof(char));
+    //     sprintf(push, push_template, (arg->stack_index + (arg->type == STRING_AST ? 1 : 0)) * 8);
+    //     printf(push);
+    //     s = realloc(s, (strlen(s) + strlen(push) + 1) * sizeof(char));
+    //     strcat(s, push);
+    //     free(push);
+    // }
+    for (i = 0 ; i < ast->parent->children->size; i++) {
         AST_t* arg = (AST_t*) ast->parent->children->items[i];
 
         const char* push_template = "\n# call arg\n"
                                     "ldr x0, [fp, #%d]\n";
 
+        int arg_offset = arg->stack_index * -8; // Negative offset
         char * push = calloc(strlen(push_template) + 128, sizeof(char));
-        sprintf(push, push_template, (arg->stack_index + (arg->type == STRING_AST ? 1 : 0)) * 8);
-        printf(push);
+        sprintf(push, push_template, arg_offset);
+
         s = realloc(s, (strlen(s) + strlen(push) + 1) * sizeof(char));
         strcat(s, push);
         free(push);
@@ -205,7 +225,8 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
     unsigned int numb_bytes = ((chunks->size + 1) * 8);
     unsigned int byte_counter = numb_bytes - 8;
 
-    int index = ast->stack_index * 8;
+    // int index = ast->stack_index * 8;
+    int index = ast->stack_index * -8;
 
     const char* subl_template = "\n# %s\n"
                                 "sub sp, sp, #%d\n";
@@ -246,13 +267,21 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
     const char * final = "\n add x0, sp, #%d\n" // Adjusted to ARM64 syntax
                          "str x0, [fp, #%d]\n";
     
+    // char * fin = calloc(strlen(final) + 128, sizeof(char));
+    // sprintf(fin, final, index + 8);
+
+    // strpush = realloc(strpush, (strlen(strpush) + strlen(fin) + 1) * sizeof(char));
+
+    // strcat(strpush, fin);
+
+    // free(fin);
+
+    // return strpush;
     char * fin = calloc(strlen(final) + 128, sizeof(char));
-    sprintf(fin, final, index + 8);
+    sprintf(fin, final, 0, index); // Use 0 for sp offset
 
     strpush = realloc(strpush, (strlen(strpush) + strlen(fin) + 1) * sizeof(char));
-
     strcat(strpush, fin);
-
     free(fin);
 
     return strpush;

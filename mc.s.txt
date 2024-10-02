@@ -6,40 +6,81 @@ bl main
 mov x1, x0
 mov x0, #1
 svc #0
- # compound (0x6000025d8600) 
+ # compound (0x600003df4840) 
 # start of "main"
 .globl main
 main:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #56
-sub sp, sp, #64
+sub sp, sp, #104
+sub sp, sp, #112
 
- # compound (0x6000025d8780) 
+ # compound (0x600003df49c0) 
 
-# john do, yeah
-
+# Taeyang Hi!
 sub sp, sp, #24
 
 mov x0, #0
 str x0, [sp, #16]
-ldr x0, =0x0a6861657920
+ldr x0, =0x0216948
 str x0, [sp, #8]
-ldr x0, =0x02c6f64206e686f6a
+ldr x0, =0x020676e6179656154
 str x0, [sp, #0]
 
- add x0, sp, #-40
-str x0, [fp, #0]
+ add x0, sp, #0
+str x0, [fp, #48]
 # assign default
 add x0, sp, #0
-str x0, [fp, #-0x20]
+str x0, [fp, #-0x28]
 
-# variable (name)
-str x0, [fp, #-8]
+# Hello
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x06f6c6c6548
+str x0, [sp, #0]
+
+ add x0, sp, #0
+str x0, [fp, #56]
+# assign default
+add x0, sp, #0
+str x0, [fp, #-0x38]
+
+# what
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x074616877
+str x0, [sp, #0]
+
+ add x0, sp, #0
+str x0, [fp, #72]
+# assign default
+add x0, sp, #0
+str x0, [fp, #-0x48]
+
+# this
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x073696874
+str x0, [sp, #0]
+
+ add x0, sp, #0
+str x0, [fp, #88]
+# assign default
+add x0, sp, #0
+str x0, [fp, #-0x58]
+
+# variable (what)
+str x0, [fp, #-144]
 str x0, [sp, #-16]!
 
 # call arg
-ldr x0, [fp, #-8]
+ldr x0, [fp, #-72]
 bl HelloWorld
 add sp, sp, #0
 str x0, [sp, #-16]!
@@ -54,10 +95,10 @@ str x2, [fp, #0]
 b return_statement
 # assign default
 add x0, sp, #0
-str x0, [fp, #-0x0]
+str x0, [fp, #-0x8]
 
 # variable (int)
-str x0, [fp, #-8]
+str x0, [fp, #0]
 str x0, [sp, #-16]!
 HelloWorld:
     stp x29, x30, [sp, #-16]!
