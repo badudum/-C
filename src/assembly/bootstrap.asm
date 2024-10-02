@@ -71,7 +71,7 @@ itos_end:
     ret
 
 return_statement:
-    ldr x0, [sp], #8
+    ldp x29, x30, [sp], 0x10
     mov sp, x29
     ldp x29, x30, [sp], #16
     ret

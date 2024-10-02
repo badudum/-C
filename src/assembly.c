@@ -44,7 +44,7 @@ char * assemble_compound(AST_t* ast, dynamic_list_t* list)
 // this is the assembly conversion for assignment occurrences
 char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
 {
-    int id = (ast->stack_index * 8);
+    int id = (ast->stack_index * 16);
 
     char* s = calloc(1, sizeof(char));
 
@@ -104,9 +104,9 @@ char * assemble_variable(AST_t * ast, dynamic_list_t * list)
 {
     char * s =  calloc(1, sizeof(char));
 
-const char* template = "\n# variable (%s)\n"
-                         "str x0, [fp, #%d]\n"
-                         "str x0, [sp, #-16]!\n";
+    const char* template =  "\n# variable (%s)\n"
+                            "str x0, [fp, #%d]\n"
+                            "str x0, [sp, #-16]!\n";
 
     // int id = ((ast->stack_index)*8);
     // s = realloc(s, (strlen(template) + 8) * sizeof(char));
@@ -114,7 +114,7 @@ const char* template = "\n# variable (%s)\n"
 
 
     // return s;
-    int id = ast->stack_index * -16; // Negative offset
+    int id = ast->stack_index * -8; // Negative offset
     s = realloc(s, (strlen(template) + strlen(ast->name) + 8) * sizeof(char));
     sprintf(s, template, ast->name, id);
     return s;
@@ -161,7 +161,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
         const char* push_template = "\n# call arg\n"
                                     "ldr x0, [fp, #%d]\n";
 
-        int arg_offset = arg->stack_index * -8; // Negative offset
+        int arg_offset = arg->stack_index * -16; // Negative offset
         char * push = calloc(strlen(push_template) + 128, sizeof(char));
         sprintf(push, push_template, arg_offset);
 
@@ -170,7 +170,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
         free(push);
     }
 
-    int add_size = i * 8;
+    int add_size = i * 16;
 
     if(list->size)
     {
@@ -210,7 +210,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
 
 char * assemble_int(AST_t * ast, dynamic_list_t * list)
 {
-    int index = ast->stack_index * 8;
+    int index = ast->stack_index * -16;
 
     char * s = calloc(assembly_assignment_int_aarch64_len + 128, sizeof(char));
     sprintf(s, (char*) assembly_int_aarch64, ast->int_value, ast->int_value, index);
@@ -222,8 +222,15 @@ char * assemble_int(AST_t * ast, dynamic_list_t * list)
 char * assemble_string(AST_t * ast, dynamic_list_t * list)
 {
     dynamic_list_t * chunks = str_to_hex_list(ast->string_value);
-    unsigned int numb_bytes = ((chunks->size + 1) * 8);
-    unsigned int byte_counter = numb_bytes - 8;
+    unsigned int numb_bytes = ((chunks->size + 1)* 8) + ( 8 * (((chunks->size + 1) * 8)%16 != 0));
+    unsigned int actual_bytes = (chunks->size + 1) * 8;
+    unsigned int diff = numb_bytes - actual_bytes;
+
+
+    printf(" %d , %d \n" , numb_bytes, ( 8 * (((chunks->size + 1) * 8)%16 == 0)));
+
+
+    unsigned int byte_counter = (numb_bytes - 8) - diff;
 
     // int index = ast->stack_index * 8;
     int index = ast->stack_index * -8;
@@ -378,9 +385,9 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
 char * assemble_function(AST_t* ast, dynamic_list_t* list)
 {
     char * name = ast->name; 
-    int index = ast->stackframe->stack->size * 8;
+    int index = ast->stackframe->stack->size *16;
 
-    char * s = calloc((assembly_function_begin_aarch64_len + (strlen(name)*2)+1), sizeof(char));
+    char * s = calloc((assembly_function_begin_aarch64_len + (strlen(name))+1), sizeof(char));
 
     sprintf(s, (char*) assembly_function_begin_aarch64, name, index);
 
@@ -388,7 +395,7 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
     {
         const char* sub_template = "\nsub sp, sp, #%d\n";
         char* sub = calloc(strlen(sub_template) + 128, sizeof(char));
-        sprintf(sub, sub_template, (1+ ast->stackframe->stack->size) *8);
+        sprintf(sub, sub_template, (1+ ast->stackframe->stack->size) *16);
 
         s = realloc(s, (strlen(s)+ strlen(sub) +1) * sizeof(char));
         strcat(s, sub);
@@ -401,7 +408,7 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
         AST_t* function_arg = (AST_t*) assembly_value->children->items[i];
         AST_t* variable_arg = init_ast(VAR_AST);
         variable_arg->name = function_arg->name;
-        variable_arg->int_value = (8* assembly_value->children->size) - ( i*8);
+        variable_arg->int_value = (16* assembly_value->children->size) - ( i*16);
     }
 
     char* assemble_value_value = assemble(assembly_value->parent, list);

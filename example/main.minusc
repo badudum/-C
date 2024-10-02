@@ -1,11 +1,21 @@
+
+print = ({test} str) function {
+     HelloWorld(test);
+     return 0;
+} int;
+
 main = ({x} int) function {
     {name} str = "Taeyang Hi!"; 
     {hello} str= "Hello";
+    {name2} str = "David Hello";
     {what} str= "what";
 
-    what = "this";
+
+    comment: what = "this";
     HelloWorld(what);
+    HelloWorld(name);
+    print(name);
     return 0;
-} int;
+} int;  
 
 

@@ -17,7 +17,7 @@ char* str_to_hex(const char* hex)
 
     for (unsigned int i = 0; i < len+1; i++)
     {
-        char * newhex = calloc(4, sizeof(char));
+        char * newhex = calloc(16, sizeof(char));
         sprintf(newhex, "%x", hex[(len-i)]);
         hexstring = realloc(hexstring, (strlen(hexstring) + strlen(newhex) + 1) * sizeof(char));
         strcat(hexstring, newhex);
