@@ -6,7 +6,7 @@ bl main
 mov x1, x0
 mov x0, #1
 svc #0
- # compound (0x600003e9ce40) 
+ # compound (0x6000000a8d80) 
 # start of "print"
 .globl print
 print:
@@ -15,7 +15,7 @@ mov x29, sp
 sub sp, sp, #80
 sub sp, sp, #96
 
- # compound (0x600003e9cfc0) 
+ # compound (0x6000000a8f00) 
 
 # variable (test)
 str x0, [fp, #-24]
@@ -50,23 +50,7 @@ mov x29, sp
 sub sp, sp, #240
 sub sp, sp, #256
 
- # compound (0x600003e9d200) 
-
-# Taeyang Hi!
-sub sp, sp, #32
-
-mov x0, #0
-str x0, [sp, #16]
-ldr x0, =0x0216948
-str x0, [sp, #8]
-ldr x0, =0x020676e6179656154
-str x0, [sp, #0]
-
- add x0, sp, #0
-str x0, [fp, #48]
-# assign default
-add x0, sp, #0
-str x0, [fp, #-0x50]
+ # compound (0x6000000a9140) 
 
 # Hello
 sub sp, sp, #16
@@ -77,16 +61,39 @@ ldr x0, =0x06f6c6c6548
 str x0, [sp, #0]
 
  add x0, sp, #0
-str x0, [fp, #56]
+str x0, [fp, #40]
+# assign default
+add x0, sp, #0
+str x0, [fp, #-0x50]
+
+# Taeyang Hi!Hello This is a longer string with newline
+sub sp, sp, #64
+
+mov x0, #0
+str x0, [sp, #56]
+ldr x0, =0x0656e696c77
+str x0, [sp, #48]
+ldr x0, =0x0656e206874697720
+str x0, [sp, #40]
+ldr x0, =0x0676e697274732072
+str x0, [sp, #32]
+ldr x0, =0x065676e6f6c206120
+str x0, [sp, #24]
+ldr x0, =0x07369207369685420
+str x0, [sp, #16]
+ldr x0, =0x06f6c6c6548216948
+str x0, [sp, #8]
+ldr x0, =0x020676e6179656154
+str x0, [sp, #0]
+
+ add x0, sp, #0
+str x0, [fp, #104]
 # assign default
 add x0, sp, #0
 str x0, [fp, #-0x70]
 
 # David Hello
-sub sp, sp, #32
-
-mov x0, #0
-str x0, [sp, #16]
+sub sp, sp, #16
 ldr x0, =0x06f6c6c
 str x0, [sp, #8]
 ldr x0, =0x06548206469766144
@@ -98,12 +105,12 @@ str x0, [fp, #80]
 add x0, sp, #0
 str x0, [fp, #-0x90]
 
-# what
+# whatwha
 sub sp, sp, #16
 
 mov x0, #0
 str x0, [sp, #8]
-ldr x0, =0x074616877
+ldr x0, =0x061687774616877
 str x0, [sp, #0]
 
  add x0, sp, #0
@@ -123,21 +130,21 @@ add sp, sp, #0
 str x0, [sp, #-16]!
 
 # variable (name)
-str x0, [fp, #-40]
+str x0, [fp, #-56]
 str x0, [sp, #-16]!
 
 # call arg
-ldr x0, [fp, #-80]
+ldr x0, [fp, #-112]
 bl HelloWorld
 add sp, sp, #0
 str x0, [sp, #-16]!
 
 # variable (name)
-str x0, [fp, #-40]
+str x0, [fp, #-56]
 str x0, [sp, #-16]!
 
 # call arg
-ldr x0, [fp, #-80]
+ldr x0, [fp, #-112]
 bl print
 add sp, sp, #0
 str x0, [sp, #-16]!

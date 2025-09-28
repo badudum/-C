@@ -20,7 +20,7 @@ void compile(char * src)
 
     command("as mc.s -o mc.o"); // for mac
     // command("arm-linux-gnueabi-gcc-12 mc.s -o mc.o"); // for x86 linux
-    command("ld -macos_version_min 14.0.0 mc.o -o mc.out -lSystem -syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64 ");
+    command("ld -macos_version_min 15.0.0 mc.o -o mc.out -lSystem -syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64 ");
 
     
 }

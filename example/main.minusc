@@ -5,10 +5,10 @@ print = ({test} str) function {
 } int;
 
 main = ({x} int) function {
-    {name} str = "Taeyang Hi!"; 
     {hello} str= "Hello";
+    {name} str = "Taeyang Hi!Hello This is a longer string with newline"; 
     {name2} str = "David Hello";
-    {what} str= "what";
+    {what} str= "whatwha";
 
 
     comment: what = "this";

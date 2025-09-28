@@ -222,15 +222,18 @@ char * assemble_int(AST_t * ast, dynamic_list_t * list)
 char * assemble_string(AST_t * ast, dynamic_list_t * list)
 {
     dynamic_list_t * chunks = str_to_hex_list(ast->string_value);
-    unsigned int numb_bytes = ((chunks->size + 1)* 8) + ( 8 * (((chunks->size + 1) * 8)%16 != 0));
-    unsigned int actual_bytes = (chunks->size + 1) * 8;
-    unsigned int diff = numb_bytes - actual_bytes;
+    unsigned int string_len = strlen(ast->string_value);
+    unsigned int min_bytes = string_len + 1;  // string + null terminator
+    // Simply round the minimum required bytes to 16-byte boundary
+    unsigned int numb_bytes = ((min_bytes + 15) / 16) * 16;
+    unsigned int diff = numb_bytes - min_bytes;
 
 
-    printf(" %d , %d \n" , numb_bytes, ( 8 * (((chunks->size + 1) * 8)%16 == 0)));
+    printf("String '%s': length=%d, chunks=%d, allocated=%d bytes\n", ast->string_value, string_len, chunks->size, numb_bytes);
 
 
-    unsigned int byte_counter = (numb_bytes - 8) - diff;
+    // Start placing string data from the end, working backwards to offset 0
+    unsigned int byte_counter = (chunks->size - 1) * 8;
 
     // int index = ast->stack_index * 8;
     int index = ast->stack_index * -8;
@@ -244,16 +247,16 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
     char * strpush = calloc(strlen(sub)+1, sizeof(char));
     strcat(strpush, sub);
 
-    const char*  push_zero = "\nmov x0, #0\n"
-                             "str x0, [sp, #%d]\n";
-    
-    char * zero = calloc(strlen(push_zero) + 128, sizeof(char));
-    sprintf(zero, push_zero, byte_counter);
-
-    strpush = realloc(strpush, (strlen(strpush) + strlen(zero) + 1) * sizeof(char));
-    strcat(strpush, zero);
-
-    byte_counter -= 8;  
+    // Place null terminator at the end if needed
+    if (numb_bytes > (chunks->size * 8)) {
+        const char*  push_zero = "\nmov x0, #0\n"
+                                 "str x0, [sp, #%d]\n";
+        
+        char * zero = calloc(strlen(push_zero) + 128, sizeof(char));
+        sprintf(zero, push_zero, numb_bytes - 8);
+        strpush = realloc(strpush, (strlen(strpush) + strlen(zero) + 1) * sizeof(char));
+        strcat(strpush, zero);
+    }  
 
     const char* pushtemplate = "ldr x0, =0x%s\n"
                            "str x0, [sp, #%d]\n";
@@ -268,7 +271,9 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
         strcat(strpush, push);
         free(push);
         free(push_hex);
-        byte_counter -= 8;
+        if (byte_counter >= 8) {
+            byte_counter -= 8;
+        }
     }
 
     const char * final = "\n add x0, sp, #%d\n" // Adjusted to ARM64 syntax

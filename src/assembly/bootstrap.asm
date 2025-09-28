@@ -71,7 +71,7 @@ itos_end:
     ret
 
 return_statement:
-    ldp x29, x30, [sp], 0x10
-    mov sp, x29
-    ldp x29, x30, [sp], #16
+    ldr x0, [sp], #16           # Load return value and adjust stack
+    mov sp, x29                 # Restore stack pointer to frame pointer
+    ldp x29, x30, [sp], #16     # Restore frame pointer and return address
     ret
