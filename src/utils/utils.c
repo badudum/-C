@@ -10,15 +10,15 @@ void assert_not_null(void* ptr)
     exit(1);
 }
 
-char* str_to_hex(const char* hex)
+char* str_to_hex(const char* str)
 {
-    unsigned int len = strlen(hex);
+    unsigned int len = strlen(str);
     char * hexstring = calloc(1, sizeof(char));
 
-    for (unsigned int i = 0; i < len+1; i++)
+    for (int i = len - 1; i >= 0; i--)
     {
-        char * newhex = calloc(16, sizeof(char));
-        sprintf(newhex, "%x", hex[(len-i)]);
+        char * newhex = calloc(3, sizeof(char));  // 2 hex digits + null terminator
+        sprintf(newhex, "%02x", (unsigned char)str[i]);
         hexstring = realloc(hexstring, (strlen(hexstring) + strlen(newhex) + 1) * sizeof(char));
         strcat(hexstring, newhex);
         free(newhex);
@@ -44,7 +44,7 @@ dynamic_list_t* str_to_hex_list(const char* hex)
         // the second part of this line is a trick to convert a char to a string, essentially with a character of hex[i], then the null terminated string
         strcat(tmp, (char[]){hex[i], 0}); 
 
-        if(((i>0 && (strlen(tmp) % 8 == 0)) || i >= len-1) || hex[i] == '\n' || hex[i] == '\t')
+        if((i > 0 && (strlen(tmp) % 8 == 0)) || i >= len - 1)
         {
             char * hexstring = str_to_hex(tmp);
             free(tmp);
@@ -201,19 +201,22 @@ char * str_format(char* instr)
     return newstr;
 }
 
+/* Map escape sequences to bytes for string literals (used when printing etc.). */
 char str_to_escape(const char* instr)
 {
-    if ( strlen(instr) <= 1) return 0;
+    if (strlen(instr) <= 1) return 0;
     if (instr[0] != '\\') return 0;
     char in_c = instr[1];
 
     switch (in_c)
     {
-        case 'n' : return '\n';
-        case 't' : return '\t';
-        case 'r' : return '\r';
-        case '\\': return in_c;
-        default : return in_c;
+        case 'n' : return '\n';   /* newline */
+        case 't' : return '\t';   /* tab */
+        case 'r' : return '\r';   /* carriage return */
+        case '\\': return '\\';
+        case '"' : return '"';    /* double quote */
+        case '\'': return '\'';   /* single quote */
+        case '0' : return '\0';   /* null */
+        default  : return in_c;
     }
-    return in_c;
 }

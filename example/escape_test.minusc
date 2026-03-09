@@ -1,0 +1,5 @@
+main = ({x} int) function {
+    {msg} str = "Line1\nLine2\tTabbed";
+    HelloWorld(msg);
+    return 0;
+} int;

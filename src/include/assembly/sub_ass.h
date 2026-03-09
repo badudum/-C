@@ -1,12 +1,18 @@
-unsigned char assemble_sub_aarch64[] = {
-    0X23, 0X20, 0X73, 0X75, 0X62, 0X74, 0X72, 0X61, 0X63, 0X74, 0X69, 0X6F, 
-    0X6E, 0X0A, 0X6C, 0X64, 0X72, 0X20, 0X77, 0X30, 0X2C, 0X20, 0X5B, 0X73, 
-    0X70, 0X5D, 0X2C, 0X20, 0X23, 0X34, 0X0A, 0X6C, 0X64, 0X72, 0X20, 0X77, 
-    0X31, 0X2C, 0X20, 0X5B, 0X73, 0X70, 0X5D, 0X0A, 0X73, 0X75, 0X62, 0X20, 
-    0X77, 0X30, 0X2C, 0X20, 0X77, 0X30, 0X2C, 0X20, 0X77, 0X31, 0X0A, 0X73, 
-    0X74, 0X72, 0X20, 0X77, 0X30, 0X2C, 0X20, 0X5B, 0X73, 0X70, 0X2C, 0X20, 
-    0X23, 0X2D, 0X34, 0X5D, 0X21, 0X0A, 0X6C, 0X64, 0X72, 0X20, 0X77, 0X31, 
-    0X2C, 0X20, 0X5B, 0X73, 0X70, 0X5D
-};
+static const char assemble_sub_aarch64[] =
+"# subtraction\n"
+"ldr w0, [fp, #%d]\n"
+"ldr w1, [fp, #%d]\n"
+"sub w0, w0, w1\n"
+"str w0, [fp, #%d]\n";
+#define assemble_sub_aarch64_len (sizeof(assemble_sub_aarch64) - 1)
 
-unsigned int assemble_sub_aarch64_len = 90;
+static const char assemble_sub_large_offset_aarch64[] =
+"# subtraction\n"
+"sub x4, fp, #%d\n"
+"ldr w0, [x4]\n"
+"sub x4, fp, #%d\n"
+"ldr w1, [x4]\n"
+"sub w0, w0, w1\n"
+"sub x4, fp, #%d\n"
+"str w0, [x4]\n";
+#define assemble_sub_large_offset_aarch64_len (sizeof(assemble_sub_large_offset_aarch64) - 1)

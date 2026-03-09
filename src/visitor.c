@@ -67,6 +67,9 @@ AST_t* visit_compound(visitor_t * visitor, AST_t* node, dynamic_list_t* list, st
         AST_t* new_child = visitor_visit(visitor, child, list, stackframe);
         list_enqueue(compound->children, new_child);
     }
+    if (compound->children->size == 1) {
+        compound->stack_index = ((AST_t*)compound->children->items[0])->stack_index;
+    }
     return compound;
 }
 
@@ -192,9 +195,9 @@ AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
 
 AST_t* visit_int(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
-    node->stack_index = -(stackframe->stack->size);
-    node->stackframe = stackframe;
     list_enqueue(stackframe->stack, mkstr("0"));
+    node->stack_index = stackframe->stack->size;
+    node->stackframe = stackframe;
     return node;
 }
 
@@ -203,7 +206,7 @@ AST_t* visit_str(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackfr
     dynamic_list_t * string = str_to_hex_list(node->string_value);
 
     list_enqueue(stackframe->stack, 0);
-    node->stack_index = -(stackframe->stack->size + string->size);
+    node->stack_index = stackframe->stack->size;
 
     return node;
 }
@@ -215,6 +218,9 @@ AST_t* visit_binop(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stack
     binop->left = visitor_visit(visitor, node->left, list, stackframe);
     binop->right = visitor_visit(visitor, node->right, list, stackframe);
     binop->op = node->op;
+    list_enqueue(stackframe->stack, mkstr("0"));
+    binop->stack_index = stackframe->stack->size;
+    binop->stackframe = stackframe;
     return binop;
 }
 

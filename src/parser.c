@@ -159,10 +159,10 @@ AST_t * parse_term(parser_t *parser)
     {
         AST_t * binop = init_ast(BINOP_AST);
         binop->left = left;
-        left->op = parser->token->type;
+        binop->op = parser->token->type;
         parser_next(parser, parser->token->type);
         binop->right = parse_factor(parser);
-        return binop;
+        left = binop;
     }
 
     return left;
@@ -178,10 +178,10 @@ AST_t * parse_expression(parser_t* parser)
     {
         AST_t * binop = init_ast(BINOP_AST);
         binop->left = left;
-        left->op = parser->token->type;
-        binop->right= parse_expression(parser);
+        binop->op = parser->token->type;
         parser_next(parser, parser->token->type);
-        return binop;
+        binop->right = parse_expression(parser);
+        left = binop;
     }
     return left;
 }

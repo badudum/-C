@@ -1,19 +1,38 @@
 
 print = ({test} str) function {
      HelloWorld(test);
-     return 0;
+     return 30;
 } int;
 
 main = ({x} int) function {
     {hello} str= "Hello";
-    {name} str = "Taeyang Hi!Hello This is a longer string with newline"; 
+    {name} str = "Taeyang Hi!Hello This is a \t longer string with newline \n haha "; 
     {name2} str = "David Hello";
     {what} str= "whatwha";
 
+    {add} int = 42 + 10;
+    {sub} int = 40 - 17;
+    {mul} int = 10 * 10;
+    {div} int = 25 / 5;
+    {mixed1} int = 2 + 3 * 4;
+    {mixed2} int = (2 + 3) * 4;
+    {mixed3} int = 20 - 4 / 2;
+    {mixed4} int = (20 - 4) / 2;
+    {nested} int = ((1 + 2) * 3) + 4;
 
-    comment: what = "this";
+    HelloWorldLine("add 42+10=", add);
+    HelloWorldLine("sub 40-17=", sub);
+    HelloWorldLine("mul 10*10=", mul);
+    HelloWorldLine("div 25/5=", div);
+    HelloWorldLine("2+3*4 (no paren)=", mixed1);
+    HelloWorldLine("(2+3)*4 (paren)=", mixed2);
+    HelloWorldLine("20-4/2 (no paren)=", mixed3);
+    HelloWorldLine("(20-4)/2 (paren)=", mixed4);
+    HelloWorldLine("((1+2)*3)+4=", nested);
+
     HelloWorld(what);
-    HelloWorld(name);
+    HelloWorld(name, name2);
+    HelloWorld("Hello ", name2, "!\n");
     print(name);
     return 0;
 } int;  
