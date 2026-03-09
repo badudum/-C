@@ -17,54 +17,141 @@ ld -e _start -macos_version_min 11.0.0 -L/Library/Developer/CommandLineTools/SDK
 ./mc_test
 ```
 
-## Embedded Features
-
-### Built-in Functions
-
-| Function | Description |
-|----------|-------------|
-| `HelloWorld(arg1, arg2, ...)` | Prints each argument to stdout. Accepts strings and integers (ints are converted to strings automatically). |
-| `HelloWorldLine(arg1, arg2, ...)` | Same as `HelloWorld` but appends a newline after printing all arguments. |
+## Language Features
 
 ### Data Types
 
-- **int** — 32-bit integers
-- **str** — String literals and variables
-- **bool** — Boolean type (parser support)
+| Type | Description |
+|------|-------------|
+| `int` | 32-bit integers |
+| `str` | String literals and variables |
+| `Array<int>` | Integer arrays |
 
 ### Variables
 
+Variables are declared with the `{name} type = value;` syntax.
+
 ```minusC
-{name} str = "Hello";
 {x} int = 42;
-{mixed} int = (2 + 3) * 4;
-```
-
-### Functions
-
-```minusC
-print = ({test} str) function {
-    HelloWorld(test);
-    return 30;
-} int;
-
-main = ({x} int) function {
-    return 0;
-} int;
+{name} str = "Hello";
+{arr} Array<int> = [10, 20, 30];
 ```
 
 ### Arithmetic
 
 - Operators: `+`, `-`, `*`, `/`
-- Order of operations: multiplication and division before addition and subtraction
+- Operator precedence: `*` and `/` bind tighter than `+` and `-`
 - Parentheses for grouping: `(2 + 3) * 4`
+
+```minusC
+{mixed} int = 2 + 3 * 4;       // 14
+{grouped} int = (2 + 3) * 4;   // 20
+{nested} int = ((1 + 2) * 3) + 4;
+```
 
 ### Strings
 
 - Double-quoted literals: `"Hello, world!"`
-- Escape sequences: `\n` (newline), `\t` (tab), `\r` (carriage return), `\\`, `\"`, `\'`
+- Escape sequences: `\n`, `\t`, `\r`, `\\`, `\"`, `\'`
+- Concatenation with `+`:
+
+```minusC
+{a} str = "Hello";
+{b} str = "World";
+{c} str = a + b;    // "HelloWorld"
+```
+
+### String Operations
+
+| Syntax / Function | Description |
+|---|---|
+| `s[i]` | Character access — returns the character at index `i` |
+| `s[start:end]` | Substring slice — returns characters from `start` to `end` (exclusive) |
+| `SmolString(s, start, end)` | Function form of substring slice |
+| `Change(s, old, new)` | Replace first occurrence of `old` with `new` in `s` |
+| `Clipper(s)` | Trim leading and trailing whitespace |
+| `SmolStrings(s, delim)` | Split string `s` by delimiter `delim` |
+
+```minusC
+{s} str = "hello";
+{ch} str = s[0];                    // "h"
+{sub} str = s[1:4];                 // "ell"
+{r} str = Change("foo bar", "bar", "baz");  // "foo baz"
+{trimmed} str = Clipper("  hi  ");  // "hi"
+{parts} str = SmolStrings("a,b,c", ",");
+```
+
+### Arrays
+
+Arrays are declared with the `Array<int>` type. Elements are accessed by index with `arr[i]`.
+
+**Explicit literals:**
+
+```minusC
+{arr} Array<int> = [10, 20, 30];
+{val} int = arr[0];    // 10
+```
+
+**Repeat fill** — `[value; count]` creates `count` elements all set to `value`:
+
+```minusC
+{zeros} Array<int> = [0; 5];      // [0, 0, 0, 0, 0]
+{sevens} Array<int> = [7; 3];     // [7, 7, 7]
+```
+
+**Range fill** — `[v1; c1, v2; c2, ...]` concatenates multiple repeat segments:
+
+```minusC
+{range} Array<int> = [0; 3, 1; 2, 99; 1];
+// produces [0, 0, 0, 1, 1, 99]
+```
+
+### Functions
+
+Functions are declared with parameters, a body, and a return type.
+
+```minusC
+add = ({a} int, {b} int) function {
+    return a + b;
+} int;
+
+greet = ({name} str) function {
+    HelloWorldLine("Hello, ", name);
+    return 0;
+} int;
+```
+
+### Built-in I/O
+
+| Function | Description |
+|----------|-------------|
+| `HelloWorld(arg1, arg2, ...)` | Prints each argument to stdout. Accepts strings and integers (ints are converted automatically). |
+| `HelloWorldLine(arg1, arg2, ...)` | Same as `HelloWorld` but appends a newline. |
 
 ### Comments
 
-- Line comment: `comment` followed by rest of line
-- Block comment: `comment:` until `;`
+```minusC
+comment this is a line comment
+
+comment:
+    this is a block comment
+    spanning multiple lines
+;
+```
+
+## Error Handling
+
+### Compile-Time Errors
+
+| Error | Description |
+|-------|-------------|
+| Undefined variable | Using a variable that hasn't been declared |
+| Type mismatch | Assigning a value to a variable of an incompatible type (e.g. array to int, str to int) |
+
+### Runtime Errors
+
+| Error | Description |
+|-------|-------------|
+| Array out-of-bounds | Accessing an array index outside `[0, size)` |
+| Null string access | Indexing or slicing a null/uninitialized string |
+| Division by zero | Dividing an integer by zero |

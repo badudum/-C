@@ -63,6 +63,30 @@ testArrayOps = ({x} int) function {
     HelloWorldLine("five[0]: ", f0);
     HelloWorldLine("five[4]: ", f4);
 
+    {zeros} Array<int> = [0; 5];
+    {z0} int = zeros[0];
+    {z4} int = zeros[4];
+    HelloWorldLine("zeros[0]: ", z0);
+    HelloWorldLine("zeros[4]: ", z4);
+
+    {sevens} Array<int> = [7; 3];
+    {sv0} int = sevens[0];
+    {sv2} int = sevens[2];
+    HelloWorldLine("sevens[0]: ", sv0);
+    HelloWorldLine("sevens[2]: ", sv2);
+
+    {range} Array<int> = [0; 3, 1; 2, 99; 1];
+    {r0} int = range[0];
+    {r2} int = range[2];
+    {r3} int = range[3];
+    {r4} int = range[4];
+    {r5} int = range[5];
+    HelloWorldLine("range[0] (expect 0): ", r0);
+    HelloWorldLine("range[2] (expect 0): ", r2);
+    HelloWorldLine("range[3] (expect 1): ", r3);
+    HelloWorldLine("range[4] (expect 1): ", r4);
+    HelloWorldLine("range[5] (expect 99): ", r5);
+
     return 0;
 } int;
 

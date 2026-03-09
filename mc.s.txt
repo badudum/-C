@@ -6,7 +6,7 @@ mov x0, #0
 mov x16, #1
 svc #0
 
- # compound (0x6000023bb300) 
+ # compound (0x600000a356e0) 
 # start of "print"
 .globl print
 print:
@@ -19,7 +19,7 @@ sub sp, sp, #96
 # load parameter test from x0
 str x0, [fp, #-48]
 
- # compound (0x6000023bb480) 
+ # compound (0x600000a35860) 
 
 # variable (test)
 ldr x0, [fp, #-48]
@@ -52,7 +52,7 @@ sub sp, sp, #112
 # load parameter pushed from x0
 str x0, [fp, #-48]
 
- # compound (0x6000023bb6c0) 
+ # compound (0x600000a35aa0) 
 
 # Taken string : 
 sub sp, sp, #16
@@ -116,7 +116,7 @@ sub sp, sp, #912
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x6000023bb8a0) 
+ # compound (0x600000a35c80) 
 
 # --- String ops tests ---
 sub sp, sp, #32
@@ -768,14 +768,14 @@ str x0, [fp, #-48]
 testArrayOps:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #752
+sub sp, sp, #1744
 
-sub sp, sp, #768
+sub sp, sp, #1760
 
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x6000023bc0c0) 
+ # compound (0x600000a36460) 
 
 # --- Array tests ---
 sub sp, sp, #32
@@ -1309,6 +1309,811 @@ bl HelloWorldLine
 
 # store return value
 str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #752
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #768
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #784
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #800
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #816
+str x2, [x4]
+
+# assign array (base_slot=47, count=5)
+mov w0, #47
+
+# store array base slot
+sub x4, fp, #832
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #848
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #848
+ldr w0, [x4]
+
+# array bounds check (size=5)
+mov w1, #5
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #832
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #848
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #880
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #4
+sub x4, fp, #896
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #896
+ldr w0, [x4]
+
+# array bounds check (size=5)
+mov w1, #5
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #832
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #896
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #928
+str w0, [x4]
+
+# zeros[0]: 
+sub sp, sp, #16
+ldr x0, =0x203a
+str x0, [sp, #8]
+ldr x0, =0x5d305b736f72657a
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #944
+str x0, [x4]
+
+# variable (z0)
+sub x4, fp, #880
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #944
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #880
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# zeros[4]: 
+sub sp, sp, #16
+ldr x0, =0x203a
+str x0, [sp, #8]
+ldr x0, =0x5d345b736f72657a
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #976
+str x0, [x4]
+
+# variable (z4)
+sub x4, fp, #928
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #976
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #928
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #7
+sub x4, fp, #1008
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #7
+sub x4, fp, #1024
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #7
+sub x4, fp, #1040
+str x2, [x4]
+
+# assign array (base_slot=63, count=3)
+mov w0, #63
+
+# store array base slot
+sub x4, fp, #1056
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1072
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #1072
+ldr w0, [x4]
+
+# array bounds check (size=3)
+mov w1, #3
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #1056
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #1072
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #1104
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #2
+sub x4, fp, #1120
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #1120
+ldr w0, [x4]
+
+# array bounds check (size=3)
+mov w1, #3
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #1056
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #1120
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #1152
+str w0, [x4]
+
+# sevens[0]: 
+sub sp, sp, #16
+ldr x0, =0x203a5d
+str x0, [sp, #8]
+ldr x0, =0x305b736e65766573
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1168
+str x0, [x4]
+
+# variable (sv0)
+sub x4, fp, #1104
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1168
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1104
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# sevens[2]: 
+sub sp, sp, #16
+ldr x0, =0x203a5d
+str x0, [sp, #8]
+ldr x0, =0x325b736e65766573
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1200
+str x0, [x4]
+
+# variable (sv2)
+sub x4, fp, #1152
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1200
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1152
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1232
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1248
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1264
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #1
+sub x4, fp, #1280
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #1
+sub x4, fp, #1296
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #99
+sub x4, fp, #1312
+str x2, [x4]
+
+# assign array (base_slot=77, count=6)
+mov w0, #77
+
+# store array base slot
+sub x4, fp, #1328
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1344
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #1344
+ldr w0, [x4]
+
+# array bounds check (size=6)
+mov w1, #6
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #1328
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #1344
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #1376
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #2
+sub x4, fp, #1392
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #1392
+ldr w0, [x4]
+
+# array bounds check (size=6)
+mov w1, #6
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #1328
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #1392
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #1424
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #1440
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #1440
+ldr w0, [x4]
+
+# array bounds check (size=6)
+mov w1, #6
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #1328
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #1440
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #1472
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #4
+sub x4, fp, #1488
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #1488
+ldr w0, [x4]
+
+# array bounds check (size=6)
+mov w1, #6
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #1328
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #1488
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #1520
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #1536
+str x2, [x4]
+
+# load array index for bounds check
+sub x4, fp, #1536
+ldr w0, [x4]
+
+# array bounds check (size=6)
+mov w1, #6
+bl rt_array_bounds_check
+
+# load array base_slot
+sub x4, fp, #1328
+ldr w0, [x4]
+str w0, [sp, #-16]!
+
+# load array index
+sub x4, fp, #1536
+ldr w0, [x4]
+
+# array element access
+ldr w1, [sp], #16
+add w1, w1, w0
+mov w3, #16
+mul w1, w1, w3
+mov x3, fp
+sub x3, x3, x1
+ldr x0, [x3]
+str x0, [sp, #-16]!
+
+# assign int (pop from stack)
+ldr x0, [sp], #16
+
+# assign int from access
+sub x4, fp, #1568
+str w0, [x4]
+
+# range[0] (expect 0): 
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x203a293020
+str x0, [sp, #16]
+ldr x0, =0x7463657078652820
+str x0, [sp, #8]
+ldr x0, =0x5d305b65676e6172
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1584
+str x0, [x4]
+
+# variable (r0)
+sub x4, fp, #1376
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1584
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1376
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# range[2] (expect 0): 
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x203a293020
+str x0, [sp, #16]
+ldr x0, =0x7463657078652820
+str x0, [sp, #8]
+ldr x0, =0x5d325b65676e6172
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1616
+str x0, [x4]
+
+# variable (r2)
+sub x4, fp, #1424
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1616
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1424
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# range[3] (expect 1): 
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x203a293120
+str x0, [sp, #16]
+ldr x0, =0x7463657078652820
+str x0, [sp, #8]
+ldr x0, =0x5d335b65676e6172
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1648
+str x0, [x4]
+
+# variable (r3)
+sub x4, fp, #1472
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1648
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1472
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# range[4] (expect 1): 
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x203a293120
+str x0, [sp, #16]
+ldr x0, =0x7463657078652820
+str x0, [sp, #8]
+ldr x0, =0x5d345b65676e6172
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1680
+str x0, [x4]
+
+# variable (r4)
+sub x4, fp, #1520
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1680
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1520
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# range[5] (expect 99): 
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x203a29393920
+str x0, [sp, #16]
+ldr x0, =0x7463657078652820
+str x0, [sp, #8]
+ldr x0, =0x5d355b65676e6172
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1712
+str x0, [x4]
+
+# variable (r5)
+sub x4, fp, #1568
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1712
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1568
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
 
 mov w0, #0
 b return_statement
@@ -1330,7 +2135,7 @@ sub sp, sp, #1536
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x6000023bc660) 
+ # compound (0x600000a36e80) 
 
 # Hello
 sub sp, sp, #16
@@ -1576,7 +2381,7 @@ mov x2, #4
 sub x4, fp, #592
 str x2, [x4]
 
- # compound (0x6000023bcd20) 
+ # compound (0x600000a37540) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -1667,7 +2472,7 @@ mov x2, #2
 sub x4, fp, #784
 str x2, [x4]
 
- # compound (0x6000023bd020) 
+ # compound (0x600000a37840) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -1716,7 +2521,7 @@ mov x2, #4
 sub x4, fp, #912
 str x2, [x4]
 
- # compound (0x6000023bd1a0) 
+ # compound (0x600000a379c0) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -1724,7 +2529,7 @@ mov x2, #3
 sub x4, fp, #880
 str x2, [x4]
 
- # compound (0x6000023bd260) 
+ # compound (0x600000a37a80) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]

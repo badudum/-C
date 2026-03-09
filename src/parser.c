@@ -159,10 +159,41 @@ AST_t * parse_factor(parser_t * parser)
             parser_next(parser, LSQUAREBRKT_TOKEN);
             AST_t* arr = init_ast(ARRAY_LITERAL_AST);
             if (parser->token->type != RSQUAREBRKT_TOKEN) {
-                list_enqueue(arr->children, parse_expression(parser));
-                while (parser->token->type == COMMA_TOKEN) {
-                    parser_next(parser, COMMA_TOKEN);
-                    list_enqueue(arr->children, parse_expression(parser));
+                AST_t* first = parse_expression(parser);
+                if (parser->token->type == SEMI_TOKEN) {
+                    /* Repeat/range syntax: [val; count, val; count, ...] */
+                    AST_t* val = first;
+                    while (1) {
+                        parser_next(parser, SEMI_TOKEN);
+                        AST_t* count_expr = parse_expression(parser);
+                        if (count_expr->type != INT_AST) {
+                            fprintf(stderr, "Error: Array repeat count must be an integer literal\n");
+                            exit(1);
+                        }
+                        int count = count_expr->int_value;
+                        for (int i = 0; i < count; i++) {
+                            AST_t* elem = init_ast(INT_AST);
+                            elem->int_value = val->int_value;
+                            list_enqueue(arr->children, elem);
+                        }
+                        if (parser->token->type == COMMA_TOKEN) {
+                            parser_next(parser, COMMA_TOKEN);
+                            val = parse_expression(parser);
+                            if (parser->token->type != SEMI_TOKEN) {
+                                fprintf(stderr, "Error: Expected ';' after value in array range syntax\n");
+                                exit(1);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                } else {
+                    /* Explicit literal: [val, val, ...] */
+                    list_enqueue(arr->children, first);
+                    while (parser->token->type == COMMA_TOKEN) {
+                        parser_next(parser, COMMA_TOKEN);
+                        list_enqueue(arr->children, parse_expression(parser));
+                    }
                 }
             }
             parser_next(parser, RSQUAREBRKT_TOKEN);
