@@ -1,0 +1,11 @@
+test = ({x} int) function {
+    {si} str = "Hello";
+    {subsi} str = SmolString(si, 1, 4);
+    HelloWorldLine("SmolString(si,1,4): ", subsi);
+    return 0;
+} int;
+
+main = ({x} int) function {
+    {dummy} int = test(0);
+    return 0;
+} int;

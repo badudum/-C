@@ -1,0 +1,27 @@
+main = ({x} int) function {
+    {a} str = "Hello";
+    {b} str = "World";
+    {c} str = a + b;
+    HelloWorldLine("concat: ", c);
+
+    {s} str = "hello";
+    {ch} str = s[0];
+    HelloWorldLine("s[0]: ", ch);
+
+    {sub} str = Substring(s, 1, 4);
+    HelloWorldLine("s[1:4]: ", sub);
+
+    {t} str = "foo bar baz";
+    {r} str = Change(t, "bar", "qux");
+    HelloWorldLine("Change: ", r);
+
+    {sp} str = "  trim me  ";
+    {sm} str = SmolString(sp);
+    HelloWorldLine("SmolString: ", sm);
+
+    {split} str = "a,b,c";
+    {parts} str = SmolStrings(split, ",");
+    HelloWorldLine("SmolStrings: ", parts);
+
+    return 0;
+} int;

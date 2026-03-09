@@ -11,5 +11,13 @@ int type_to_type(const char* name)
     {
         return TYPE_BOOL;
     }
+    else if (strcmp(name, "str") == 0)
+    {
+        return TYPE_STR;
+    }
+    else if (strcmp(name, "Array") == 0)
+    {
+        return TYPE_ARRAY;
+    }
     return TYPE_UNKNOWN;
 }

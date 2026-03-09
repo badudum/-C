@@ -8,7 +8,6 @@
 #include "include/assembly/function_ass.h"
 #include "include/assembly/call_ass.h"
 #include "include/assembly/assign_int_ass.h"
-#include "include/assembly/assign_call_ass.h"
 #include "include/assembly/assign_binop_ass.h"
 #include "include/assembly/assign_default_ass.h"
 #include "include/assembly/int_ass.h"
@@ -24,6 +23,9 @@
 /*
 * The reason we allocate an additional 128 bytes is to ensure that we have enough space, and does not cause a buffer overflow
 */
+
+/* Forward declaration */
+static void append_load_from_fp(char **s, int offset, int reg, const char *comment);
 
 /* Helper: emit ldr w0 from [fp, offset]. Handles large offsets. */
 static void append_load_w_from_fp(char **s, int offset, const char *comment)
@@ -53,6 +55,34 @@ static void append_store_w_to_fp(char **s, int offset, const char *comment)
     *s = realloc(*s, (strlen(*s) + strlen(instr) + 1) * sizeof(char));
     strcat(*s, instr);
     free(instr);
+}
+
+/* Helper: emit str xN to [fp, offset]. Handles large offsets. */
+static void append_store_to_fp(char **s, int offset, int reg, const char *comment)
+{
+    int abs_off = offset < 0 ? -offset : offset;
+    char *instr = calloc(256, sizeof(char));
+    if (abs_off <= 255) {
+        sprintf(instr, "\n# %s\nstr x%d, [fp, #%d]\n", comment, reg, offset);
+    } else {
+        sprintf(instr, "\n# %s\nsub x4, fp, #%d\nstr x%d, [x4]\n", comment, abs_off, reg);
+    }
+    *s = realloc(*s, (strlen(*s) + strlen(instr) + 1) * sizeof(char));
+    strcat(*s, instr);
+    free(instr);
+}
+
+/* Helper: return store instruction for xN to [fp, offset]. Caller frees. */
+static char* store_x_to_fp_instr(int offset, int reg, const char* comment)
+{
+    int abs_off = offset < 0 ? -offset : offset;
+    char *instr = calloc(256, sizeof(char));
+    if (abs_off <= 255) {
+        sprintf(instr, "\n# %s\nstr x%d, [fp, #%d]\n", comment, reg, offset);
+    } else {
+        sprintf(instr, "\n# %s\nsub x4, fp, #%d\nstr x%d, [x4]\n", comment, abs_off, reg);
+    }
+    return instr;
 }
 
 char * assemble_compound(AST_t* ast, dynamic_list_t* list)
@@ -90,24 +120,55 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         free(assemble_value);
     }
 
-    if(ast->datatype == TYPE_INT)
+    if (ast->parent->type == CALL_AST)
+    {
+        /* Return value is in x0 after the call; store to variable and pop stack */
+        int var_offset = ast->stack_index * -16;
+        if (ast->datatype == TYPE_INT)
+            append_store_w_to_fp(&s, var_offset, "assign call store (int)");
+        else
+            append_store_to_fp(&s, var_offset, 0, "assign call store (ptr)");
+        const char* pop = "add sp, sp, #16\n";
+        s = realloc(s, (strlen(s) + strlen(pop) + 1) * sizeof(char));
+        strcat(s, pop);
+    }
+
+    else if (IS_ARRAY_TYPE(ast->datatype))
+    {
+        /* Array literal: elements already stored by assemble_array_literal.
+           Store the base stack_index in the variable slot so access can find it. */
+        AST_t* rhs = ast->parent;
+        if (rhs->type == COMP_AST && rhs->children->size == 1)
+            rhs = (AST_t*) rhs->children->items[0];
+        int var_offset = ast->stack_index * -16;
+        char *arr_info = calloc(256, sizeof(char));
+        int base_slot = rhs->stack_index;
+        int count = rhs->int_value;
+        sprintf(arr_info, "\n# assign array (base_slot=%d, count=%d)\nmov w0, #%d\n",
+                base_slot, count, base_slot);
+        s = realloc(s, strlen(s) + strlen(arr_info) + 1);
+        strcat(s, arr_info);
+        free(arr_info);
+        append_store_w_to_fp(&s, var_offset, "store array base slot");
+    }
+
+    else if(ast->datatype == TYPE_INT)
     {
         AST_t* rhs = ast->parent;
         if (rhs->type == COMP_AST && rhs->children->size == 1)
             rhs = (AST_t*) rhs->children->items[0];
-        int rhs_offset = rhs->stack_index * -16;
         int var_offset = ast->stack_index * -16;
-        append_load_w_from_fp(&s, rhs_offset, "assign (int) load");
-        append_store_w_to_fp(&s, var_offset, "assign (int) store");
-    }
-
-    else if (ast->parent->type == CALL_AST)
-    {
-        char * mo = calloc(assembly_assignment_call_aarch64_len + 128, sizeof(char));
-        sprintf(mo, (char*) assembly_assignment_call_aarch64, id, 0);
-        s = realloc(s, (strlen(s) + strlen(mo) + 1) * sizeof(char));
-        strcat(s, mo);
-        free(mo);
+        if (rhs->type == ACCESS_AST) {
+            /* Array element access pushed result to stack */
+            const char* pop = "\n# assign int (pop from stack)\nldr x0, [sp], #16\n";
+            s = realloc(s, strlen(s) + strlen(pop) + 1);
+            strcat(s, pop);
+            append_store_w_to_fp(&s, var_offset, "assign int from access");
+        } else {
+            int rhs_offset = rhs->stack_index * -16;
+            append_load_w_from_fp(&s, rhs_offset, "assign (int) load");
+            append_store_w_to_fp(&s, var_offset, "assign (int) store");
+        }
     }
 
     else if(ast->parent->type == BINOP_AST || (ast->parent->type == COMP_AST && ast->parent->children->size == 1))
@@ -115,34 +176,44 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         AST_t* rhs = ast->parent->type == COMP_AST ? (AST_t*) ast->parent->children->items[0] : ast->parent;
         int rhs_offset = rhs->stack_index * -16;
         int var_offset = ast->stack_index * -16;
-        append_load_w_from_fp(&s, rhs_offset, "assign binop load");
-        append_store_w_to_fp(&s, var_offset, "assign binop store");
+        if (ast->datatype == TYPE_STR) {
+            /* String BINOP (+ ) pushes result to stack; pop and store */
+            const char* pop_str = "\n# assign str binop (pop from stack)\nldr x0, [sp], #16\n";
+            s = realloc(s, strlen(s) + strlen(pop_str) + 1);
+            strcat(s, pop_str);
+            append_store_to_fp(&s, var_offset, 0, "assign binop store (str)");
+        } else {
+            append_load_w_from_fp(&s, rhs_offset, "assign binop load");
+            append_store_w_to_fp(&s, var_offset, "assign binop store");
+        }
+    }
+
+    else if (ast->datatype == TYPE_STR)
+    {
+        AST_t* rhs = ast->parent->type == COMP_AST && ast->parent->children->size == 1
+            ? (AST_t*) ast->parent->children->items[0] : ast->parent;
+        int var_offset = ast->stack_index * -16;
+        /* SLICE, ACCESS push result; STRING_AST stores to fp */
+        if (rhs->type == SLICE_AST || rhs->type == ACCESS_AST) {
+            const char* pop_str = "\n# assign str (pop from stack)\nldr x0, [sp], #16\n";
+            s = realloc(s, strlen(s) + strlen(pop_str) + 1);
+            strcat(s, pop_str);
+        } else {
+            int rhs_offset = rhs->stack_index * -16;
+            append_load_from_fp(&s, rhs_offset, 0, "assign str load");
+        }
+        append_store_to_fp(&s, var_offset, 0, "assign str store");
     }
 
     else 
     {
-        char * mo = calloc(assembly_assignment_default_aarch64_len + 128, sizeof(char));
-        sprintf(mo, (char*) assembly_assignment_default_aarch64, id);
-        s = realloc(s, (strlen(s) + strlen(mo) + 1) * sizeof(char));
-        strcat(s, mo);
-        free(mo);
+        int var_offset = ast->stack_index * -16;
+        const char* add_sp = "\n# assign default\nadd x0, sp, #0\n";
+        s = realloc(s, strlen(s) + strlen(add_sp) + 1);
+        strcat(s, add_sp);
+        append_store_to_fp(&s, var_offset, 0, "assign default store");
     }
     return s;
-}
-
-/* Helper: emit store from reg to [fp, offset]. Handles large offsets. */
-static void append_store_to_fp(char **s, int offset, int reg, const char *comment)
-{
-    int abs_off = offset < 0 ? -offset : offset;
-    char *instr = calloc(256, sizeof(char));
-    if (abs_off <= 255) {
-        sprintf(instr, "\n# %s\nstr x%d, [fp, #%d]\n", comment, reg, offset);
-    } else {
-        sprintf(instr, "\n# %s\nsub x4, fp, #%d\nstr x%d, [x4]\n", comment, abs_off, reg);
-    }
-    *s = realloc(*s, (strlen(*s) + strlen(instr) + 1) * sizeof(char));
-    strcat(*s, instr);
-    free(instr);
 }
 
 /* Helper: emit load from [fp, offset] into reg. Handles large offsets. */
@@ -428,9 +499,43 @@ char * assemble_root(AST_t* ast, dynamic_list_t * list)
 }
 
 
+static int is_string_operand(AST_t* node, dynamic_list_t* list)
+{
+    if (node->type == STRING_AST) return 1;
+    if (node->type == VAR_AST && node->name) {
+        for (unsigned int j = 0; j < list->size; j++) {
+            AST_t* def = (AST_t*)list->items[j];
+            if (def->type == ASSIGNEMENT_AST && def->name && strcmp(def->name, node->name) == 0)
+                return (def->datatype == TYPE_STR);
+        }
+    }
+    return 0;
+}
+
 char * assemble_binop(AST_t * ast, dynamic_list_t * list)
 {
     char * s = calloc(1, sizeof(char));
+
+    if (ast->op == PLUS_TOKEN && is_string_operand(ast->left, list) && is_string_operand(ast->right, list)) {
+        char* left_asm = assemble(ast->left, list);
+        char* right_asm = assemble(ast->right, list);
+        s = realloc(s, strlen(left_asm) + strlen(right_asm) + 128);
+        strcat(s, left_asm);
+        strcat(s, right_asm);
+        int left_off = ast->left->stack_index * -16;
+        int right_off = ast->right->stack_index * -16;
+        append_load_from_fp(&s, left_off, 0, "BigWord left");
+        const char* push = "str x0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(push) + 1);
+        strcat(s, push);
+        append_load_from_fp(&s, right_off, 0, "BigWord right");
+        const char* call = "\n# BigWord\nmov x1, x0\nldr x0, [sp], #16\nbl BigWord\nstr x0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(call) + 1);
+        strcat(s, call);
+        free(left_asm);
+        free(right_asm);
+        return s;
+    }
 
     char * left_str = assemble(ast->left, list);
     char * right_str = assemble(ast->right, list);
@@ -468,12 +573,21 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
             else
                 sprintf(op_asm, (char*) assemble_mul_aarch64, left_offset, right_offset, result_offset);
             break;
-        case SLASH_TOKEN:
+        case SLASH_TOKEN:{
+            /* Division by zero check: load divisor, call rt_div_zero_check */
+            char div_chk[256];
+            if (right_abs > 255)
+                sprintf(div_chk, "\n# div-by-zero check\nsub x4, fp, #%d\nldr w0, [x4]\nbl rt_div_zero_check\n", right_abs);
+            else
+                sprintf(div_chk, "\n# div-by-zero check\nldr w0, [fp, #%d]\nbl rt_div_zero_check\n", right_offset);
+            s = realloc(s, strlen(s) + strlen(div_chk) + 1);
+            strcat(s, div_chk);
             if (use_large)
                 sprintf(op_asm, (char*) assemble_div_large_offset_aarch64, left_abs, right_abs, result_abs);
             else
                 sprintf(op_asm, (char*) assemble_div_aarch64, left_offset, right_offset, result_offset);
             break;
+        }
         default:
             printf("ASSEMBLER: No front for AST of type `%d`\n", ast->type);
             exit(1);
@@ -486,14 +600,144 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
 }
 
 
+char * assemble_slice(AST_t * ast, dynamic_list_t * list)
+{
+    AST_t* base = (AST_t*)ast->children->items[0];
+    AST_t* start_expr = (AST_t*)ast->children->items[1];
+    AST_t* end_expr = (AST_t*)ast->children->items[2];
+    /* Assemble start/end first so their values are stored before we load them */
+    char * s = calloc(1, sizeof(char));
+    char* start_asm = assemble(start_expr, list);
+    if (start_asm) {
+        s = realloc(s, strlen(s) + strlen(start_asm) + 1);
+        strcat(s, start_asm);
+        free(start_asm);
+    }
+    char* end_asm = assemble(end_expr, list);
+    if (end_asm) {
+        s = realloc(s, strlen(s) + strlen(end_asm) + 1);
+        strcat(s, end_asm);
+        free(end_asm);
+    }
+    int base_offset = (base->stack_index > 0) ? (base->stack_index * -16) : (ast->int_value * -16);
+    if (base_offset == 0 && base->name && ast->stackframe) {
+        for (unsigned int i = 0; i < ast->stackframe->stack->size; i++) {
+            char* var_name = (char*)ast->stackframe->stack->items[i];
+            if (var_name && strcmp(var_name, base->name) == 0) {
+                base_offset = (int)(i + 1) * -16;
+                break;
+            }
+        }
+    }
+    append_load_from_fp(&s, base_offset, 0, "load string for SmolString");
+    /* Null string check */
+    const char* null_chk = "bl rt_null_str_check\n";
+    s = realloc(s, strlen(s) + strlen(null_chk) + 1);
+    strcat(s, null_chk);
+    const char* push = "str x0, [sp, #-16]!\n";
+    s = realloc(s, strlen(s) + strlen(push) + 1);
+    strcat(s, push);
+    int start_off = start_expr->stack_index * -16;
+    int end_off = end_expr->stack_index * -16;
+    append_load_w_from_fp(&s, start_off, "load start");
+    const char* push2 = "str w0, [sp, #-16]!\n";
+    s = realloc(s, strlen(s) + strlen(push2) + 1);
+    strcat(s, push2);
+    append_load_w_from_fp(&s, end_off, "load end");
+    const char* call = "\n# SmolString (slice)\nmov w2, w0\nldr w1, [sp], #16\nldr x0, [sp], #16\nbl SmolString\nstr x0, [sp, #-16]!\n";
+    s = realloc(s, strlen(s) + strlen(call) + 1);
+    strcat(s, call);
+    return s;
+}
+
 char * assemble_access(AST_t * ast, dynamic_list_t * list)
 {
-    int offset = ((ast->stack_index * -1) * 8) - 8;
-    int array_offset = MAX(8, (ast->int_value+1) *8);
+    /* Assemble the index expression first so its value is stored */
+    char * s = calloc(1, sizeof(char));
+    if (ast->left) {
+        char* idx_asm = assemble(ast->left, list);
+        if (idx_asm) {
+            s = realloc(s, strlen(s) + strlen(idx_asm) + 1);
+            strcat(s, idx_asm);
+            free(idx_asm);
+        }
+    }
+    int base_offset = (ast->int_value > 0) ? (ast->int_value * -16) : 0;
+    if (base_offset == 0 && ast->name && ast->stackframe) {
+        for (unsigned int i = 0; i < ast->stackframe->stack->size; i++) {
+            char* var_name = (char*)ast->stackframe->stack->items[i];
+            if (var_name && strcmp(var_name, ast->name) == 0) {
+                base_offset = (int)(i + 1) * -16;
+                break;
+            }
+        }
+    }
 
-    char * s = calloc(assemble_access_aarch64_len + 128, sizeof(char));
-    sprintf(s, (char*) assemble_access_aarch64, offset, array_offset, array_offset, ast->stack_index * 8);
+    /* Check if base is an array variable */
+    int is_array = 0;
+    for (unsigned int i = 0; i < list->size; i++) {
+        AST_t* def = (AST_t*) list->items[i];
+        if (def->type == ASSIGNEMENT_AST && def->name && ast->name &&
+            strcmp(def->name, ast->name) == 0 && IS_ARRAY_TYPE(def->datatype)) {
+            is_array = 1;
+            break;
+        }
+    }
 
+    if (is_array) {
+        /* Array access: base_slot stored at [fp, base_offset], index at idx_offset */
+        int idx_offset = ast->left->stack_index * -16;
+        /* Find array size for bounds check */
+        int arr_size = 0;
+        for (unsigned int i = 0; i < list->size; i++) {
+            AST_t* def = (AST_t*) list->items[i];
+            if (def->type == ASSIGNEMENT_AST && def->name && ast->name &&
+                strcmp(def->name, ast->name) == 0 && def->parent &&
+                def->parent->type == ARRAY_LITERAL_AST) {
+                arr_size = def->parent->int_value;
+                break;
+            }
+        }
+        /* Emit bounds check: w0=index, w1=size */
+        append_load_w_from_fp(&s, idx_offset, "load array index for bounds check");
+        char bounds_chk[128];
+        sprintf(bounds_chk, "\n# array bounds check (size=%d)\nmov w1, #%d\nbl rt_array_bounds_check\n", arr_size, arr_size);
+        s = realloc(s, strlen(s) + strlen(bounds_chk) + 1);
+        strcat(s, bounds_chk);
+
+        append_load_w_from_fp(&s, base_offset, "load array base_slot");
+        const char* push = "str w0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(push) + 1);
+        strcat(s, push);
+        append_load_w_from_fp(&s, idx_offset, "load array index");
+        const char* arr_access =
+            "\n# array element access\n"
+            "ldr w1, [sp], #16\n"
+            "add w1, w1, w0\n"
+            "mov w3, #16\n"
+            "mul w1, w1, w3\n"
+            "mov x3, fp\n"
+            "sub x3, x3, x1\n"
+            "ldr x0, [x3]\n"
+            "str x0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(arr_access) + 1);
+        strcat(s, arr_access);
+    } else {
+        /* String access: CharAt */
+        append_load_from_fp(&s, base_offset, 0, "load string for CharAt");
+        /* Null string check */
+        const char* null_chk = "bl rt_null_str_check\n";
+        s = realloc(s, strlen(s) + strlen(null_chk) + 1);
+        strcat(s, null_chk);
+        const char* push = "str x0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(push) + 1);
+        strcat(s, push);
+        int idx_offset = ast->left->stack_index * -16;
+        append_load_w_from_fp(&s, idx_offset, "load index for CharAt");
+        const char* call = "\n# CharAt\nmov w1, w0\nldr x0, [sp], #16\nbl CharAt\nstr x0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(call) + 1);
+        strcat(s, call);
+    }
     return s;
 }
 
@@ -501,17 +745,49 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
 char * assemble_return(AST_t * ast, dynamic_list_t * list)
 {
     char * s = calloc(1, sizeof(char));
+    AST_t * expr = ast->parent;
 
-    const char* template = "\n%s\n"
-                            "b return_statement\n";
+    /* Unwrap (expr) from parentheses */
+    if (expr->type == COMP_AST && expr->children->size == 1)
+        expr = (AST_t*) expr->children->items[0];
 
-    char * value = assemble(ast->parent, list);
-    char * ret = calloc(strlen(template) + strlen(value) + 128, sizeof(char));
-    sprintf(ret, template, value);
-
-    s = realloc(s, (strlen(ret) + 1) * sizeof(char));
-    strcat(s, ret);
-    free(ret);
+    if (expr->type == INT_AST)
+    {
+        char * instr = calloc(64, sizeof(char));
+        sprintf(instr, "\nmov w0, #%d\nb return_statement\n", expr->int_value);
+        s = realloc(s, strlen(instr) + 1);
+        strcat(s, instr);
+        free(instr);
+    }
+    else if (expr->type == VAR_AST || expr->type == BINOP_AST)
+    {
+        char * load = calloc(1, sizeof(char));
+        append_load_w_from_fp(&load, expr->stack_index * -16, "return load");
+        s = realloc(s, strlen(load) + 32);
+        strcat(s, load);
+        strcat(s, "b return_statement\n");
+        free(load);
+    }
+    else if (expr->type == CALL_AST)
+    {
+        /* Assemble call; it stores return value on stack. Pop into x0 for return. */
+        char * call_asm = assemble_call(expr, list);
+        s = realloc(s, strlen(call_asm) + 64);
+        strcat(s, call_asm);
+        free(call_asm);
+        const char * pop_and_branch = "ldr x0, [sp], #16\nb return_statement\n";
+        s = realloc(s, strlen(s) + strlen(pop_and_branch) + 1);
+        strcat(s, pop_and_branch);
+    }
+    else
+    {
+        /* Fallback: assemble and hope value ends up in x0 */
+        char * value = assemble(ast->parent, list);
+        s = realloc(s, strlen(value) + 32);
+        strcat(s, value);
+        strcat(s, "\nb return_statement\n");
+        free(value);
+    }
 
     return s;
 }
@@ -522,67 +798,94 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
     char * name = ast->name;
     int index = ast->stackframe->stack->size * 16;
 
-    char * s = calloc((assembly_function_begin_aarch64_len + (strlen(name)) + 1), sizeof(char));
+    size_t s_cap = 65536;
+    char * s = calloc(s_cap, sizeof(char));
 
     sprintf(s, (char*) assembly_function_begin_aarch64, name, index);
 
     if(ast->stackframe->stack->size)
     {
         const char* sub_template = "\nsub sp, sp, #%d\n";
-        char* sub = calloc(strlen(sub_template) + 128, sizeof(char));
-        sprintf(sub, sub_template, (1 + ast->stackframe->stack->size) * 16);
-
-        s = realloc(s, (strlen(s) + strlen(sub) + 1) * sizeof(char));
+        char sub[128];
+        snprintf(sub, sizeof(sub), sub_template, (1 + ast->stackframe->stack->size) * 16);
         strcat(s, sub);
-        free(sub);
     }
 
     AST_t* assembly_value = ast;
 
     // Set up function parameters - first 8 parameters in registers x0-x7, rest on stack
+    /* Use a local list for function body to avoid heap corruption from shared list mutation */
+    dynamic_list_t* body_list = init_list(sizeof(struct AST_S*));
     for (unsigned int i = 0; i < assembly_value->children->size; i++)
     {
         AST_t* function_arg = (AST_t*) assembly_value->children->items[i];
+        list_enqueue(body_list, function_arg);
 
         if(i < 8)
         {
-            // First 8 parameters are passed in registers x0-x7
-            const char* param_template = "\n# load parameter %s from x%d\n"
-                                         "str x%d, [fp, #%d]\n";
-            char* param_setup = calloc(strlen(param_template) + 128, sizeof(char));
-            sprintf(param_setup, param_template, function_arg->name, i, i, function_arg->stack_index * -16);
-
-            s = realloc(s, (strlen(s) + strlen(param_setup) + 1) * sizeof(char));
-            strcat(s, param_setup);
-            free(param_setup);
+            char param_comment[128];
+            snprintf(param_comment, sizeof(param_comment), "load parameter %s from x%d", function_arg->name, i);
+            char* store_instr = store_x_to_fp_instr(function_arg->stack_index * -16, i, param_comment);
+            size_t need = strlen(s) + strlen(store_instr) + 1;
+            if (need >= s_cap) {
+                s_cap = need + 65536;
+                char* new_s = realloc(s, s_cap);
+                if (new_s) s = new_s;
+            }
+            strcat(s, store_instr);
+            free(store_instr);
         }
         else
         {
-            // Additional parameters are passed on the stack
-            int stack_offset = 16 + (i - 8) * 16; // Start after return address/frame pointer
-            const char* param_template = "\n# load parameter %s from stack\n"
-                                         "ldr x0, [sp, #%d]\n"
-                                         "str x0, [fp, #%d]\n";
-            char* param_setup = calloc(strlen(param_template) + 128, sizeof(char));
-            sprintf(param_setup, param_template, function_arg->name, stack_offset, function_arg->stack_index * -16);
-
-            s = realloc(s, (strlen(s) + strlen(param_setup) + 1) * sizeof(char));
-            strcat(s, param_setup);
-            free(param_setup);
+            int stack_offset = 16 + (i - 8) * 16;
+            int var_offset = function_arg->stack_index * -16;
+            const char* load_template = "\n# load parameter %s from stack\nldr x0, [sp, #%d]\n";
+            char param_buf[256];
+            int plen = snprintf(param_buf, sizeof(param_buf), load_template, function_arg->name, stack_offset);
+            if (plen > 0 && (size_t)(strlen(s) + plen) < s_cap)
+                strcat(s, param_buf);
+            char* store_instr = store_x_to_fp_instr(var_offset, 0, "store param");
+            size_t need = strlen(s) + strlen(store_instr) + 1;
+            if (need >= s_cap) {
+                s_cap = need + 65536;
+                char* new_s = realloc(s, s_cap);
+                if (new_s) s = new_s;
+            }
+            strcat(s, store_instr);
+            free(store_instr);
         }
     }
 
-    char* assemble_value_value = assemble(assembly_value->parent, list);
-    s = realloc(s, (strlen(s) + strlen(assemble_value_value) + 1) * sizeof(char));
+    char* assemble_value_value = assemble(assembly_value->parent, body_list);
+    size_t body_len = strlen(assemble_value_value);
+    if (strlen(s) + body_len >= s_cap) {
+        s_cap = strlen(s) + body_len + 65536;
+        char* new_s = realloc(s, s_cap);
+        if (new_s) s = new_s;
+    }
     strcat(s, assemble_value_value);
     free(assemble_value_value);
+    free(body_list->items);
+    free(body_list);
 
     return s;
 }
 
-
-
-
+char * assemble_array_literal(AST_t * ast, dynamic_list_t * list)
+{
+    char * s = calloc(1, sizeof(char));
+    int count = ast->int_value;
+    for (int i = 0; i < count; i++) {
+        AST_t* elem = (AST_t*)ast->children->items[i];
+        char* elem_asm = assemble(elem, list);
+        if (elem_asm) {
+            s = realloc(s, strlen(s) + strlen(elem_asm) + 1);
+            strcat(s, elem_asm);
+            free(elem_asm);
+        }
+    }
+    return s;
+}
 
 
 char * assemble(AST_t * ast, dynamic_list_t * list)
@@ -602,6 +905,8 @@ char * assemble(AST_t * ast, dynamic_list_t * list)
         case STRING_AST : next = assemble_string(ast, list); break;
         case BINOP_AST : next = assemble_binop(ast, list); break;
         case ACCESS_AST : next = assemble_access(ast, list); break;
+        case SLICE_AST : next = assemble_slice(ast, list); break;
+        case ARRAY_LITERAL_AST : next = assemble_array_literal(ast, list); break;
         case RETURN_AST : next = assemble_return(ast, list); break;
         case FUNC_AST : next = assemble_function(ast, list); break;
         default : {printf("ASSEMBLER: No front for AST of type `%d`\n", ast->type); exit(1);} break;

@@ -39,4 +39,8 @@ AST_t* visit_return(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
 
 AST_t* visit_access(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
 
+AST_t* visit_slice(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
+AST_t* visit_array_literal(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
 #endif

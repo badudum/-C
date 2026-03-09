@@ -4,6 +4,68 @@ print = ({test} str) function {
      return 30;
 } int;
 
+stringReturn = ({pushed} str) function {
+    HelloWorldLine("Taken string : ", pushed);
+    return "Done";
+} str;
+
+testStringOps = ({x} int) function {
+    HelloWorldLine("--- String ops tests ---");
+
+    {a} str = "Hello";
+    {b} str = "World";
+    {c} str = a + b;
+    HelloWorldLine("concat a+b: ", c);
+
+    {s} str = "hello";
+    {sub} str = SmolString(s, 1, 4);
+    HelloWorldLine("s[1:4]: ", sub);
+
+    {subsi} str = s[1:4];
+    HelloWorldLine("s[one to four] " , subsi); 
+
+    {ch} str = s[0];
+    HelloWorldLine("s[0]: ", ch);
+
+    {t} str = "foo bar baz";
+    {r} str = Change(t, "bar", "qux");
+    HelloWorldLine("Change: ", r);
+
+    {sp} str = "  trim me  ";
+    {sm} str = Clipper(sp);
+    HelloWorldLine("Clipper: ", sm);
+
+    {split} str = "a,b,c";
+    {parts} str = SmolStrings(split, ",");
+    HelloWorldLine("SmolStrings: ", parts);
+
+    return 0;
+} int;
+
+testArrayOps = ({x} int) function {
+    HelloWorldLine("--- Array tests ---");
+
+    {arr} Array<int> = [10, 20, 30];
+    {a0} int = arr[0];
+    {a1} int = arr[1];
+    {a2} int = arr[2];
+    HelloWorldLine("arr[0]: ", a0);
+    HelloWorldLine("arr[1]: ", a1);
+    HelloWorldLine("arr[2]: ", a2);
+
+    {single} Array<int> = [42];
+    {s0} int = single[0];
+    HelloWorldLine("single[0]: ", s0);
+
+    {five} Array<int> = [1, 2, 3, 4, 5];
+    {f0} int = five[0];
+    {f4} int = five[4];
+    HelloWorldLine("five[0]: ", f0);
+    HelloWorldLine("five[4]: ", f4);
+
+    return 0;
+} int;
+
 main = ({x} int) function {
     {hello} str= "Hello";
     {name} str = "Taeyang Hi!Hello This is a \t longer string with newline \n haha "; 
@@ -33,7 +95,15 @@ main = ({x} int) function {
     HelloWorld(what);
     HelloWorld(name, name2);
     HelloWorld("Hello ", name2, "!\n");
-    print(name);
+    {returnVal} int = print(name);
+    HelloWorldLine("returned value: ", returnVal);
+
+    {returnStr} str = stringReturn("hah");
+    HelloWorldLine(returnStr);
+
+    {dummy} int = testStringOps(0);
+    {dummy2} int = testArrayOps(0);
+
     return 0;
 } int;  
 

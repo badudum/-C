@@ -1,0 +1,6 @@
+main = ({x} int) function {
+    {s} str = "hello";
+    {ch} str = s[1];
+    HelloWorldLine("s[1]: ", ch);
+    return 0;
+} int;

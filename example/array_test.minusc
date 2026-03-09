@@ -1,0 +1,18 @@
+testArrays = ({x} int) function {
+    HelloWorldLine("--- Array tests ---");
+
+    {arr} Array<int> = [10, 20, 30];
+    {a} int = arr[0];
+    {b} int = arr[1];
+    {c} int = arr[2];
+    HelloWorldLine("arr[0]: ", a);
+    HelloWorldLine("arr[1]: ", b);
+    HelloWorldLine("arr[2]: ", c);
+
+    return 0;
+} int;
+
+main = ({x} int) function {
+    {dummy} int = testArrays(0);
+    return 0;
+} int;

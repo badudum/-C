@@ -96,13 +96,27 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
             ast->type = CALL_AST;
             ast->parent = parse_list(parser);
         }
-        else if (parser->token->type == LSQUAREBRKT_TOKEN) // this is for array access
+        else if (parser->token->type == LSQUAREBRKT_TOKEN)
         {
             parser_next(parser, LSQUAREBRKT_TOKEN);
-            ast->type = ACCESS_AST;
-            ast->int_value = atoi(parser->token->value);
-            parser_next(parser, INT_TOKEN);
-            parser_next(parser, RSQUAREBRKT_TOKEN);
+            AST_t* start_expr = parse_expression(parser);
+            if (parser->token->type == COLON_TOKEN)
+            {
+                parser_next(parser, COLON_TOKEN);
+                AST_t* end_expr = parse_expression(parser);
+                parser_next(parser, RSQUAREBRKT_TOKEN);
+                AST_t* slice_ast = init_ast(SLICE_AST);
+                list_enqueue(slice_ast->children, ast);
+                list_enqueue(slice_ast->children, start_expr);
+                list_enqueue(slice_ast->children, end_expr);
+                return slice_ast;
+            }
+            else
+            {
+                parser_next(parser, RSQUAREBRKT_TOKEN);
+                ast->type = ACCESS_AST;
+                ast->left = start_expr;
+            }
         }
     }
 
@@ -114,7 +128,9 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
 
         ast->parent = parse_expression(parser);
 
-        if (ast->parent->type != CALL_AST)
+        if (ast->parent->type != CALL_AST &&
+            ast->parent->type != ACCESS_AST &&
+            ast->parent->type != SLICE_AST)
         {
             ast->parent->name = mkstr(ast->name);
         }
@@ -139,6 +155,20 @@ AST_t * parse_factor(parser_t * parser)
             return parse_string(parser);
         case LPAREN_TOKEN:
             return parse_list(parser);
+        case LSQUAREBRKT_TOKEN:{
+            parser_next(parser, LSQUAREBRKT_TOKEN);
+            AST_t* arr = init_ast(ARRAY_LITERAL_AST);
+            if (parser->token->type != RSQUAREBRKT_TOKEN) {
+                list_enqueue(arr->children, parse_expression(parser));
+                while (parser->token->type == COMMA_TOKEN) {
+                    parser_next(parser, COMMA_TOKEN);
+                    list_enqueue(arr->children, parse_expression(parser));
+                }
+            }
+            parser_next(parser, RSQUAREBRKT_TOKEN);
+            arr->int_value = arr->children->size;
+            return arr;
+        }
         case LBRACE_TOKEN:{
             parser_next(parser, parser->token->type);
             return parse_id(parser);
@@ -255,7 +285,12 @@ AST_t * parse_list(parser_t * parser)
         list->type = FUNC_AST;
         list->parent = parse_compound(parser);
 
-        // TODO : apprenetly we need to implement this 
+        /* Consume the return type after function body (e.g., } int;) */
+        if (parser->token->type == ID_TOKEN)
+        {
+            list->datatype = type_to_type(parser->token->value);
+            parser_next(parser, ID_TOKEN);
+        }
 
         for (int i = 0; i < list->children->size; i++)
         {

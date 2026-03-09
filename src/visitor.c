@@ -1,4 +1,5 @@
 #include "include/visitor.h"
+#include "include/token.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -43,6 +44,8 @@ AST_t* visitor_visit(visitor_t* visitor, AST_t* node, dynamic_list_t* list, stac
         case BINOP_AST: return visit_binop(visitor, node, list, stackframe);break;
         case RETURN_AST: return visit_return(visitor, node, list, stackframe);break;
         case ACCESS_AST: return visit_access(visitor, node, list, stackframe);break;
+        case SLICE_AST: return visit_slice(visitor, node, list, stackframe);break;
+        case ARRAY_LITERAL_AST: return visit_array_literal(visitor, node, list, stackframe);break;
         default: {
             printf("Unknown node type: %d\n", node->type);
             exit(1);
@@ -74,6 +77,17 @@ AST_t* visit_compound(visitor_t * visitor, AST_t* node, dynamic_list_t* list, st
 }
 
 // this is the visitor we use when we have an assignent going on like a = 5;. This is pretty much copying everything over
+static const char* datatype_name(int dt)
+{
+    if (IS_ARRAY_TYPE(dt)) return "Array";
+    switch(dt) {
+        case TYPE_INT: return "int";
+        case TYPE_BOOL: return "bool";
+        case TYPE_STR: return "str";
+        default: return "unknown";
+    }
+}
+
 AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
     AST_t* variable = init_ast(ASSIGNEMENT_AST);
@@ -83,6 +97,31 @@ AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, 
     if (node->parent)
     {
         variable->parent = visitor_visit(visitor, node->parent, list, stackframe);
+    }
+
+    /* Type mismatch checks (only for unambiguous literal/array mismatches) */
+    if (variable->parent && variable->datatype != TYPE_UNKNOWN) {
+        AST_t* rhs = variable->parent;
+        int lhs_is_arr = IS_ARRAY_TYPE(variable->datatype);
+
+        if (rhs->type == ARRAY_LITERAL_AST && !lhs_is_arr) {
+            fprintf(stderr, "Error: Cannot assign array literal to %s variable '%s'\n",
+                    datatype_name(variable->datatype), variable->name);
+            exit(1);
+        }
+        if (lhs_is_arr && (rhs->type == INT_AST || rhs->type == STRING_AST)) {
+            fprintf(stderr, "Error: Cannot assign %s to Array variable '%s'\n",
+                    rhs->type == INT_AST ? "int" : "str", variable->name);
+            exit(1);
+        }
+        if (variable->datatype == TYPE_INT && rhs->type == STRING_AST) {
+            fprintf(stderr, "Error: Cannot assign str to int variable '%s'\n", variable->name);
+            exit(1);
+        }
+        if (variable->datatype == TYPE_STR && rhs->type == INT_AST) {
+            fprintf(stderr, "Error: Cannot assign int to str variable '%s'\n", variable->name);
+            exit(1);
+        }
     }
 
     list_enqueue(stackframe->stack, variable->name);
@@ -100,35 +139,16 @@ AST_t* visit_var(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackfr
     
     int index = 0;
 
-    // for (int i = 0; i < list->size; i++)
-    // {
-    //     AST_t * child = (AST_t*)list->items[i];
-
-    //     if (!child->name)
-    //     {
-    //         continue;
-    //     }
-
-    //     if(strcmp(child->name, node->name) == 0)
-    //     {
-    //         index = i +1 ;
-    //         break;
-    //     }
-    // }
     for (int i = 0; i < stackframe->stack->size; i++) {
         char* var_name = (char*)stackframe->stack->items[i];
         if (var_name && strcmp(var_name, node->name) == 0) {
-            index = i + 1; // +1 because stack_index starts from 1
+            index = i + 1;
             break;
         }
     }
 
-    // node->stack_index = index ? (index + 1) : list_index_deep(stackframe->stack, node);
-    // node->stackframe = stackframe;
-
-    // return node;
-    if (index == -1) {
-        printf("Undefined variable '%s'\n", node->name);
+    if (index == 0) {
+        fprintf(stderr, "Error: Undefined variable '%s'\n", node->name);
         exit(1);
     }
 
@@ -211,13 +231,27 @@ AST_t* visit_str(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackfr
     return node;
 }
 
-// This is the visitor we use when we have a binary operation
+static int is_string_node(AST_t* node, dynamic_list_t* list)
+{
+    if (node->type == STRING_AST) return 1;
+    if (node->type == VAR_AST && node->name) {
+        for (unsigned int j = 0; j < list->size; j++) {
+            AST_t* def = (AST_t*)list->items[j];
+            if (def->type == ASSIGNEMENT_AST && def->name && strcmp(def->name, node->name) == 0)
+                return (def->datatype == TYPE_STR);
+        }
+    }
+    return 0;
+}
+
 AST_t* visit_binop(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
     AST_t * binop = init_ast(BINOP_AST);
     binop->left = visitor_visit(visitor, node->left, list, stackframe);
     binop->right = visitor_visit(visitor, node->right, list, stackframe);
     binop->op = node->op;
+    if (node->op == PLUS_TOKEN && is_string_node(binop->left, list) && is_string_node(binop->right, list))
+        binop->datatype = TYPE_STR;
     list_enqueue(stackframe->stack, mkstr("0"));
     binop->stack_index = stackframe->stack->size;
     binop->stackframe = stackframe;
@@ -233,8 +267,61 @@ AST_t* visit_return(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
 
 AST_t* visit_access(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
-    list_enqueue(stackframe->stack, 0);
-    node->stack_index = list_index_deep(stackframe->stack, node);
+    /* Look up base variable index before visiting index expr (which adds to stack) */
+    int base_index = 0;
+    for (int i = 0; i < stackframe->stack->size; i++) {
+        char* var_name = (char*)stackframe->stack->items[i];
+        if (var_name && node->name && strcmp(var_name, node->name) == 0) {
+            base_index = i + 1;
+            break;
+        }
+    }
+    if (base_index == 0 && node->name) {
+        fprintf(stderr, "Error: Undefined variable '%s' in index access\n", node->name);
+        exit(1);
+    }
+    node->int_value = base_index;
+    if (node->left)
+        node->left = visitor_visit(visitor, node->left, list, stackframe);
+    list_enqueue(stackframe->stack, mkstr("0"));
+    node->stack_index = stackframe->stack->size;
+    node->stackframe = stackframe;
+    return node;
+}
+
+AST_t* visit_slice(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    AST_t* base = (AST_t*)node->children->items[0];
+    AST_t* start_expr = (AST_t*)node->children->items[1];
+    AST_t* end_expr = (AST_t*)node->children->items[2];
+    /* Visit base first to get correct stack_index (before start/end add to stack) */
+    visitor_visit(visitor, base, list, stackframe);
+    int base_index = base->stack_index;
+    if (base_index == 0 && base->name) {
+        fprintf(stderr, "Error: Undefined variable '%s' in slice\n", base->name);
+        exit(1);
+    }
+    visitor_visit(visitor, start_expr, list, stackframe);
+    visitor_visit(visitor, end_expr, list, stackframe);
+    list_enqueue(stackframe->stack, mkstr("0"));
+    node->stack_index = stackframe->stack->size;
+    node->stackframe = stackframe;
+    node->int_value = base_index;
+    return node;
+}
+
+AST_t* visit_array_literal(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    int count = node->children->size;
+    /* Visit each element; each visit pushes a stack entry */
+    for (int i = 0; i < count; i++) {
+        AST_t* elem = (AST_t*)node->children->items[i];
+        node->children->items[i] = visitor_visit(visitor, elem, list, stackframe);
+    }
+    /* stack_index points to the first element's slot */
+    node->stack_index = ((AST_t*)node->children->items[0])->stack_index;
+    node->stackframe = stackframe;
+    node->int_value = count;
     return node;
 }
 

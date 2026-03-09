@@ -21,6 +21,7 @@ typedef struct TOKEN_S
         RSQUAREBRKT_TOKEN,
         COMMA_TOKEN,
         DOT_TOKEN,
+        COLON_TOKEN,
 
         IF_TOKEN,
         ELSE_TOKEN,

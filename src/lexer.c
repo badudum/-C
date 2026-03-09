@@ -286,6 +286,8 @@ token_t *lexer_get_next_token(lexer_t *lexer)
             return lexer_get_next_with_type(lexer, COMMA_TOKEN);
         case '.':
             return lexer_get_next_with_type(lexer, DOT_TOKEN);
+        case ':':
+            return lexer_get_next_with_type(lexer, COLON_TOKEN);
         case '>':
             return lexer_get_next_with_type(lexer, GT_TOKEN);
         case '<':

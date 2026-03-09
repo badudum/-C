@@ -21,6 +21,8 @@ typedef struct AST_S
         INT_AST,
         STRING_AST,
         BINOP_AST,
+        SLICE_AST,
+        ARRAY_LITERAL_AST,
         NOOP_AST,
     }type;
 
