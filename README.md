@@ -25,6 +25,7 @@ ld -e _start -macos_version_min 11.0.0 -L/Library/Developer/CommandLineTools/SDK
 |------|-------------|
 | `int` | 32-bit integers |
 | `str` | String literals and variables |
+| `bool` | Boolean — `Real` (true) or `Fake` (false) |
 | `Array<int>` | Integer arrays |
 
 ### Variables
@@ -37,6 +38,16 @@ Variables are declared with the `{name} type = value;` syntax.
 {arr} Array<int> = [10, 20, 30];
 ```
 
+### Booleans
+
+Boolean values use `Real` (true) and `Fake` (false). When printed, they display as `Real` or `Fake`. When used arithmetically, they behave as `1` or `0`.
+
+```minusC
+{t} bool = Real;
+{f} bool = Fake;
+HelloWorldLine("value: ", t);   // prints "value: Real"
+```
+
 ### Arithmetic
 
 - Operators: `+`, `-`, `*`, `/`
@@ -47,6 +58,84 @@ Variables are declared with the `{name} type = value;` syntax.
 {mixed} int = 2 + 3 * 4;       // 14
 {grouped} int = (2 + 3) * 4;   // 20
 {nested} int = ((1 + 2) * 3) + 4;
+```
+
+### Comparison Operators
+
+All comparisons return a `bool` (`Real` or `Fake`).
+
+| Operator | Description |
+|----------|-------------|
+| `==` | Equal |
+| `!=` | Not equal |
+| `<` | Less than |
+| `>` | Greater than |
+| `<=` | Less than or equal |
+| `>=` | Greater than or equal |
+
+```minusC
+{eq} bool = 5 == 5;   // Real
+{lt} bool = 3 < 5;    // Real
+{ge} bool = 3 >= 5;   // Fake
+```
+
+### Logical Operators
+
+| Operator | Description |
+|----------|-------------|
+| `and` | Logical AND — returns `Real` if both operands are truthy |
+| `or` | Logical OR — returns `Real` if either operand is truthy |
+| `not` | Logical NOT — negates a boolean value |
+
+```minusC
+{a} bool = Real and Fake;   // Fake
+{o} bool = Real or Fake;    // Real
+{n} bool = not Fake;         // Real
+```
+
+### Bitwise Operators
+
+| Operator | Description |
+|----------|-------------|
+| `&` | Bitwise AND |
+| `\|` | Bitwise OR |
+| `~` | Bitwise NOT |
+
+```minusC
+{ba} int = 5 & 3;   // 1
+{bo} int = 5 | 3;   // 7
+{bn} int = ~0;      // -1 (all bits set)
+```
+
+### If / Else If / Else
+
+Conditional branching with `if`, `else if`, and `else`. The condition must be in parentheses and the body in braces. The entire if statement is terminated with a semicolon after the closing brace.
+
+```minusC
+{n} int = 10;
+if (n > 20) {
+    HelloWorldLine("big");
+} else if (n > 5) {
+    HelloWorldLine("medium");
+} else {
+    HelloWorldLine("small");
+};
+```
+
+Standalone `if`:
+
+```minusC
+if (val == 42) {
+    HelloWorldLine("found it");
+};
+```
+
+Boolean literals work directly as conditions:
+
+```minusC
+if (Real) {
+    HelloWorldLine("always runs");
+};
 ```
 
 ### Strings

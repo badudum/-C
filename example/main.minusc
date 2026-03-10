@@ -39,6 +39,22 @@ testStringOps = ({x} int) function {
     {parts} str = SmolStrings(split, ",");
     HelloWorldLine("SmolStrings: ", parts);
 
+    HelloWorldLine("--- String if-checks ---");
+    {slen} int = 5;
+    if (slen == 5) {
+        HelloWorldLine("PASS: string length is 5");
+    } else {
+        HelloWorldLine("FAIL: string length");
+    };
+
+    {idx} int = 0;
+    {ch2} str = s[idx];
+    if (idx == 0) {
+        HelloWorldLine("PASS: index 0 access");
+    } else {
+        HelloWorldLine("FAIL: index 0 access");
+    };
+
     return 0;
 } int;
 
@@ -87,6 +103,144 @@ testArrayOps = ({x} int) function {
     HelloWorldLine("range[4] (expect 1): ", r4);
     HelloWorldLine("range[5] (expect 99): ", r5);
 
+    HelloWorldLine("--- Array if-checks ---");
+    if (a0 == 10) {
+        HelloWorldLine("PASS: arr[0]==10");
+    } else {
+        HelloWorldLine("FAIL: arr[0]!=10");
+    };
+    if (a1 == 20 and a2 == 30) {
+        HelloWorldLine("PASS: arr[1]==20 and arr[2]==30");
+    } else {
+        HelloWorldLine("FAIL: arr values");
+    };
+    if (s0 == 42) {
+        HelloWorldLine("PASS: single[0]==42");
+    } else {
+        HelloWorldLine("FAIL: single[0]");
+    };
+    if (z0 == 0 and z4 == 0) {
+        HelloWorldLine("PASS: zeros all 0");
+    } else {
+        HelloWorldLine("FAIL: zeros");
+    };
+    if (sv0 == 7 and sv2 == 7) {
+        HelloWorldLine("PASS: sevens all 7");
+    } else {
+        HelloWorldLine("FAIL: sevens");
+    };
+    if (r0 == 0 and r3 == 1 and r5 == 99) {
+        HelloWorldLine("PASS: range values correct");
+    } else {
+        HelloWorldLine("FAIL: range values");
+    };
+
+    return 0;
+} int;
+
+testBoolAndIf = ({x} int) function {
+    HelloWorldLine("--- Bool & If tests ---");
+
+    {t} bool = Real;
+    {f} bool = Fake;
+    HelloWorldLine("t = ", t);
+    HelloWorldLine("f = ", f);
+
+    {r} bool = not f;
+    HelloWorldLine("not Fake = ", r);
+
+    {a} bool = t and f;
+    {o} bool = t or f;
+    HelloWorldLine("Real and Fake = ", a);
+    HelloWorldLine("Real or Fake = ", o);
+
+    {ba} int = 5 & 3;
+    {bo} int = 5 | 3;
+    {bn} int = ~0;
+    HelloWorldLine("5 & 3 = ", ba);
+    HelloWorldLine("5 | 3 = ", bo);
+    HelloWorldLine("~0 = ", bn);
+
+    {eq} bool = 5 == 5;
+    {ne} bool = 5 != 3;
+    {lt} bool = 3 < 5;
+    {gt} bool = 5 > 3;
+    {le} bool = 5 <= 5;
+    {ge} bool = 3 >= 5;
+    HelloWorldLine("5==5: ", eq);
+    HelloWorldLine("5!=3: ", ne);
+    HelloWorldLine("3<5: ", lt);
+    HelloWorldLine("5>3: ", gt);
+    HelloWorldLine("5<=5: ", le);
+    HelloWorldLine("3>=5: ", ge);
+
+    {val} int = 42;
+    if (val == 42) {
+        HelloWorldLine("if: val is 42");
+    };
+
+    {n} int = 10;
+    if (n > 20) {
+        HelloWorldLine("if: n>20");
+    } else if (n > 5) {
+        HelloWorldLine("else if: n>5");
+    } else {
+        HelloWorldLine("else: n<=5");
+    };
+
+    if (Fake) {
+        HelloWorldLine("ERROR: should not print");
+    } else {
+        HelloWorldLine("else: Fake branch skipped");
+    };
+
+    HelloWorldLine("--- Bool if-checks ---");
+    if (t == Real) {
+        HelloWorldLine("PASS: t is Real");
+    } else {
+        HelloWorldLine("FAIL: t is not Real");
+    };
+    if (f == Fake) {
+        HelloWorldLine("PASS: f is Fake");
+    } else {
+        HelloWorldLine("FAIL: f is not Fake");
+    };
+    if (r == Real) {
+        HelloWorldLine("PASS: not Fake == Real");
+    } else {
+        HelloWorldLine("FAIL: not Fake != Real");
+    };
+    if (a == Fake) {
+        HelloWorldLine("PASS: Real and Fake == Fake");
+    } else {
+        HelloWorldLine("FAIL: Real and Fake != Fake");
+    };
+    if (o == Real) {
+        HelloWorldLine("PASS: Real or Fake == Real");
+    } else {
+        HelloWorldLine("FAIL: Real or Fake != Real");
+    };
+    if (ba == 1) {
+        HelloWorldLine("PASS: 5&3==1");
+    } else {
+        HelloWorldLine("FAIL: 5&3");
+    };
+    if (bo == 7) {
+        HelloWorldLine("PASS: 5|3==7");
+    } else {
+        HelloWorldLine("FAIL: 5|3");
+    };
+    if (eq == Real and ne == Real and lt == Real and gt == Real and le == Real) {
+        HelloWorldLine("PASS: comparisons correct");
+    } else {
+        HelloWorldLine("FAIL: comparisons");
+    };
+    if (ge == Fake) {
+        HelloWorldLine("PASS: 3>=5 is Fake");
+    } else {
+        HelloWorldLine("FAIL: 3>=5");
+    };
+
     return 0;
 } int;
 
@@ -116,6 +270,38 @@ main = ({x} int) function {
     HelloWorldLine("(20-4)/2 (paren)=", mixed4);
     HelloWorldLine("((1+2)*3)+4=", nested);
 
+    HelloWorldLine("--- Arithmetic if-checks ---");
+    if (add == 52) {
+        HelloWorldLine("PASS: 42+10==52");
+    } else {
+        HelloWorldLine("FAIL: 42+10");
+    };
+    if (sub == 23) {
+        HelloWorldLine("PASS: 40-17==23");
+    } else {
+        HelloWorldLine("FAIL: 40-17");
+    };
+    if (mul == 100) {
+        HelloWorldLine("PASS: 10*10==100");
+    } else {
+        HelloWorldLine("FAIL: 10*10");
+    };
+    if (div == 5) {
+        HelloWorldLine("PASS: 25/5==5");
+    } else {
+        HelloWorldLine("FAIL: 25/5");
+    };
+    if (mixed1 == 14 and mixed2 == 20) {
+        HelloWorldLine("PASS: precedence correct");
+    } else {
+        HelloWorldLine("FAIL: precedence");
+    };
+    if (nested == 13) {
+        HelloWorldLine("PASS: ((1+2)*3)+4==13");
+    } else {
+        HelloWorldLine("FAIL: nested");
+    };
+
     HelloWorld(what);
     HelloWorld(name, name2);
     HelloWorld("Hello ", name2, "!\n");
@@ -127,6 +313,7 @@ main = ({x} int) function {
 
     {dummy} int = testStringOps(0);
     {dummy2} int = testArrayOps(0);
+    {dummy3} int = testBoolAndIf(0);
 
     return 0;
 } int;  

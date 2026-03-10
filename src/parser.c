@@ -141,10 +141,17 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
 
 }
 
+AST_t * parse_bool(parser_t * parser)
+{
+    AST_t * ast = init_ast(BOOL_AST);
+    ast->int_value = (parser->token->type == REAL_TOKEN) ? 1 : 0;
+    parser_next(parser, parser->token->type);
+    return ast;
+}
+
 //This is the function used to parse factors
 AST_t * parse_factor(parser_t * parser)
 {
-    // printf("[Factor] Current Token : %s\n", parser->token->value);
     switch (parser->token->type)
     {
         case INT_TOKEN:
@@ -153,6 +160,9 @@ AST_t * parse_factor(parser_t * parser)
             return parse_id(parser);
         case STRING_TOKEN:
             return parse_string(parser);
+        case REAL_TOKEN:
+        case FAKE_TOKEN:
+            return parse_bool(parser);
         case LPAREN_TOKEN:
             return parse_list(parser);
         case LSQUAREBRKT_TOKEN:{
@@ -161,7 +171,6 @@ AST_t * parse_factor(parser_t * parser)
             if (parser->token->type != RSQUAREBRKT_TOKEN) {
                 AST_t* first = parse_expression(parser);
                 if (parser->token->type == SEMI_TOKEN) {
-                    /* Repeat/range syntax: [val; count, val; count, ...] */
                     AST_t* val = first;
                     while (1) {
                         parser_next(parser, SEMI_TOKEN);
@@ -188,7 +197,6 @@ AST_t * parse_factor(parser_t * parser)
                         }
                     }
                 } else {
-                    /* Explicit literal: [val, val, ...] */
                     list_enqueue(arr->children, first);
                     while (parser->token->type == COMMA_TOKEN) {
                         parser_next(parser, COMMA_TOKEN);
@@ -210,11 +218,23 @@ AST_t * parse_factor(parser_t * parser)
     }
 }
 
-//this is for multiplication and division
+// unary: not, ~
+AST_t * parse_unary(parser_t * parser)
+{
+    if (parser->token->type == NOT_TOKEN || parser->token->type == BITNOT_TOKEN) {
+        AST_t * unary = init_ast(UNARY_AST);
+        unary->op = parser->token->type;
+        parser_next(parser, parser->token->type);
+        unary->left = parse_unary(parser);
+        return unary;
+    }
+    return parse_factor(parser);
+}
+
+// multiplication, division
 AST_t * parse_term(parser_t *parser)
 {
-    // printf("[Term] Current Token : %s\n", parser->token->value);
-    AST_t * left = parse_factor(parser);
+    AST_t * left = parse_unary(parser);
 
     while (parser->token->type == ASTERISK_TOKEN || parser->token->type == SLASH_TOKEN)
     {
@@ -222,18 +242,17 @@ AST_t * parse_term(parser_t *parser)
         binop->left = left;
         binop->op = parser->token->type;
         parser_next(parser, parser->token->type);
-        binop->right = parse_factor(parser);
+        binop->right = parse_unary(parser);
         left = binop;
     }
 
     return left;
 }
 
-//this is for addition and subtraction
-AST_t * parse_expression(parser_t* parser)
+// addition, subtraction
+AST_t * parse_addition(parser_t* parser)
 {
-    // printf("[Expression] Current Token : %s\n", parser->token->value);
-    AST_t * left = parse_term(parser); // parse the left side of the expression aka "{x} int"
+    AST_t * left = parse_term(parser);
 
     while (parser->token->type == PLUS_TOKEN || parser->token->type == MINUS_TOKEN)
     {
@@ -241,7 +260,97 @@ AST_t * parse_expression(parser_t* parser)
         binop->left = left;
         binop->op = parser->token->type;
         parser_next(parser, parser->token->type);
-        binop->right = parse_expression(parser);
+        binop->right = parse_term(parser);
+        left = binop;
+    }
+    return left;
+}
+
+// bitwise and
+AST_t * parse_bitand(parser_t* parser)
+{
+    AST_t * left = parse_addition(parser);
+
+    while (parser->token->type == BITAND_TOKEN)
+    {
+        AST_t * binop = init_ast(BINOP_AST);
+        binop->left = left;
+        binop->op = parser->token->type;
+        parser_next(parser, parser->token->type);
+        binop->right = parse_addition(parser);
+        left = binop;
+    }
+    return left;
+}
+
+// bitwise or
+AST_t * parse_bitor(parser_t* parser)
+{
+    AST_t * left = parse_bitand(parser);
+
+    while (parser->token->type == BITOR_TOKEN)
+    {
+        AST_t * binop = init_ast(BINOP_AST);
+        binop->left = left;
+        binop->op = parser->token->type;
+        parser_next(parser, parser->token->type);
+        binop->right = parse_bitand(parser);
+        left = binop;
+    }
+    return left;
+}
+
+// comparisons: ==  !=  <  >  <=  >=
+AST_t * parse_comparison(parser_t* parser)
+{
+    AST_t * left = parse_bitor(parser);
+
+    while (parser->token->type == DEQUALS_TOKEN ||
+           parser->token->type == NOT_EQUALS_TOKEN ||
+           parser->token->type == LT_TOKEN ||
+           parser->token->type == GT_TOKEN ||
+           parser->token->type == LTE_TOKEN ||
+           parser->token->type == GTE_TOKEN)
+    {
+        AST_t * binop = init_ast(BINOP_AST);
+        binop->left = left;
+        binop->op = parser->token->type;
+        parser_next(parser, parser->token->type);
+        binop->right = parse_bitor(parser);
+        left = binop;
+    }
+    return left;
+}
+
+// logical and
+AST_t * parse_and(parser_t* parser)
+{
+    AST_t * left = parse_comparison(parser);
+
+    while (parser->token->type == AND_TOKEN)
+    {
+        AST_t * binop = init_ast(BINOP_AST);
+        binop->left = left;
+        binop->op = parser->token->type;
+        parser_next(parser, parser->token->type);
+        binop->right = parse_comparison(parser);
+        left = binop;
+    }
+    return left;
+}
+
+// logical or  (lowest precedence)
+AST_t * parse_expression(parser_t* parser)
+{
+    AST_t * left = parse_and(parser);
+
+    while (parser->token->type == OR_TOKEN)
+    {
+        AST_t * binop = init_ast(BINOP_AST);
+        binop->left = left;
+        binop->op = parser->token->type;
+        parser_next(parser, parser->token->type);
+        binop->right = parse_and(parser);
         left = binop;
     }
     return left;
@@ -251,13 +360,68 @@ AST_t * parse_expression(parser_t* parser)
 //This is the function used to parse return statements
 AST_t * parse_statement(parser_t * parser)
 {
-    // printf("[Statement] Current Token : %s\n", parser->token->value);
     AST_t * ast = init_ast(RETURN_AST);
     parser_next(parser, RETURN_TOKEN);
     ast->parent = parse_expression(parser);
-
     return ast;
+}
 
+/*
+ * if (condition) { body } else if (condition) { body } else { body };
+ * IF_AST: left=condition, children=body, right=next else/else-if (IF_AST or NULL)
+ */
+AST_t * parse_if(parser_t * parser)
+{
+    parser_next(parser, IF_TOKEN);
+    AST_t * node = init_ast(IF_AST);
+
+    parser_next(parser, LPAREN_TOKEN);
+    node->left = parse_expression(parser);
+    parser_next(parser, RPAREN_TOKEN);
+
+    parser_next(parser, LBRACE_TOKEN);
+    while (parser->token->type != RBRACE_TOKEN && parser->token->type != EOF_TOKEN)
+    {
+        if (parser->token->type == RETURN_TOKEN)
+            list_enqueue(node->children, parse_statement(parser));
+        else if (parser->token->type == IF_TOKEN)
+            list_enqueue(node->children, parse_if(parser));
+        else
+            list_enqueue(node->children, parse_expression(parser));
+        if (parser->token->type == SEMI_TOKEN)
+            parser_next(parser, SEMI_TOKEN);
+    }
+    parser_next(parser, RBRACE_TOKEN);
+
+    if (parser->token->type == ELSE_TOKEN)
+    {
+        parser_next(parser, ELSE_TOKEN);
+        if (parser->token->type == IF_TOKEN)
+        {
+            node->right = parse_if(parser);
+        }
+        else
+        {
+            AST_t * else_node = init_ast(IF_AST);
+            else_node->left = NULL;
+            parser_next(parser, LBRACE_TOKEN);
+            while (parser->token->type != RBRACE_TOKEN && parser->token->type != EOF_TOKEN)
+            {
+                if (parser->token->type == RETURN_TOKEN)
+                    list_enqueue(else_node->children, parse_statement(parser));
+                else if (parser->token->type == IF_TOKEN)
+                    list_enqueue(else_node->children, parse_if(parser));
+                else
+                    list_enqueue(else_node->children, parse_expression(parser));
+                if (parser->token->type == SEMI_TOKEN)
+                    parser_next(parser, SEMI_TOKEN);
+            }
+            parser_next(parser, RBRACE_TOKEN);
+            node->right = else_node;
+        }
+    }
+
+    return node;
 }
 
 
@@ -362,17 +526,19 @@ AST_t * parse_compound(parser_t * parser)
 
     while (parser->token->type != RBRACE_TOKEN && parser->token->type != EOF_TOKEN)
     {
-        // printf("[Compound] Current token: %s\n", parser->token->value);
-
         if (parser->token->type == RETURN_TOKEN)
         {
-            list_enqueue(compound->children, parse_statement(parser)); //parse_statement is for returns
+            list_enqueue(compound->children, parse_statement(parser));
+        }
+        else if (parser->token->type == IF_TOKEN)
+        {
+            list_enqueue(compound->children, parse_if(parser));
         }
         else 
         {
-            list_enqueue(compound->children, parse_expression(parser)); // this is for all other tokens between the braces
+            list_enqueue(compound->children, parse_expression(parser));
         }
-        if (parser->token->type == SEMI_TOKEN) //we skip the semi colons
+        if (parser->token->type == SEMI_TOKEN)
         {
             parser_next(parser, SEMI_TOKEN);
         }

@@ -32,8 +32,12 @@ typedef struct TOKEN_S
         INT_TOKEN,
         STRING_TOKEN,
         BOOL_TOKEN,
+        REAL_TOKEN,
+        FAKE_TOKEN,
         
         EQUALS_TOKEN,
+        DEQUALS_TOKEN,
+        NOT_EQUALS_TOKEN,
         PLUS_TOKEN,
         MINUS_TOKEN,
         ASTERISK_TOKEN,
@@ -41,6 +45,15 @@ typedef struct TOKEN_S
         MODULUS_TOKEN,
         GT_TOKEN,
         LT_TOKEN,
+        GTE_TOKEN,
+        LTE_TOKEN,
+
+        AND_TOKEN,
+        OR_TOKEN,
+        NOT_TOKEN,
+        BITAND_TOKEN,
+        BITOR_TOKEN,
+        BITNOT_TOKEN,
 
         EOF_TOKEN
     

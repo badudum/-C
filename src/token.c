@@ -26,7 +26,21 @@ const char * token_type_to_string(int type)
         case DOT_TOKEN : return "DOT_TOKEN";
         case INT_TOKEN : return "INT_TOKEN";
         case GT_TOKEN : return "GT_TOKEN";
-        case LT_TOKEN : return "LT_TOKEN"; 
+        case LT_TOKEN : return "LT_TOKEN";
+        case GTE_TOKEN : return "GTE_TOKEN";
+        case LTE_TOKEN : return "LTE_TOKEN";
+        case DEQUALS_TOKEN : return "DEQUALS_TOKEN";
+        case NOT_EQUALS_TOKEN : return "NOT_EQUALS_TOKEN";
+        case REAL_TOKEN : return "REAL_TOKEN";
+        case FAKE_TOKEN : return "FAKE_TOKEN";
+        case AND_TOKEN : return "AND_TOKEN";
+        case OR_TOKEN : return "OR_TOKEN";
+        case NOT_TOKEN : return "NOT_TOKEN";
+        case BITAND_TOKEN : return "BITAND_TOKEN";
+        case BITOR_TOKEN : return "BITOR_TOKEN";
+        case BITNOT_TOKEN : return "BITNOT_TOKEN";
+        case IF_TOKEN : return "IF_TOKEN";
+        case ELSE_TOKEN : return "ELSE_TOKEN";
 
         case EOF_TOKEN : return "EOF_TOKEN";
     }

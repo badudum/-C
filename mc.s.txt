@@ -6,7 +6,7 @@ mov x0, #0
 mov x16, #1
 svc #0
 
- # compound (0x600000a356e0) 
+ # compound (0x128f3e4d0) 
 # start of "print"
 .globl print
 print:
@@ -19,7 +19,7 @@ sub sp, sp, #96
 # load parameter test from x0
 str x0, [fp, #-48]
 
- # compound (0x600000a35860) 
+ # compound (0x128f3e700) 
 
 # variable (test)
 ldr x0, [fp, #-48]
@@ -52,7 +52,7 @@ sub sp, sp, #112
 # load parameter pushed from x0
 str x0, [fp, #-48]
 
- # compound (0x600000a35aa0) 
+ # compound (0x128f3ea50) 
 
 # Taken string : 
 sub sp, sp, #16
@@ -109,14 +109,14 @@ str x0, [fp, #-32]
 testStringOps:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #896
+sub sp, sp, #1184
 
-sub sp, sp, #912
+sub sp, sp, #1200
 
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600000a35c80) 
+ # compound (0x128f3eeb0) 
 
 # --- String ops tests ---
 sub sp, sp, #32
@@ -755,6 +755,263 @@ bl HelloWorldLine
 # store return value
 str x0, [sp, #-16]!
 
+# --- String if-checks ---
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x2d2d2d20736b6365
+str x0, [sp, #16]
+ldr x0, =0x68632d666920676e
+str x0, [sp, #8]
+ldr x0, =0x69727453202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #896
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #896
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #912
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #912
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #928
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #960
+str x2, [x4]
+
+# variable (slen)
+sub x4, fp, #928
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #928
+ldr w0, [x4]
+sub x4, fp, #960
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #976
+str w0, [x4]
+
+# if condition
+sub x4, fp, #976
+ldr w0, [x4]
+cbz w0, _else_0
+
+# PASS: string length is 5
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x3520736920687467
+str x0, [sp, #16]
+ldr x0, =0x6e656c20676e6972
+str x0, [sp, #8]
+ldr x0, =0x7473203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #992
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #992
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_0
+_else_0:
+
+# FAIL: string length
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x687467
+str x0, [sp, #16]
+ldr x0, =0x6e656c20676e6972
+str x0, [sp, #8]
+ldr x0, =0x7473203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1008
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1008
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_0:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1024
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #1024
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1040
+str w0, [x4]
+
+# variable (idx)
+sub x4, fp, #1040
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# load string for CharAt
+sub x4, fp, #256
+ldr x0, [x4]
+bl rt_null_str_check
+str x0, [sp, #-16]!
+
+# load index for CharAt
+sub x4, fp, #1040
+ldr w0, [x4]
+
+# CharAt
+mov w1, w0
+ldr x0, [sp], #16
+bl CharAt
+str x0, [sp, #-16]!
+
+# assign str (pop from stack)
+ldr x0, [sp], #16
+
+# assign str store
+sub x4, fp, #1088
+str x0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1120
+str x2, [x4]
+
+# variable (idx)
+sub x4, fp, #1040
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1040
+ldr w0, [x4]
+sub x4, fp, #1120
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1136
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1136
+ldr w0, [x4]
+cbz w0, _else_2
+
+# PASS: index 0 access
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x73736563
+str x0, [sp, #16]
+ldr x0, =0x6361203020786564
+str x0, [sp, #8]
+ldr x0, =0x6e69203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1152
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1152
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_2
+_else_2:
+
+# FAIL: index 0 access
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x73736563
+str x0, [sp, #16]
+ldr x0, =0x6361203020786564
+str x0, [sp, #8]
+ldr x0, =0x6e69203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1168
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1168
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_2:
+
 mov w0, #0
 b return_statement
 
@@ -768,14 +1025,14 @@ str x0, [fp, #-48]
 testArrayOps:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #1744
+sub sp, sp, #2560
 
-sub sp, sp, #1760
+sub sp, sp, #2576
 
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600000a36460) 
+ # compound (0x128f41360) 
 
 # --- Array tests ---
 sub sp, sp, #32
@@ -2115,6 +2372,695 @@ bl HelloWorldLine
 # store return value
 str x0, [sp, #-16]!
 
+# --- Array if-checks ---
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x2d2d2d20736b63
+str x0, [sp, #16]
+ldr x0, =0x6568632d66692079
+str x0, [sp, #8]
+ldr x0, =0x61727241202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1744
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1744
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #10
+sub x4, fp, #1776
+str x2, [x4]
+
+# variable (a0)
+ldr x0, [fp, #-176]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #176
+ldr w0, [x4]
+sub x4, fp, #1776
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1792
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1792
+ldr w0, [x4]
+cbz w0, _else_4
+
+# PASS: arr[0]==10
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x30313d3d5d305b72
+str x0, [sp, #8]
+ldr x0, =0x7261203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1808
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1808
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_4
+_else_4:
+
+# FAIL: arr[0]!=10
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x30313d215d305b72
+str x0, [sp, #8]
+ldr x0, =0x7261203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1824
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1824
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_4:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #30
+sub x4, fp, #1904
+str x2, [x4]
+
+# variable (a2)
+sub x4, fp, #272
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #272
+ldr w0, [x4]
+sub x4, fp, #1904
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1920
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #20
+sub x4, fp, #1856
+str x2, [x4]
+
+# variable (a1)
+ldr x0, [fp, #-224]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #224
+ldr w0, [x4]
+sub x4, fp, #1856
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1872
+str w0, [x4]
+# logical and
+sub x4, fp, #1872
+ldr w0, [x4]
+sub x4, fp, #1920
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #1936
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1936
+ldr w0, [x4]
+cbz w0, _else_6
+
+# PASS: arr[1]==20 and arr[2]==30
+sub sp, sp, #32
+ldr x0, =0x30333d3d5d325b
+str x0, [sp, #24]
+ldr x0, =0x72726120646e6120
+str x0, [sp, #16]
+ldr x0, =0x30323d3d5d315b72
+str x0, [sp, #8]
+ldr x0, =0x7261203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1952
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1952
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_6
+_else_6:
+
+# FAIL: arr values
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x7365756c61762072
+str x0, [sp, #8]
+ldr x0, =0x7261203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1968
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1968
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_6:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #42
+sub x4, fp, #2000
+str x2, [x4]
+
+# variable (s0)
+sub x4, fp, #448
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #448
+ldr w0, [x4]
+sub x4, fp, #2000
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2016
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2016
+ldr w0, [x4]
+cbz w0, _else_8
+
+# PASS: single[0]==42
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x32343d
+str x0, [sp, #16]
+ldr x0, =0x3d5d305b656c676e
+str x0, [sp, #8]
+ldr x0, =0x6973203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2032
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2032
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_8
+_else_8:
+
+# FAIL: single[0]
+sub sp, sp, #16
+ldr x0, =0x5d305b656c676e
+str x0, [sp, #8]
+ldr x0, =0x6973203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2048
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2048
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_8:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #2128
+str x2, [x4]
+
+# variable (z4)
+sub x4, fp, #928
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #928
+ldr w0, [x4]
+sub x4, fp, #2128
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2144
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #2080
+str x2, [x4]
+
+# variable (z0)
+sub x4, fp, #880
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #880
+ldr w0, [x4]
+sub x4, fp, #2080
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2096
+str w0, [x4]
+# logical and
+sub x4, fp, #2096
+ldr w0, [x4]
+sub x4, fp, #2144
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2160
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2160
+ldr w0, [x4]
+cbz w0, _else_10
+
+# PASS: zeros all 0
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x30
+str x0, [sp, #16]
+ldr x0, =0x206c6c6120736f72
+str x0, [sp, #8]
+ldr x0, =0x657a203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2176
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2176
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_10
+_else_10:
+
+# FAIL: zeros
+sub sp, sp, #16
+ldr x0, =0x736f72
+str x0, [sp, #8]
+ldr x0, =0x657a203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2192
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2192
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_10:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #7
+sub x4, fp, #2272
+str x2, [x4]
+
+# variable (sv2)
+sub x4, fp, #1152
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1152
+ldr w0, [x4]
+sub x4, fp, #2272
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2288
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #7
+sub x4, fp, #2224
+str x2, [x4]
+
+# variable (sv0)
+sub x4, fp, #1104
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1104
+ldr w0, [x4]
+sub x4, fp, #2224
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2240
+str w0, [x4]
+# logical and
+sub x4, fp, #2240
+ldr w0, [x4]
+sub x4, fp, #2288
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2304
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2304
+ldr w0, [x4]
+cbz w0, _else_12
+
+# PASS: sevens all 7
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x3720
+str x0, [sp, #16]
+ldr x0, =0x6c6c6120736e6576
+str x0, [sp, #8]
+ldr x0, =0x6573203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2320
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2320
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_12
+_else_12:
+
+# FAIL: sevens
+sub sp, sp, #16
+ldr x0, =0x736e6576
+str x0, [sp, #8]
+ldr x0, =0x6573203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2336
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2336
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_12:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #99
+sub x4, fp, #2480
+str x2, [x4]
+
+# variable (r5)
+sub x4, fp, #1568
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1568
+ldr w0, [x4]
+sub x4, fp, #2480
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2496
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #1
+sub x4, fp, #2416
+str x2, [x4]
+
+# variable (r3)
+sub x4, fp, #1472
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1472
+ldr w0, [x4]
+sub x4, fp, #2416
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2432
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #2368
+str x2, [x4]
+
+# variable (r0)
+sub x4, fp, #1376
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1376
+ldr w0, [x4]
+sub x4, fp, #2368
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2384
+str w0, [x4]
+# logical and
+sub x4, fp, #2384
+ldr w0, [x4]
+sub x4, fp, #2432
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2448
+str w0, [x4]
+# logical and
+sub x4, fp, #2448
+ldr w0, [x4]
+sub x4, fp, #2496
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2512
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2512
+ldr w0, [x4]
+cbz w0, _else_14
+
+# PASS: range values correct
+sub sp, sp, #32
+ldr x0, =0x7463
+str x0, [sp, #24]
+ldr x0, =0x6572726f63207365
+str x0, [sp, #16]
+ldr x0, =0x756c61762065676e
+str x0, [sp, #8]
+ldr x0, =0x6172203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2528
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2528
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_14
+_else_14:
+
+# FAIL: range values
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x7365
+str x0, [sp, #16]
+ldr x0, =0x756c61762065676e
+str x0, [sp, #8]
+ldr x0, =0x6172203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2544
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2544
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_14:
+
 mov w0, #0
 b return_statement
 
@@ -2123,19 +3069,2342 @@ add x0, sp, #0
 
 # assign default store
 str x0, [fp, #-64]
+# start of "testBoolAndIf"
+.globl testBoolAndIf
+testBoolAndIf:
+stp x29, x30, [sp, #-16]!
+mov x29, sp
+sub sp, sp, #2640
+
+sub sp, sp, #2656
+
+# load parameter x from x0
+str x0, [fp, #-48]
+
+ # compound (0x128f44db0) 
+
+# --- Bool & If tests ---
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x2d2d2d20737473
+str x0, [sp, #16]
+ldr x0, =0x6574206649202620
+str x0, [sp, #8]
+ldr x0, =0x6c6f6f42202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+str x0, [fp, #-64]
+
+# HelloWorld arg 0
+ldr x0, [fp, #-64]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+str w2, [fp, #-80]
+
+# assign (int) load
+ldr w0, [fp, #-80]
+
+# assign (int) store
+str w0, [fp, #-96]
+# bool (Fake)
+str x0, [sp, #-16]!
+mov w2, #0
+str w2, [fp, #-112]
+
+# assign (int) load
+ldr w0, [fp, #-112]
+
+# assign (int) store
+str w0, [fp, #-128]
+
+# t = 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203d2074
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+str x0, [fp, #-144]
+
+# variable (t)
+ldr x0, [fp, #-96]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+ldr x0, [fp, #-144]
+bl HelloWorld
+
+# HelloWorld arg 1
+ldr w0, [fp, #-96]
+cmp w0, #0
+b.eq _btos_fake_0
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_0
+_btos_fake_0:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_0:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# f = 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203d2066
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+str x0, [fp, #-176]
+
+# variable (f)
+ldr x0, [fp, #-128]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+ldr x0, [fp, #-176]
+bl HelloWorld
+
+# HelloWorld arg 1
+ldr w0, [fp, #-128]
+cmp w0, #0
+b.eq _btos_fake_1
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_1
+_btos_fake_1:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_1:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# variable (f)
+ldr x0, [fp, #-128]
+str x0, [sp, #-16]!
+
+# logical not load
+ldr w0, [fp, #-128]
+cmp w0, #0
+cset w0, eq
+
+# logical not store
+str w0, [fp, #-224]
+
+# assign (int) load
+ldr w0, [fp, #-224]
+
+# assign (int) store
+str w0, [fp, #-240]
+
+# not Fake = 
+sub sp, sp, #16
+ldr x0, =0x203d20
+str x0, [sp, #8]
+ldr x0, =0x656b614620746f6e
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #256
+str x0, [x4]
+
+# variable (r)
+ldr x0, [fp, #-240]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #256
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+ldr w0, [fp, #-240]
+cmp w0, #0
+b.eq _btos_fake_2
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_2
+_btos_fake_2:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_2:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# variable (f)
+ldr x0, [fp, #-128]
+str x0, [sp, #-16]!
+
+# variable (t)
+ldr x0, [fp, #-96]
+str x0, [sp, #-16]!
+# logical and
+sub x4, fp, #96
+ldr w0, [x4]
+sub x4, fp, #128
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #320
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #320
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #336
+str w0, [x4]
+
+# variable (f)
+ldr x0, [fp, #-128]
+str x0, [sp, #-16]!
+
+# variable (t)
+ldr x0, [fp, #-96]
+str x0, [sp, #-16]!
+# logical or
+sub x4, fp, #96
+ldr w0, [x4]
+sub x4, fp, #128
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+orr w0, w0, w1
+sub x4, fp, #384
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #384
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #400
+str w0, [x4]
+
+# Real and Fake = 
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x203d20656b614620
+str x0, [sp, #8]
+ldr x0, =0x646e61206c616552
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #416
+str x0, [x4]
+
+# variable (a)
+sub x4, fp, #336
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #416
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #336
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_3
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_3
+_btos_fake_3:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_3:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# Real or Fake = 
+sub sp, sp, #16
+ldr x0, =0x203d20656b6146
+str x0, [sp, #8]
+ldr x0, =0x20726f206c616552
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #448
+str x0, [x4]
+
+# variable (o)
+sub x4, fp, #400
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #448
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #400
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_4
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_4
+_btos_fake_4:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_4:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #496
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #480
+str x2, [x4]
+# bitwise and
+sub x4, fp, #480
+ldr w0, [x4]
+sub x4, fp, #496
+ldr w1, [x4]
+and w0, w0, w1
+sub x4, fp, #512
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #512
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #528
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #560
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #544
+str x2, [x4]
+# bitwise or
+sub x4, fp, #544
+ldr w0, [x4]
+sub x4, fp, #560
+ldr w1, [x4]
+orr w0, w0, w1
+sub x4, fp, #576
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #576
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #592
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #608
+str x2, [x4]
+
+# bitwise not load
+sub x4, fp, #608
+ldr w0, [x4]
+mvn w0, w0
+
+# bitwise not store
+sub x4, fp, #624
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #624
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #640
+str w0, [x4]
+
+# 5 & 3 = 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203d203320262035
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #656
+str x0, [x4]
+
+# variable (ba)
+sub x4, fp, #528
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #656
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #528
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# 5 | 3 = 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203d2033207c2035
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #688
+str x0, [x4]
+
+# variable (bo)
+sub x4, fp, #592
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #688
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #592
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# ~0 = 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203d20307e
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #720
+str x0, [x4]
+
+# variable (bn)
+sub x4, fp, #640
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #720
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #640
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #768
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #752
+str x2, [x4]
+# comparison
+sub x4, fp, #752
+ldr w0, [x4]
+sub x4, fp, #768
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #784
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #784
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #800
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #832
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #816
+str x2, [x4]
+# comparison
+sub x4, fp, #816
+ldr w0, [x4]
+sub x4, fp, #832
+ldr w1, [x4]
+cmp w0, w1
+cset w0, ne
+sub x4, fp, #848
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #848
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #864
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #896
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #880
+str x2, [x4]
+# comparison
+sub x4, fp, #880
+ldr w0, [x4]
+sub x4, fp, #896
+ldr w1, [x4]
+cmp w0, w1
+cset w0, lt
+sub x4, fp, #912
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #912
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #928
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #960
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #944
+str x2, [x4]
+# comparison
+sub x4, fp, #944
+ldr w0, [x4]
+sub x4, fp, #960
+ldr w1, [x4]
+cmp w0, w1
+cset w0, gt
+sub x4, fp, #976
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #976
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #992
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #1024
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #1008
+str x2, [x4]
+# comparison
+sub x4, fp, #1008
+ldr w0, [x4]
+sub x4, fp, #1024
+ldr w1, [x4]
+cmp w0, w1
+cset w0, le
+sub x4, fp, #1040
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #1040
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1056
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #1088
+str x2, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #1072
+str x2, [x4]
+# comparison
+sub x4, fp, #1072
+ldr w0, [x4]
+sub x4, fp, #1088
+ldr w1, [x4]
+cmp w0, w1
+cset w0, ge
+sub x4, fp, #1104
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #1104
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1120
+str w0, [x4]
+
+# 5==5: 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203a353d3d35
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1136
+str x0, [x4]
+
+# variable (eq)
+sub x4, fp, #800
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1136
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #800
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_5
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_5
+_btos_fake_5:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_5:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# 5!=3: 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203a333d2135
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1168
+str x0, [x4]
+
+# variable (ne)
+sub x4, fp, #864
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1168
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #864
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_6
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_6
+_btos_fake_6:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_6:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# 3<5: 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203a353c33
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1200
+str x0, [x4]
+
+# variable (lt)
+sub x4, fp, #928
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1200
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #928
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_7
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_7
+_btos_fake_7:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_7:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# 5>3: 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203a333e35
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1232
+str x0, [x4]
+
+# variable (gt)
+sub x4, fp, #992
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1232
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #992
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_8
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_8
+_btos_fake_8:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_8:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# 5<=5: 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203a353d3c35
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1264
+str x0, [x4]
+
+# variable (le)
+sub x4, fp, #1056
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1264
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1056
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_9
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_9
+_btos_fake_9:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_9:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# 3>=5: 
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x203a353d3e33
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1296
+str x0, [x4]
+
+# variable (ge)
+sub x4, fp, #1120
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1296
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1120
+ldr w0, [x4]
+cmp w0, #0
+b.eq _btos_fake_10
+sub sp, sp, #16
+mov w1, #0x6552
+movk w1, #0x6c61, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+b _btos_end_10
+_btos_fake_10:
+sub sp, sp, #16
+mov w1, #0x6146
+movk w1, #0x656b, lsl #16
+str w1, [sp]
+strb wzr, [sp, #4]
+mov x1, sp
+mov x2, #4
+mov x0, #1
+mov x16, #4
+svc #0
+add sp, sp, #16
+_btos_end_10:
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #42
+sub x4, fp, #1328
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #1328
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1344
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #42
+sub x4, fp, #1376
+str x2, [x4]
+
+# variable (val)
+sub x4, fp, #1344
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1344
+ldr w0, [x4]
+sub x4, fp, #1376
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1392
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1392
+ldr w0, [x4]
+cbz w0, _endif_16
+
+# if: val is 42
+sub sp, sp, #16
+ldr x0, =0x3234207369
+str x0, [sp, #8]
+ldr x0, =0x206c6176203a6669
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1408
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1408
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_16
+_endif_16:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #10
+sub x4, fp, #1424
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #1424
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1440
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #20
+sub x4, fp, #1472
+str x2, [x4]
+
+# variable (n)
+sub x4, fp, #1440
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1440
+ldr w0, [x4]
+sub x4, fp, #1472
+ldr w1, [x4]
+cmp w0, w1
+cset w0, gt
+sub x4, fp, #1488
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1488
+ldr w0, [x4]
+cbz w0, _else_17
+
+# if: n>20
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x30323e6e203a6669
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1504
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1504
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_17
+_else_17:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #1536
+str x2, [x4]
+
+# variable (n)
+sub x4, fp, #1440
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1440
+ldr w0, [x4]
+sub x4, fp, #1536
+ldr w1, [x4]
+cmp w0, w1
+cset w0, gt
+sub x4, fp, #1552
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1552
+ldr w0, [x4]
+cbz w0, _else_18
+
+# else if: n>5
+sub sp, sp, #16
+ldr x0, =0x353e6e20
+str x0, [sp, #8]
+ldr x0, =0x3a66692065736c65
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1568
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1568
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_18
+_else_18:
+
+# else: n<=5
+sub sp, sp, #16
+ldr x0, =0x353d
+str x0, [sp, #8]
+ldr x0, =0x3c6e203a65736c65
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1584
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1584
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_18:
+_endif_17:
+# bool (Fake)
+str x0, [sp, #-16]!
+mov w2, #0
+sub x4, fp, #1600
+str w2, [x4]
+
+# if condition
+sub x4, fp, #1600
+ldr w0, [x4]
+cbz w0, _else_20
+
+# ERROR: should not print
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x746e6972702074
+str x0, [sp, #16]
+ldr x0, =0x6f6e20646c756f68
+str x0, [sp, #8]
+ldr x0, =0x73203a524f525245
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1616
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1616
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_20
+_else_20:
+
+# else: Fake branch skipped
+sub sp, sp, #32
+ldr x0, =0x64
+str x0, [sp, #24]
+ldr x0, =0x657070696b732068
+str x0, [sp, #16]
+ldr x0, =0x636e61726220656b
+str x0, [sp, #8]
+ldr x0, =0x6146203a65736c65
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1632
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1632
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_20:
+
+# --- Bool if-checks ---
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x2d2d2d20736b
+str x0, [sp, #16]
+ldr x0, =0x636568632d666920
+str x0, [sp, #8]
+ldr x0, =0x6c6f6f42202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1648
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1648
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #1680
+str w2, [x4]
+
+# variable (t)
+ldr x0, [fp, #-96]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #96
+ldr w0, [x4]
+sub x4, fp, #1680
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1696
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1696
+ldr w0, [x4]
+cbz w0, _else_22
+
+# PASS: t is Real
+sub sp, sp, #16
+ldr x0, =0x6c616552207369
+str x0, [sp, #8]
+ldr x0, =0x2074203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1712
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1712
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_22
+_else_22:
+
+# FAIL: t is not Real
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x6c6165
+str x0, [sp, #16]
+ldr x0, =0x5220746f6e207369
+str x0, [sp, #8]
+ldr x0, =0x2074203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1728
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1728
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_22:
+# bool (Fake)
+str x0, [sp, #-16]!
+mov w2, #0
+sub x4, fp, #1760
+str w2, [x4]
+
+# variable (f)
+ldr x0, [fp, #-128]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #128
+ldr w0, [x4]
+sub x4, fp, #1760
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1776
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1776
+ldr w0, [x4]
+cbz w0, _else_24
+
+# PASS: f is Fake
+sub sp, sp, #16
+ldr x0, =0x656b6146207369
+str x0, [sp, #8]
+ldr x0, =0x2066203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1792
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1792
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_24
+_else_24:
+
+# FAIL: f is not Fake
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x656b61
+str x0, [sp, #16]
+ldr x0, =0x4620746f6e207369
+str x0, [sp, #8]
+ldr x0, =0x2066203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1808
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1808
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_24:
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #1840
+str w2, [x4]
+
+# variable (r)
+ldr x0, [fp, #-240]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #240
+ldr w0, [x4]
+sub x4, fp, #1840
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1856
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1856
+ldr w0, [x4]
+cbz w0, _else_26
+
+# PASS: not Fake == Real
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x6c616552203d
+str x0, [sp, #16]
+ldr x0, =0x3d20656b61462074
+str x0, [sp, #8]
+ldr x0, =0x6f6e203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1872
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1872
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_26
+_else_26:
+
+# FAIL: not Fake != Real
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x6c616552203d
+str x0, [sp, #16]
+ldr x0, =0x2120656b61462074
+str x0, [sp, #8]
+ldr x0, =0x6f6e203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1888
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1888
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_26:
+# bool (Fake)
+str x0, [sp, #-16]!
+mov w2, #0
+sub x4, fp, #1920
+str w2, [x4]
+
+# variable (a)
+sub x4, fp, #336
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #336
+ldr w0, [x4]
+sub x4, fp, #1920
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1936
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1936
+ldr w0, [x4]
+cbz w0, _else_28
+
+# PASS: Real and Fake == Fake
+sub sp, sp, #32
+ldr x0, =0x656b61
+str x0, [sp, #24]
+ldr x0, =0x46203d3d20656b61
+str x0, [sp, #16]
+ldr x0, =0x4620646e61206c61
+str x0, [sp, #8]
+ldr x0, =0x6552203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1952
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1952
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_28
+_else_28:
+
+# FAIL: Real and Fake != Fake
+sub sp, sp, #32
+ldr x0, =0x656b61
+str x0, [sp, #24]
+ldr x0, =0x46203d2120656b61
+str x0, [sp, #16]
+ldr x0, =0x4620646e61206c61
+str x0, [sp, #8]
+ldr x0, =0x6552203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1968
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1968
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_28:
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #2000
+str w2, [x4]
+
+# variable (o)
+sub x4, fp, #400
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #400
+ldr w0, [x4]
+sub x4, fp, #2000
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2016
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2016
+ldr w0, [x4]
+cbz w0, _else_30
+
+# PASS: Real or Fake == Real
+sub sp, sp, #32
+ldr x0, =0x6c61
+str x0, [sp, #24]
+ldr x0, =0x6552203d3d20656b
+str x0, [sp, #16]
+ldr x0, =0x614620726f206c61
+str x0, [sp, #8]
+ldr x0, =0x6552203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2032
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2032
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_30
+_else_30:
+
+# FAIL: Real or Fake != Real
+sub sp, sp, #32
+ldr x0, =0x6c61
+str x0, [sp, #24]
+ldr x0, =0x6552203d2120656b
+str x0, [sp, #16]
+ldr x0, =0x614620726f206c61
+str x0, [sp, #8]
+ldr x0, =0x6552203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2048
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2048
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_30:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #1
+sub x4, fp, #2080
+str x2, [x4]
+
+# variable (ba)
+sub x4, fp, #528
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #528
+ldr w0, [x4]
+sub x4, fp, #2080
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2096
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2096
+ldr w0, [x4]
+cbz w0, _else_32
+
+# PASS: 5&3==1
+sub sp, sp, #16
+ldr x0, =0x313d3d33
+str x0, [sp, #8]
+ldr x0, =0x2635203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2112
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2112
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_32
+_else_32:
+
+# FAIL: 5&3
+sub sp, sp, #16
+ldr x0, =0x33
+str x0, [sp, #8]
+ldr x0, =0x2635203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2128
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2128
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_32:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #7
+sub x4, fp, #2160
+str x2, [x4]
+
+# variable (bo)
+sub x4, fp, #592
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #592
+ldr w0, [x4]
+sub x4, fp, #2160
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2176
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2176
+ldr w0, [x4]
+cbz w0, _else_34
+
+# PASS: 5|3==7
+sub sp, sp, #16
+ldr x0, =0x373d3d33
+str x0, [sp, #8]
+ldr x0, =0x7c35203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2192
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2192
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_34
+_else_34:
+
+# FAIL: 5|3
+sub sp, sp, #16
+ldr x0, =0x33
+str x0, [sp, #8]
+ldr x0, =0x7c35203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2208
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2208
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_34:
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #2480
+str w2, [x4]
+
+# variable (le)
+sub x4, fp, #1056
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1056
+ldr w0, [x4]
+sub x4, fp, #2480
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2496
+str w0, [x4]
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #2416
+str w2, [x4]
+
+# variable (gt)
+sub x4, fp, #992
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #992
+ldr w0, [x4]
+sub x4, fp, #2416
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2432
+str w0, [x4]
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #2352
+str w2, [x4]
+
+# variable (lt)
+sub x4, fp, #928
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #928
+ldr w0, [x4]
+sub x4, fp, #2352
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2368
+str w0, [x4]
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #2288
+str w2, [x4]
+
+# variable (ne)
+sub x4, fp, #864
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #864
+ldr w0, [x4]
+sub x4, fp, #2288
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2304
+str w0, [x4]
+# bool (Real)
+str x0, [sp, #-16]!
+mov w2, #1
+sub x4, fp, #2240
+str w2, [x4]
+
+# variable (eq)
+sub x4, fp, #800
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #800
+ldr w0, [x4]
+sub x4, fp, #2240
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2256
+str w0, [x4]
+# logical and
+sub x4, fp, #2256
+ldr w0, [x4]
+sub x4, fp, #2304
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2320
+str w0, [x4]
+# logical and
+sub x4, fp, #2320
+ldr w0, [x4]
+sub x4, fp, #2368
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2384
+str w0, [x4]
+# logical and
+sub x4, fp, #2384
+ldr w0, [x4]
+sub x4, fp, #2432
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2448
+str w0, [x4]
+# logical and
+sub x4, fp, #2448
+ldr w0, [x4]
+sub x4, fp, #2496
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #2512
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2512
+ldr w0, [x4]
+cbz w0, _else_36
+
+# PASS: comparisons correct
+sub sp, sp, #32
+ldr x0, =0x74
+str x0, [sp, #24]
+ldr x0, =0x636572726f632073
+str x0, [sp, #16]
+ldr x0, =0x6e6f73697261706d
+str x0, [sp, #8]
+ldr x0, =0x6f63203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2528
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2528
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_36
+_else_36:
+
+# FAIL: comparisons
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x73
+str x0, [sp, #16]
+ldr x0, =0x6e6f73697261706d
+str x0, [sp, #8]
+ldr x0, =0x6f63203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2544
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2544
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_36:
+# bool (Fake)
+str x0, [sp, #-16]!
+mov w2, #0
+sub x4, fp, #2576
+str w2, [x4]
+
+# variable (ge)
+sub x4, fp, #1120
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1120
+ldr w0, [x4]
+sub x4, fp, #2576
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #2592
+str w0, [x4]
+
+# if condition
+sub x4, fp, #2592
+ldr w0, [x4]
+cbz w0, _else_38
+
+# PASS: 3>=5 is Fake
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x656b
+str x0, [sp, #16]
+ldr x0, =0x614620736920353d
+str x0, [sp, #8]
+ldr x0, =0x3e33203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2608
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2608
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_38
+_else_38:
+
+# FAIL: 3>=5
+sub sp, sp, #16
+ldr x0, =0x353d
+str x0, [sp, #8]
+ldr x0, =0x3e33203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #2624
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #2624
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_38:
+
+mov w0, #0
+b return_statement
+
+# assign default
+add x0, sp, #0
+
+# assign default store
+str x0, [fp, #-80]
 # start of "main"
 .globl main
 main:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #1520
+sub sp, sp, #2112
 
-sub sp, sp, #1536
+sub sp, sp, #2128
 
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600000a36e80) 
+ # compound (0x128f49500) 
 
 # Hello
 sub sp, sp, #16
@@ -2381,7 +5650,7 @@ mov x2, #4
 sub x4, fp, #592
 str x2, [x4]
 
- # compound (0x600000a37540) 
+ # compound (0x128f49ee0) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2472,7 +5741,7 @@ mov x2, #2
 sub x4, fp, #784
 str x2, [x4]
 
- # compound (0x600000a37840) 
+ # compound (0x128f4a560) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2521,7 +5790,7 @@ mov x2, #4
 sub x4, fp, #912
 str x2, [x4]
 
- # compound (0x600000a379c0) 
+ # compound (0x128f4a450) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2529,7 +5798,7 @@ mov x2, #3
 sub x4, fp, #880
 str x2, [x4]
 
- # compound (0x600000a37a80) 
+ # compound (0x128f4a820) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2757,6 +6026,9 @@ str x0, [sp, #-16]!
 sub sp, sp, #32
 
 mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
 str x0, [sp, #24]
 ldr x0, =0x3d296e6572617028
 str x0, [sp, #8]
@@ -2906,6 +6178,543 @@ bl HelloWorldLine
 # store return value
 str x0, [sp, #-16]!
 
+# --- Arithmetic if-checks ---
+sub sp, sp, #32
+ldr x0, =0x2d2d2d20
+str x0, [sp, #24]
+ldr x0, =0x736b636568632d66
+str x0, [sp, #16]
+ldr x0, =0x6920636974656d68
+str x0, [sp, #8]
+ldr x0, =0x74697241202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1248
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1248
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #52
+sub x4, fp, #1280
+str x2, [x4]
+
+# variable (add)
+ldr x0, [fp, #-240]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #240
+ldr w0, [x4]
+sub x4, fp, #1280
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1296
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1296
+ldr w0, [x4]
+cbz w0, _else_40
+
+# PASS: 42+10==52
+sub sp, sp, #16
+ldr x0, =0x32353d3d30312b
+str x0, [sp, #8]
+ldr x0, =0x3234203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1312
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1312
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_40
+_else_40:
+
+# FAIL: 42+10
+sub sp, sp, #16
+ldr x0, =0x30312b
+str x0, [sp, #8]
+ldr x0, =0x3234203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1328
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1328
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_40:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #23
+sub x4, fp, #1360
+str x2, [x4]
+
+# variable (sub)
+sub x4, fp, #304
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #304
+ldr w0, [x4]
+sub x4, fp, #1360
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1376
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1376
+ldr w0, [x4]
+cbz w0, _else_42
+
+# PASS: 40-17==23
+sub sp, sp, #16
+ldr x0, =0x33323d3d37312d
+str x0, [sp, #8]
+ldr x0, =0x3034203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1392
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1392
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_42
+_else_42:
+
+# FAIL: 40-17
+sub sp, sp, #16
+ldr x0, =0x37312d
+str x0, [sp, #8]
+ldr x0, =0x3034203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1408
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1408
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_42:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #100
+sub x4, fp, #1440
+str x2, [x4]
+
+# variable (mul)
+sub x4, fp, #368
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #368
+ldr w0, [x4]
+sub x4, fp, #1440
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1456
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1456
+ldr w0, [x4]
+cbz w0, _else_44
+
+# PASS: 10*10==100
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x3030313d3d30312a
+str x0, [sp, #8]
+ldr x0, =0x3031203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1472
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1472
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_44
+_else_44:
+
+# FAIL: 10*10
+sub sp, sp, #16
+ldr x0, =0x30312a
+str x0, [sp, #8]
+ldr x0, =0x3031203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1488
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1488
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_44:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #1520
+str x2, [x4]
+
+# variable (div)
+sub x4, fp, #432
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #432
+ldr w0, [x4]
+sub x4, fp, #1520
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1536
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1536
+ldr w0, [x4]
+cbz w0, _else_46
+
+# PASS: 25/5==5
+sub sp, sp, #16
+ldr x0, =0x353d3d352f
+str x0, [sp, #8]
+ldr x0, =0x3532203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1552
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1552
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_46
+_else_46:
+
+# FAIL: 25/5
+sub sp, sp, #16
+ldr x0, =0x352f
+str x0, [sp, #8]
+ldr x0, =0x3532203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1568
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1568
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_46:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #20
+sub x4, fp, #1648
+str x2, [x4]
+
+# variable (mixed2)
+sub x4, fp, #624
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #624
+ldr w0, [x4]
+sub x4, fp, #1648
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1664
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #14
+sub x4, fp, #1600
+str x2, [x4]
+
+# variable (mixed1)
+sub x4, fp, #528
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #528
+ldr w0, [x4]
+sub x4, fp, #1600
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1616
+str w0, [x4]
+# logical and
+sub x4, fp, #1616
+ldr w0, [x4]
+sub x4, fp, #1664
+ldr w1, [x4]
+cmp w0, #0
+cset w0, ne
+cmp w1, #0
+cset w1, ne
+and w0, w0, w1
+sub x4, fp, #1680
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1680
+ldr w0, [x4]
+cbz w0, _else_48
+
+# PASS: precedence correct
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x74636572726f6320
+str x0, [sp, #16]
+ldr x0, =0x65636e6564656365
+str x0, [sp, #8]
+ldr x0, =0x7270203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1696
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1696
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_48
+_else_48:
+
+# FAIL: precedence
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x65636e6564656365
+str x0, [sp, #8]
+ldr x0, =0x7270203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1712
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1712
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_48:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #13
+sub x4, fp, #1744
+str x2, [x4]
+
+# variable (nested)
+sub x4, fp, #944
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #944
+ldr w0, [x4]
+sub x4, fp, #1744
+ldr w1, [x4]
+cmp w0, w1
+cset w0, eq
+sub x4, fp, #1760
+str w0, [x4]
+
+# if condition
+sub x4, fp, #1760
+ldr w0, [x4]
+cbz w0, _else_50
+
+# PASS: ((1+2)*3)+4==13
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x33313d3d34
+str x0, [sp, #16]
+ldr x0, =0x2b29332a29322b31
+str x0, [sp, #8]
+ldr x0, =0x2828203a53534150
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1776
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1776
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+b _endif_50
+_else_50:
+
+# FAIL: nested
+sub sp, sp, #16
+ldr x0, =0x64657473
+str x0, [sp, #8]
+ldr x0, =0x656e203a4c494146
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1792
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1792
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+_endif_50:
+
 # variable (what)
 ldr x0, [fp, #-176]
 str x0, [sp, #-16]!
@@ -2947,7 +6756,7 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #1296
+sub x4, fp, #1856
 str x0, [x4]
 
 # variable (name2)
@@ -2965,11 +6774,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #1328
+sub x4, fp, #1888
 str x0, [x4]
 
 # HelloWorld arg 0
-sub x4, fp, #1296
+sub x4, fp, #1856
 ldr x0, [x4]
 bl HelloWorld
 
@@ -2978,7 +6787,7 @@ ldr x0, [fp, #-144]
 bl HelloWorld
 
 # HelloWorld arg 2
-sub x4, fp, #1328
+sub x4, fp, #1888
 ldr x0, [x4]
 bl HelloWorld
 
@@ -2999,12 +6808,15 @@ bl print
 str x0, [sp, #-16]!
 
 # assign call store (int)
-sub x4, fp, #1360
+sub x4, fp, #1920
 str w0, [x4]
 add sp, sp, #16
 
 # returned value: 
 sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
 
 mov x0, #0
 str x0, [sp, #24]
@@ -3016,21 +6828,21 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #1376
+sub x4, fp, #1936
 str x0, [x4]
 
 # variable (returnVal)
-sub x4, fp, #1360
+sub x4, fp, #1920
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #1376
+sub x4, fp, #1936
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 1
-sub x4, fp, #1360
+sub x4, fp, #1920
 ldr x0, [x4]
 bl itos
 bl HelloWorld
@@ -3052,11 +6864,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #1408
+sub x4, fp, #1968
 str x0, [x4]
 
 # load arg 0 into x0
-sub x4, fp, #1408
+sub x4, fp, #1968
 ldr x0, [x4]
 
 # call function stringReturn
@@ -3066,17 +6878,17 @@ bl stringReturn
 str x0, [sp, #-16]!
 
 # assign call store (ptr)
-sub x4, fp, #1424
+sub x4, fp, #1984
 str x0, [x4]
 add sp, sp, #16
 
 # variable (returnStr)
-sub x4, fp, #1424
+sub x4, fp, #1984
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #1424
+sub x4, fp, #1984
 ldr x0, [x4]
 bl HelloWorld
 
@@ -3089,11 +6901,11 @@ str x0, [sp, #-16]!
 str x0, [sp, #-16]!
 ldr x1, [sp]
 mov x2, #0
-sub x4, fp, #1456
+sub x4, fp, #2016
 str x2, [x4]
 
 # load arg 0 into x0
-sub x4, fp, #1456
+sub x4, fp, #2016
 ldr x0, [x4]
 
 # call function testStringOps
@@ -3103,18 +6915,18 @@ bl testStringOps
 str x0, [sp, #-16]!
 
 # assign call store (int)
-sub x4, fp, #1472
+sub x4, fp, #2032
 str w0, [x4]
 add sp, sp, #16
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
 mov x2, #0
-sub x4, fp, #1488
+sub x4, fp, #2048
 str x2, [x4]
 
 # load arg 0 into x0
-sub x4, fp, #1488
+sub x4, fp, #2048
 ldr x0, [x4]
 
 # call function testArrayOps
@@ -3124,7 +6936,28 @@ bl testArrayOps
 str x0, [sp, #-16]!
 
 # assign call store (int)
-sub x4, fp, #1504
+sub x4, fp, #2064
+str w0, [x4]
+add sp, sp, #16
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #2080
+str x2, [x4]
+
+# load arg 0 into x0
+sub x4, fp, #2080
+ldr x0, [x4]
+
+# call function testBoolAndIf
+bl testBoolAndIf
+
+# store return value
+str x0, [sp, #-16]!
+
+# assign call store (int)
+sub x4, fp, #2096
 str w0, [x4]
 add sp, sp, #16
 
@@ -3135,7 +6968,7 @@ b return_statement
 add x0, sp, #0
 
 # assign default store
-str x0, [fp, #-80]
+str x0, [fp, #-96]
 HelloWorld:
     stp x29, x30, [sp, #-16]!
     mov x29, sp
@@ -3215,6 +7048,7 @@ return_statement:
 .section __DATA,__bss
 .p2align 4
 _str_buf: .space 4096
+_btos_buf: .space 16
 _str_buf0: .space 512
 _str_buf1: .space 512
 _str_buf2: .space 512
@@ -3517,6 +7351,29 @@ SmolStrings_done:
     mov x0, x3
     ldp x21, x22, [sp], #16
     ldp x19, x20, [sp], #16
+    mov sp, x29
+    ldp x29, x30, [sp], #16
+    ret
+
+btos:
+    stp x29, x30, [sp, #-16]!
+    mov x29, sp
+    adrp x3, _btos_buf@PAGE
+    add x3, x3, _btos_buf@PAGEOFF
+    cmp w0, #0
+    b.eq btos_fake
+    mov w1, #0x6552
+    movk w1, #0x6c61, lsl #16
+    str w1, [x3]
+    strb wzr, [x3, #4]
+    b btos_done
+btos_fake:
+    mov w1, #0x6146
+    movk w1, #0x656b, lsl #16
+    str w1, [x3]
+    strb wzr, [x3, #4]
+btos_done:
+    mov x0, x3
     mov sp, x29
     ldp x29, x30, [sp], #16
     ret

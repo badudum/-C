@@ -152,7 +152,7 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         append_store_w_to_fp(&s, var_offset, "store array base slot");
     }
 
-    else if(ast->datatype == TYPE_INT)
+    else if(ast->datatype == TYPE_INT || ast->datatype == TYPE_BOOL)
     {
         AST_t* rhs = ast->parent;
         if (rhs->type == COMP_AST && rhs->children->size == 1)
@@ -279,18 +279,38 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
     int is_hello_world_line = (strcmp(ast->name, "HelloWorldLine") == 0);
 
     if (is_hello_world || is_hello_world_line) {
-        // HelloWorld: print each argument (load into x0, call for each)
         for (unsigned int i = 0; i < num_args; i++) {
             AST_t* arg = (AST_t*) ast->parent->children->items[i];
             int need_itos = 0;
-            if (arg->type == INT_AST || arg->type == BINOP_AST)
+            int need_btos = 0;
+            if (arg->type == INT_AST)
                 need_itos = 1;
+            else if (arg->type == BOOL_AST)
+                need_btos = 1;
+            else if (arg->type == BINOP_AST) {
+                if (arg->op == DEQUALS_TOKEN || arg->op == NOT_EQUALS_TOKEN ||
+                    arg->op == LT_TOKEN || arg->op == GT_TOKEN ||
+                    arg->op == LTE_TOKEN || arg->op == GTE_TOKEN ||
+                    arg->op == AND_TOKEN || arg->op == OR_TOKEN)
+                    need_btos = 1;
+                else
+                    need_itos = 1;
+            }
+            else if (arg->type == UNARY_AST) {
+                if (arg->op == NOT_TOKEN)
+                    need_btos = 1;
+                else
+                    need_itos = 1;
+            }
             else if (arg->type == VAR_AST) {
                 for (unsigned int j = 0; j < list->size; j++) {
                     AST_t* def = (AST_t*) list->items[j];
                     if (def->type == ASSIGNEMENT_AST && def->name && arg->name &&
-                        strcmp(def->name, arg->name) == 0 && def->datatype == TYPE_INT) {
-                        need_itos = 1;
+                        strcmp(def->name, arg->name) == 0) {
+                        if (def->datatype == TYPE_INT)
+                            need_itos = 1;
+                        else if (def->datatype == TYPE_BOOL)
+                            need_btos = 1;
                         break;
                     }
                 }
@@ -298,8 +318,48 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
             int off = arg->stack_index * -16;
             char cmt[64];
             snprintf(cmt, sizeof(cmt), "HelloWorld arg %d", i);
-            append_load_from_fp(&s, off, 0, cmt);
-            if (need_itos) {
+            if (need_btos) {
+                append_load_w_from_fp(&s, off, cmt);
+            } else {
+                append_load_from_fp(&s, off, 0, cmt);
+            }
+            if (need_btos) {
+                static int btos_id = 0;
+                int bid = btos_id++;
+                char btos_buf[512];
+                sprintf(btos_buf,
+                    "cmp w0, #0\n"
+                    "b.eq _btos_fake_%d\n"
+                    "sub sp, sp, #16\n"
+                    "mov w1, #0x6552\n"
+                    "movk w1, #0x6c61, lsl #16\n"
+                    "str w1, [sp]\n"
+                    "strb wzr, [sp, #4]\n"
+                    "mov x1, sp\n"
+                    "mov x2, #4\n"
+                    "mov x0, #1\n"
+                    "mov x16, #4\n"
+                    "svc #0\n"
+                    "add sp, sp, #16\n"
+                    "b _btos_end_%d\n"
+                    "_btos_fake_%d:\n"
+                    "sub sp, sp, #16\n"
+                    "mov w1, #0x6146\n"
+                    "movk w1, #0x656b, lsl #16\n"
+                    "str w1, [sp]\n"
+                    "strb wzr, [sp, #4]\n"
+                    "mov x1, sp\n"
+                    "mov x2, #4\n"
+                    "mov x0, #1\n"
+                    "mov x16, #4\n"
+                    "svc #0\n"
+                    "add sp, sp, #16\n"
+                    "_btos_end_%d:\n",
+                    bid, bid, bid, bid);
+                s = realloc(s, strlen(s) + strlen(btos_buf) + 1);
+                strcat(s, btos_buf);
+                goto skip_hello_call;
+            } else if (need_itos) {
                 const char* itos = "bl itos\n";
                 s = realloc(s, (strlen(s) + strlen(itos) + 1) * sizeof(char));
                 strcat(s, itos);
@@ -307,6 +367,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
             const char* call_one = "bl HelloWorld\n";
             s = realloc(s, (strlen(s) + strlen(call_one) + 1) * sizeof(char));
             strcat(s, call_one);
+            skip_hello_call:;
         }
         if (is_hello_world_line) {
             const char* newline_call = "\n# HelloWorldLine newline\nbl HelloWorldLine\n";
@@ -427,15 +488,15 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
     char * strpush = calloc(strlen(sub)+1, sizeof(char));
     strcat(strpush, sub);
 
-    // Place null terminator at the end if needed
-    if (numb_bytes > (chunks->size * 8)) {
+    // Zero all bytes from after chunk data to end of allocated region
+    for (unsigned int z = chunks->size * 8; z < numb_bytes; z += 8) {
         const char*  push_zero = "\nmov x0, #0\n"
                                  "str x0, [sp, #%d]\n";
-        
         char * zero = calloc(strlen(push_zero) + 128, sizeof(char));
-        sprintf(zero, push_zero, numb_bytes - 8);
+        sprintf(zero, push_zero, z);
         strpush = realloc(strpush, (strlen(strpush) + strlen(zero) + 1) * sizeof(char));
         strcat(strpush, zero);
+        free(zero);
     }  
 
     const char* pushtemplate = "ldr x0, =0x%s\n"
@@ -552,7 +613,7 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
     int result_abs = result_offset < 0 ? -result_offset : result_offset;
     int use_large = (left_abs > 255 || right_abs > 255 || result_abs > 255);
 
-    char * op_asm = calloc(512, sizeof(char));
+    char * op_asm = calloc(1024, sizeof(char));
     switch(ast->op)
     {
         case PLUS_TOKEN:
@@ -588,6 +649,123 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
                 sprintf(op_asm, (char*) assemble_div_aarch64, left_offset, right_offset, result_offset);
             break;
         }
+        case DEQUALS_TOKEN:
+        case NOT_EQUALS_TOKEN:
+        case LT_TOKEN:
+        case GT_TOKEN:
+        case LTE_TOKEN:
+        case GTE_TOKEN: {
+            const char* cond;
+            switch(ast->op) {
+                case DEQUALS_TOKEN:     cond = "eq"; break;
+                case NOT_EQUALS_TOKEN:  cond = "ne"; break;
+                case LT_TOKEN:          cond = "lt"; break;
+                case GT_TOKEN:          cond = "gt"; break;
+                case LTE_TOKEN:         cond = "le"; break;
+                case GTE_TOKEN:         cond = "ge"; break;
+                default:                cond = "eq"; break;
+            }
+            if (use_large) {
+                sprintf(op_asm,
+                    "# comparison\n"
+                    "sub x4, fp, #%d\nldr w0, [x4]\n"
+                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "cmp w0, w1\n"
+                    "cset w0, %s\n"
+                    "sub x4, fp, #%d\nstr w0, [x4]\n",
+                    left_abs, right_abs, cond, result_abs);
+            } else {
+                sprintf(op_asm,
+                    "# comparison\n"
+                    "ldr w0, [fp, #%d]\n"
+                    "ldr w1, [fp, #%d]\n"
+                    "cmp w0, w1\n"
+                    "cset w0, %s\n"
+                    "str w0, [fp, #%d]\n",
+                    left_offset, right_offset, cond, result_offset);
+            }
+            break;
+        }
+        case AND_TOKEN:
+            if (use_large) {
+                sprintf(op_asm,
+                    "# logical and\n"
+                    "sub x4, fp, #%d\nldr w0, [x4]\n"
+                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "cmp w0, #0\ncset w0, ne\n"
+                    "cmp w1, #0\ncset w1, ne\n"
+                    "and w0, w0, w1\n"
+                    "sub x4, fp, #%d\nstr w0, [x4]\n",
+                    left_abs, right_abs, result_abs);
+            } else {
+                sprintf(op_asm,
+                    "# logical and\n"
+                    "ldr w0, [fp, #%d]\nldr w1, [fp, #%d]\n"
+                    "cmp w0, #0\ncset w0, ne\n"
+                    "cmp w1, #0\ncset w1, ne\n"
+                    "and w0, w0, w1\n"
+                    "str w0, [fp, #%d]\n",
+                    left_offset, right_offset, result_offset);
+            }
+            break;
+        case OR_TOKEN:
+            if (use_large) {
+                sprintf(op_asm,
+                    "# logical or\n"
+                    "sub x4, fp, #%d\nldr w0, [x4]\n"
+                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "cmp w0, #0\ncset w0, ne\n"
+                    "cmp w1, #0\ncset w1, ne\n"
+                    "orr w0, w0, w1\n"
+                    "sub x4, fp, #%d\nstr w0, [x4]\n",
+                    left_abs, right_abs, result_abs);
+            } else {
+                sprintf(op_asm,
+                    "# logical or\n"
+                    "ldr w0, [fp, #%d]\nldr w1, [fp, #%d]\n"
+                    "cmp w0, #0\ncset w0, ne\n"
+                    "cmp w1, #0\ncset w1, ne\n"
+                    "orr w0, w0, w1\n"
+                    "str w0, [fp, #%d]\n",
+                    left_offset, right_offset, result_offset);
+            }
+            break;
+        case BITAND_TOKEN:
+            if (use_large) {
+                sprintf(op_asm,
+                    "# bitwise and\n"
+                    "sub x4, fp, #%d\nldr w0, [x4]\n"
+                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "and w0, w0, w1\n"
+                    "sub x4, fp, #%d\nstr w0, [x4]\n",
+                    left_abs, right_abs, result_abs);
+            } else {
+                sprintf(op_asm,
+                    "# bitwise and\n"
+                    "ldr w0, [fp, #%d]\nldr w1, [fp, #%d]\n"
+                    "and w0, w0, w1\n"
+                    "str w0, [fp, #%d]\n",
+                    left_offset, right_offset, result_offset);
+            }
+            break;
+        case BITOR_TOKEN:
+            if (use_large) {
+                sprintf(op_asm,
+                    "# bitwise or\n"
+                    "sub x4, fp, #%d\nldr w0, [x4]\n"
+                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "orr w0, w0, w1\n"
+                    "sub x4, fp, #%d\nstr w0, [x4]\n",
+                    left_abs, right_abs, result_abs);
+            } else {
+                sprintf(op_asm,
+                    "# bitwise or\n"
+                    "ldr w0, [fp, #%d]\nldr w1, [fp, #%d]\n"
+                    "orr w0, w0, w1\n"
+                    "str w0, [fp, #%d]\n",
+                    left_offset, right_offset, result_offset);
+            }
+            break;
         default:
             printf("ASSEMBLER: No front for AST of type `%d`\n", ast->type);
             exit(1);
@@ -888,6 +1066,117 @@ char * assemble_array_literal(AST_t * ast, dynamic_list_t * list)
 }
 
 
+static int if_label_counter = 0;
+
+char * assemble_bool(AST_t * ast, dynamic_list_t * list)
+{
+    int index = ast->stack_index * -16;
+    int abs_offset = index < 0 ? -index : index;
+    char * s = calloc(256, sizeof(char));
+    if (abs_offset <= 255) {
+        sprintf(s,
+            "# bool (%s)\n"
+            "str x0, [sp, #-16]!\n"
+            "mov w2, #%d\n"
+            "str w2, [fp, #%d]\n",
+            ast->int_value ? "Real" : "Fake", ast->int_value, index);
+    } else {
+        sprintf(s,
+            "# bool (%s)\n"
+            "str x0, [sp, #-16]!\n"
+            "mov w2, #%d\n"
+            "sub x4, fp, #%d\n"
+            "str w2, [x4]\n",
+            ast->int_value ? "Real" : "Fake", ast->int_value, abs_offset);
+    }
+    return s;
+}
+
+char * assemble_if(AST_t * ast, dynamic_list_t * list)
+{
+    int id = if_label_counter++;
+    char * s = calloc(1, sizeof(char));
+
+    if (ast->left) {
+        char* cond_asm = assemble(ast->left, list);
+        s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
+        strcat(s, cond_asm);
+        free(cond_asm);
+
+        int cond_off = ast->left->stack_index * -16;
+        append_load_w_from_fp(&s, cond_off, "if condition");
+
+        char label_buf[128];
+        if (ast->right)
+            sprintf(label_buf, "cbz w0, _else_%d\n", id);
+        else
+            sprintf(label_buf, "cbz w0, _endif_%d\n", id);
+        s = realloc(s, strlen(s) + strlen(label_buf) + 1);
+        strcat(s, label_buf);
+    }
+
+    for (unsigned int i = 0; i < ast->children->size; i++) {
+        AST_t* child = (AST_t*)ast->children->items[i];
+        char* child_asm = assemble(child, list);
+        s = realloc(s, strlen(s) + strlen(child_asm) + 1);
+        strcat(s, child_asm);
+        free(child_asm);
+    }
+
+    if (ast->left) {
+        char end_buf[64];
+        sprintf(end_buf, "b _endif_%d\n", id);
+        s = realloc(s, strlen(s) + strlen(end_buf) + 1);
+        strcat(s, end_buf);
+    }
+
+    if (ast->right) {
+        char else_label[64];
+        sprintf(else_label, "_else_%d:\n", id);
+        s = realloc(s, strlen(s) + strlen(else_label) + 1);
+        strcat(s, else_label);
+
+        char* else_asm = assemble_if(ast->right, list);
+        s = realloc(s, strlen(s) + strlen(else_asm) + 1);
+        strcat(s, else_asm);
+        free(else_asm);
+    }
+
+    if (ast->left) {
+        char endif_label[64];
+        sprintf(endif_label, "_endif_%d:\n", id);
+        s = realloc(s, strlen(s) + strlen(endif_label) + 1);
+        strcat(s, endif_label);
+    }
+
+    return s;
+}
+
+char * assemble_unary(AST_t * ast, dynamic_list_t * list)
+{
+    char * s = calloc(1, sizeof(char));
+
+    char* operand_asm = assemble(ast->left, list);
+    s = realloc(s, strlen(s) + strlen(operand_asm) + 1);
+    strcat(s, operand_asm);
+    free(operand_asm);
+
+    if (ast->op == NOT_TOKEN) {
+        append_load_w_from_fp(&s, ast->left->stack_index * -16, "logical not load");
+        const char* not_op = "cmp w0, #0\ncset w0, eq\n";
+        s = realloc(s, strlen(s) + strlen(not_op) + 1);
+        strcat(s, not_op);
+        append_store_w_to_fp(&s, ast->stack_index * -16, "logical not store");
+    } else if (ast->op == BITNOT_TOKEN) {
+        append_load_w_from_fp(&s, ast->left->stack_index * -16, "bitwise not load");
+        const char* not_op = "mvn w0, w0\n";
+        s = realloc(s, strlen(s) + strlen(not_op) + 1);
+        strcat(s, not_op);
+        append_store_w_to_fp(&s, ast->stack_index * -16, "bitwise not store");
+    }
+    return s;
+}
+
 char * assemble(AST_t * ast, dynamic_list_t * list)
 {
     // printf("Current : %d", ast->type);
@@ -909,6 +1198,9 @@ char * assemble(AST_t * ast, dynamic_list_t * list)
         case ARRAY_LITERAL_AST : next = assemble_array_literal(ast, list); break;
         case RETURN_AST : next = assemble_return(ast, list); break;
         case FUNC_AST : next = assemble_function(ast, list); break;
+        case BOOL_AST : next = assemble_bool(ast, list); break;
+        case IF_AST : next = assemble_if(ast, list); break;
+        case UNARY_AST : next = assemble_unary(ast, list); break;
         default : {printf("ASSEMBLER: No front for AST of type `%d`\n", ast->type); exit(1);} break;
 
     }

@@ -23,6 +23,9 @@ typedef struct AST_S
         BINOP_AST,
         SLICE_AST,
         ARRAY_LITERAL_AST,
+        BOOL_AST,
+        IF_AST,
+        UNARY_AST,
         NOOP_AST,
     }type;
 

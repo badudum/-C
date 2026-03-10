@@ -46,6 +46,9 @@ AST_t* visitor_visit(visitor_t* visitor, AST_t* node, dynamic_list_t* list, stac
         case ACCESS_AST: return visit_access(visitor, node, list, stackframe);break;
         case SLICE_AST: return visit_slice(visitor, node, list, stackframe);break;
         case ARRAY_LITERAL_AST: return visit_array_literal(visitor, node, list, stackframe);break;
+        case BOOL_AST: return visit_bool(visitor, node, list, stackframe);break;
+        case IF_AST: return visit_if(visitor, node, list, stackframe);break;
+        case UNARY_AST: return visit_unary(visitor, node, list, stackframe);break;
         default: {
             printf("Unknown node type: %d\n", node->type);
             exit(1);
@@ -313,15 +316,50 @@ AST_t* visit_slice(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stack
 AST_t* visit_array_literal(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
     int count = node->children->size;
-    /* Visit each element; each visit pushes a stack entry */
     for (int i = 0; i < count; i++) {
         AST_t* elem = (AST_t*)node->children->items[i];
         node->children->items[i] = visitor_visit(visitor, elem, list, stackframe);
     }
-    /* stack_index points to the first element's slot */
     node->stack_index = ((AST_t*)node->children->items[0])->stack_index;
     node->stackframe = stackframe;
     node->int_value = count;
     return node;
+}
+
+AST_t* visit_bool(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    list_enqueue(stackframe->stack, mkstr("0"));
+    node->stack_index = stackframe->stack->size;
+    node->stackframe = stackframe;
+    node->datatype = TYPE_BOOL;
+    return node;
+}
+
+AST_t* visit_if(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    if (node->left)
+        node->left = visitor_visit(visitor, node->left, list, stackframe);
+
+    for (unsigned int i = 0; i < node->children->size; i++) {
+        AST_t* child = (AST_t*)node->children->items[i];
+        node->children->items[i] = visitor_visit(visitor, child, list, stackframe);
+    }
+
+    if (node->right)
+        node->right = visitor_visit(visitor, node->right, list, stackframe);
+
+    node->stackframe = stackframe;
+    return node;
+}
+
+AST_t* visit_unary(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    AST_t* unary = init_ast(UNARY_AST);
+    unary->left = visitor_visit(visitor, node->left, list, stackframe);
+    unary->op = node->op;
+    list_enqueue(stackframe->stack, mkstr("0"));
+    unary->stack_index = stackframe->stack->size;
+    unary->stackframe = stackframe;
+    return unary;
 }
 

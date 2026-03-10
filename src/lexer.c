@@ -189,14 +189,24 @@ token_t *lexer_collect_id(lexer_t *lexer)
     }
 
     if (strcmp(value, "return") == 0)
-    {
         token_type = RETURN_TOKEN;
-    }
-
-    if(is_anagram(value, "function"))
-    {
+    else if (is_anagram(value, "function"))
         token_type = FUNCTION_TOKEN;
-    }
+    else if (strcmp(value, "if") == 0)
+        token_type = IF_TOKEN;
+    else if (strcmp(value, "else") == 0)
+        token_type = ELSE_TOKEN;
+    else if (strcmp(value, "Real") == 0)
+        token_type = REAL_TOKEN;
+    else if (strcmp(value, "Fake") == 0)
+        token_type = FAKE_TOKEN;
+    else if (strcmp(value, "and") == 0)
+        token_type = AND_TOKEN;
+    else if (strcmp(value, "or") == 0)
+        token_type = OR_TOKEN;
+    else if (strcmp(value, "not") == 0)
+        token_type = NOT_TOKEN;
+
     return init_token(token_type, value);
 }
 
@@ -271,6 +281,10 @@ token_t *lexer_get_next_token(lexer_t *lexer)
         switch (lexer->c)
         {
         case '=':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, DEQUALS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, EQUALS_TOKEN);
         case ';':
             return lexer_get_next_with_type(lexer, SEMI_TOKEN);
@@ -288,10 +302,30 @@ token_t *lexer_get_next_token(lexer_t *lexer)
             return lexer_get_next_with_type(lexer, DOT_TOKEN);
         case ':':
             return lexer_get_next_with_type(lexer, COLON_TOKEN);
+        case '!':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, NOT_EQUALS_TOKEN);
+            }
+            return lexer_get_next_with_type(lexer, NOT_TOKEN);
         case '>':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, GTE_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, GT_TOKEN);
         case '<':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, LTE_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, LT_TOKEN);
+        case '&':
+            return lexer_get_next_with_type(lexer, BITAND_TOKEN);
+        case '|':
+            return lexer_get_next_with_type(lexer, BITOR_TOKEN);
+        case '~':
+            return lexer_get_next_with_type(lexer, BITNOT_TOKEN);
         case '+':
             return lexer_get_next_with_type(lexer, PLUS_TOKEN);
         case '-':
