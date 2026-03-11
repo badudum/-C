@@ -218,9 +218,32 @@ AST_t * parse_factor(parser_t * parser)
     }
 }
 
-// unary: not, ~
+// postfix: primary then optional ++/--
+AST_t * parse_postfix(parser_t * parser)
+{
+    AST_t * primary = parse_factor(parser);
+    while (parser->token->type == PLUS_PLUS_TOKEN || parser->token->type == MINUS_MINUS_TOKEN) {
+        AST_t * incdec = init_ast(INC_DEC_AST);
+        incdec->left = primary;
+        incdec->op = parser->token->type;
+        incdec->int_value = 1; /* postfix */
+        parser_next(parser, parser->token->type);
+        primary = incdec;
+    }
+    return primary;
+}
+
+// unary: prefix ++/--, not, ~
 AST_t * parse_unary(parser_t * parser)
 {
+    if (parser->token->type == PLUS_PLUS_TOKEN || parser->token->type == MINUS_MINUS_TOKEN) {
+        AST_t * incdec = init_ast(INC_DEC_AST);
+        incdec->op = parser->token->type;
+        parser_next(parser, parser->token->type);
+        incdec->left = parse_unary(parser);
+        incdec->int_value = 0; /* prefix */
+        return incdec;
+    }
     if (parser->token->type == NOT_TOKEN || parser->token->type == BITNOT_TOKEN) {
         AST_t * unary = init_ast(UNARY_AST);
         unary->op = parser->token->type;
@@ -228,7 +251,7 @@ AST_t * parse_unary(parser_t * parser)
         unary->left = parse_unary(parser);
         return unary;
     }
-    return parse_factor(parser);
+    return parse_postfix(parser);
 }
 
 // multiplication, division
@@ -357,6 +380,8 @@ AST_t * parse_expression(parser_t* parser)
 }
 
 
+AST_t * parse_loop_until(parser_t * parser);
+
 //This is the function used to parse return statements
 AST_t * parse_statement(parser_t * parser)
 {
@@ -424,6 +449,83 @@ AST_t * parse_if(parser_t * parser)
     return node;
 }
 
+/* Parse loop body (statements until RBRACE). Consumes RBRACE. */
+static void parse_loop_body(parser_t *p, AST_t *n)
+{
+    while (p->token->type != RBRACE_TOKEN && p->token->type != EOF_TOKEN) {
+        if (p->token->type == RETURN_TOKEN)
+            list_enqueue(n->children, parse_statement(p));
+        else if (p->token->type == IF_TOKEN)
+            list_enqueue(n->children, parse_if(p));
+        else if (p->token->type == LOOP_TOKEN)
+            list_enqueue(n->children, parse_loop_until(p));
+        else
+            list_enqueue(n->children, parse_expression(p));
+        if (p->token->type == SEMI_TOKEN)
+            parser_next(p, SEMI_TOKEN);
+    }
+    parser_next(p, RBRACE_TOKEN);
+}
+
+/*
+ * loop until (condition) { body };     -> while
+ * loop until (init; cond; step) { body }; -> for
+ * loop { body } until (condition);     -> do-while
+ * loop { body } until (init; cond; step); -> do-while for-style
+ * LOOP_UNTIL_AST: left = condition (expr or FOR_CLAUSE_AST), children = body, int_value = body_first (0 or 1)
+ */
+AST_t * parse_loop_until(parser_t * parser)
+{
+    parser_next(parser, LOOP_TOKEN);
+    AST_t * node = init_ast(LOOP_UNTIL_AST);
+    int body_first = 0;
+
+    if (parser->token->type == UNTIL_TOKEN) {
+        parser_next(parser, UNTIL_TOKEN);
+        parser_next(parser, LPAREN_TOKEN);
+        AST_t * first = parse_expression(parser);
+        if (parser->token->type == SEMI_TOKEN) {
+            AST_t * for_clause = init_ast(FOR_CLAUSE_AST);
+            list_enqueue(for_clause->children, first);
+            parser_next(parser, SEMI_TOKEN);
+            list_enqueue(for_clause->children, parse_expression(parser));
+            parser_next(parser, SEMI_TOKEN);
+            list_enqueue(for_clause->children, parse_expression(parser));
+            parser_next(parser, RPAREN_TOKEN);
+            node->left = for_clause;
+        } else {
+            parser_next(parser, RPAREN_TOKEN);
+            node->left = first;
+        }
+        parser_next(parser, LBRACE_TOKEN);
+        parse_loop_body(parser, node);
+    } else if (parser->token->type == LBRACE_TOKEN) {
+        body_first = 1;
+        parser_next(parser, LBRACE_TOKEN);
+        parse_loop_body(parser, node);
+        parser_next(parser, UNTIL_TOKEN);
+        parser_next(parser, LPAREN_TOKEN);
+        AST_t * first = parse_expression(parser);
+        if (parser->token->type == SEMI_TOKEN) {
+            AST_t * for_clause = init_ast(FOR_CLAUSE_AST);
+            list_enqueue(for_clause->children, first);
+            parser_next(parser, SEMI_TOKEN);
+            list_enqueue(for_clause->children, parse_expression(parser));
+            parser_next(parser, SEMI_TOKEN);
+            list_enqueue(for_clause->children, parse_expression(parser));
+            parser_next(parser, RPAREN_TOKEN);
+            node->left = for_clause;
+        } else {
+            parser_next(parser, RPAREN_TOKEN);
+            node->left = first;
+        }
+    } else {
+        printf("[parse_loop_until] expected 'until' or '{' after 'loop'\n");
+        exit(1);
+    }
+    node->int_value = body_first;
+    return node;
+}
 
 //This is the function used to parse lists
 AST_t * parse_list(parser_t * parser)
@@ -533,6 +635,10 @@ AST_t * parse_compound(parser_t * parser)
         else if (parser->token->type == IF_TOKEN)
         {
             list_enqueue(compound->children, parse_if(parser));
+        }
+        else if (parser->token->type == LOOP_TOKEN)
+        {
+            list_enqueue(compound->children, parse_loop_until(parser));
         }
         else 
         {

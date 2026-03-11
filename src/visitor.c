@@ -49,6 +49,9 @@ AST_t* visitor_visit(visitor_t* visitor, AST_t* node, dynamic_list_t* list, stac
         case BOOL_AST: return visit_bool(visitor, node, list, stackframe);break;
         case IF_AST: return visit_if(visitor, node, list, stackframe);break;
         case UNARY_AST: return visit_unary(visitor, node, list, stackframe);break;
+        case LOOP_UNTIL_AST: return visit_loop_until(visitor, node, list, stackframe);break;
+        case FOR_CLAUSE_AST: return visit_for_clause(visitor, node, list, stackframe);break;
+        case INC_DEC_AST: return visit_inc_dec(visitor, node, list, stackframe);break;
         default: {
             printf("Unknown node type: %d\n", node->type);
             exit(1);
@@ -361,5 +364,37 @@ AST_t* visit_unary(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stack
     unary->stack_index = stackframe->stack->size;
     unary->stackframe = stackframe;
     return unary;
+}
+
+AST_t* visit_for_clause(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    for (unsigned int i = 0; i < node->children->size; i++) {
+        AST_t* child = (AST_t*)node->children->items[i];
+        node->children->items[i] = visitor_visit(visitor, child, list, stackframe);
+    }
+    node->stackframe = stackframe;
+    return node;
+}
+
+AST_t* visit_loop_until(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    if (node->left)
+        node->left = visitor_visit(visitor, node->left, list, stackframe);
+    for (unsigned int i = 0; i < node->children->size; i++) {
+        AST_t* child = (AST_t*)node->children->items[i];
+        node->children->items[i] = visitor_visit(visitor, child, list, stackframe);
+    }
+    node->stackframe = stackframe;
+    return node;
+}
+
+AST_t* visit_inc_dec(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
+{
+    node->left = visitor_visit(visitor, node->left, list, stackframe);
+    list_enqueue(stackframe->stack, mkstr("0"));
+    node->stack_index = stackframe->stack->size;
+    node->stackframe = stackframe;
+    node->datatype = TYPE_INT;
+    return node;
 }
 

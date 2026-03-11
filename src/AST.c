@@ -6,7 +6,7 @@ AST_t * init_ast(int type)
     AST_t * ast = calloc(1, sizeof(struct AST_S));
     ast->type = type;
 
-    if (type == COMP_AST || type == SLICE_AST || type == ARRAY_LITERAL_AST || type == IF_AST)
+    if (type == COMP_AST || type == SLICE_AST || type == ARRAY_LITERAL_AST || type == IF_AST || type == LOOP_UNTIL_AST || type == FOR_CLAUSE_AST)
     {
         ast->children = init_list(sizeof(struct AST_S*));
     }

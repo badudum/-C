@@ -26,6 +26,9 @@ typedef struct AST_S
         BOOL_AST,
         IF_AST,
         UNARY_AST,
+        LOOP_UNTIL_AST,
+        FOR_CLAUSE_AST,
+        INC_DEC_AST,
         NOOP_AST,
     }type;
 

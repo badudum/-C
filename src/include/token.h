@@ -27,6 +27,8 @@ typedef struct TOKEN_S
         ELSE_TOKEN,
         RETURN_TOKEN,
         WHILE_TOKEN,
+        LOOP_TOKEN,
+        UNTIL_TOKEN,
         FUNCTION_TOKEN,
 
         INT_TOKEN,
@@ -40,6 +42,8 @@ typedef struct TOKEN_S
         NOT_EQUALS_TOKEN,
         PLUS_TOKEN,
         MINUS_TOKEN,
+        PLUS_PLUS_TOKEN,
+        MINUS_MINUS_TOKEN,
         ASTERISK_TOKEN,
         SLASH_TOKEN,
         MODULUS_TOKEN,

@@ -206,6 +206,10 @@ token_t *lexer_collect_id(lexer_t *lexer)
         token_type = OR_TOKEN;
     else if (strcmp(value, "not") == 0)
         token_type = NOT_TOKEN;
+    else if (strcmp(value, "loop") == 0)
+        token_type = LOOP_TOKEN;
+    else if (strcmp(value, "until") == 0)
+        token_type = UNTIL_TOKEN;
 
     return init_token(token_type, value);
 }
@@ -327,8 +331,16 @@ token_t *lexer_get_next_token(lexer_t *lexer)
         case '~':
             return lexer_get_next_with_type(lexer, BITNOT_TOKEN);
         case '+':
+            if (lexer_peek(lexer, 1) == '+') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, PLUS_PLUS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, PLUS_TOKEN);
         case '-':
+            if (lexer_peek(lexer, 1) == '-') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, MINUS_MINUS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, MINUS_TOKEN);
         case '*':
             return lexer_get_next_with_type(lexer, ASTERISK_TOKEN);

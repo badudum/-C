@@ -6,7 +6,7 @@ mov x0, #0
 mov x16, #1
 svc #0
 
- # compound (0x128f3e4d0) 
+ # compound (0x600001f3b5a0) 
 # start of "print"
 .globl print
 print:
@@ -19,7 +19,7 @@ sub sp, sp, #96
 # load parameter test from x0
 str x0, [fp, #-48]
 
- # compound (0x128f3e700) 
+ # compound (0x600001f3b720) 
 
 # variable (test)
 ldr x0, [fp, #-48]
@@ -52,7 +52,7 @@ sub sp, sp, #112
 # load parameter pushed from x0
 str x0, [fp, #-48]
 
- # compound (0x128f3ea50) 
+ # compound (0x600001f3b960) 
 
 # Taken string : 
 sub sp, sp, #16
@@ -116,7 +116,7 @@ sub sp, sp, #1200
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x128f3eeb0) 
+ # compound (0x600001f3bb40) 
 
 # --- String ops tests ---
 sub sp, sp, #32
@@ -1032,7 +1032,7 @@ sub sp, sp, #2576
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x128f41360) 
+ # compound (0x600001f34720) 
 
 # --- Array tests ---
 sub sp, sp, #32
@@ -3081,7 +3081,7 @@ sub sp, sp, #2656
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x128f44db0) 
+ # compound (0x600001f35c20) 
 
 # --- Bool & If tests ---
 sub sp, sp, #32
@@ -5392,19 +5392,823 @@ add x0, sp, #0
 
 # assign default store
 str x0, [fp, #-80]
+# start of "testLoopUntil"
+.globl testLoopUntil
+testLoopUntil:
+stp x29, x30, [sp, #-16]!
+mov x29, sp
+sub sp, sp, #1104
+
+sub sp, sp, #1120
+
+# load parameter x from x0
+str x0, [fp, #-48]
+
+ # compound (0x600001f379c0) 
+
+# --- loop until & ++/-- tests ---
+sub sp, sp, #48
+
+mov x0, #0
+str x0, [sp, #32]
+
+mov x0, #0
+str x0, [sp, #40]
+ldr x0, =0x2d2d2d2073747365
+str x0, [sp, #24]
+ldr x0, =0x74202d2d2f2b2b20
+str x0, [sp, #16]
+ldr x0, =0x26206c69746e7520
+str x0, [sp, #8]
+ldr x0, =0x706f6f6c202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+str x0, [fp, #-64]
+
+# HelloWorld arg 0
+ldr x0, [fp, #-64]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+str x2, [fp, #-80]
+
+# assign (int) load
+ldr w0, [fp, #-80]
+
+# assign (int) store
+str w0, [fp, #-96]
+_loop_cond_0:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+str x2, [fp, #-128]
+
+# variable (count)
+ldr x0, [fp, #-96]
+str x0, [sp, #-16]!
+# comparison
+ldr w0, [fp, #-96]
+ldr w1, [fp, #-128]
+cmp w0, w1
+cset w0, lt
+str w0, [fp, #-144]
+
+# while condition
+ldr w0, [fp, #-144]
+cbz w0, _loop_end_0
+
+# while-style count=
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x3d74
+str x0, [sp, #16]
+ldr x0, =0x6e756f6320656c79
+str x0, [sp, #8]
+ldr x0, =0x74732d656c696877
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+str x0, [fp, #-160]
+
+# variable (count)
+ldr x0, [fp, #-96]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+ldr x0, [fp, #-160]
+bl HelloWorld
+
+# HelloWorld arg 1
+ldr x0, [fp, #-96]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# inc/dec load var
+ldr w0, [fp, #-96]
+
+# postfix: save old value
+str w0, [fp, #-208]
+add w0, w0, #1
+
+# inc/dec store back
+str w0, [fp, #-96]
+b _loop_cond_0
+_loop_end_0:
+
+# --- for-style: 0..2 ---
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x2d2d2d20322e2e
+str x0, [sp, #16]
+ldr x0, =0x30203a656c797473
+str x0, [sp, #8]
+ldr x0, =0x2d726f66202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+str x0, [fp, #-224]
+
+# HelloWorld arg 0
+ldr x0, [fp, #-224]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+str x2, [fp, #-240]
+
+# assign (int) load
+ldr w0, [fp, #-240]
+
+# assign (int) store
+sub x4, fp, #256
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #272
+str x2, [x4]
+
+# assign default
+add x0, sp, #0
+
+# assign default store
+sub x4, fp, #288
+str x0, [x4]
+_loop_cond_1:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #3
+sub x4, fp, #320
+str x2, [x4]
+
+# variable (i)
+sub x4, fp, #256
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #256
+ldr w0, [x4]
+sub x4, fp, #320
+ldr w1, [x4]
+cmp w0, w1
+cset w0, lt
+sub x4, fp, #336
+str w0, [x4]
+
+# for condition
+sub x4, fp, #336
+ldr w0, [x4]
+cbz w0, _loop_end_1
+
+# for i=
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x3d6920726f66
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #384
+str x0, [x4]
+
+# variable (i)
+sub x4, fp, #256
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #384
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #256
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# inc/dec load var
+sub x4, fp, #256
+ldr w0, [x4]
+
+# postfix: save old value
+sub x4, fp, #368
+str w0, [x4]
+add w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #256
+str w0, [x4]
+b _loop_cond_1
+_loop_end_1:
+
+# --- do-while: run once then until ---
+sub sp, sp, #48
+
+mov x0, #0
+str x0, [sp, #40]
+ldr x0, =0x2d2d2d206c
+str x0, [sp, #32]
+ldr x0, =0x69746e75206e6568
+str x0, [sp, #24]
+ldr x0, =0x742065636e6f206e
+str x0, [sp, #16]
+ldr x0, =0x7572203a656c6968
+str x0, [sp, #8]
+ldr x0, =0x772d6f64202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #416
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #416
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #432
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #432
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #448
+str w0, [x4]
+_loop_body_2:
+
+# do-while body n=
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x3d6e2079646f6220
+str x0, [sp, #8]
+ldr x0, =0x656c6968772d6f64
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #512
+str x0, [x4]
+
+# variable (n)
+sub x4, fp, #448
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #512
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #448
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# inc/dec load var
+sub x4, fp, #448
+ldr w0, [x4]
+
+# postfix: save old value
+sub x4, fp, #560
+str w0, [x4]
+add w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #448
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #2
+sub x4, fp, #480
+str x2, [x4]
+
+# variable (n)
+sub x4, fp, #448
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #448
+ldr w0, [x4]
+sub x4, fp, #480
+ldr w1, [x4]
+cmp w0, w1
+cset w0, ge
+sub x4, fp, #496
+str w0, [x4]
+
+# do-while condition
+sub x4, fp, #496
+ldr w0, [x4]
+cbnz w0, _loop_body_2
+_loop_end_2:
+
+# --- ++/-- prefix and postfix ---
+sub sp, sp, #48
+
+mov x0, #0
+str x0, [sp, #32]
+
+mov x0, #0
+str x0, [sp, #40]
+ldr x0, =0x2d2d2d2078696674
+str x0, [sp, #24]
+ldr x0, =0x736f7020646e6120
+str x0, [sp, #16]
+ldr x0, =0x786966657270202d
+str x0, [sp, #8]
+ldr x0, =0x2d2f2b2b202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #576
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #576
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #592
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #592
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #608
+str w0, [x4]
+
+# inc/dec load var
+sub x4, fp, #608
+ldr w0, [x4]
+
+# postfix: save old value
+sub x4, fp, #640
+str w0, [x4]
+add w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #608
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #640
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #656
+str w0, [x4]
+
+# a++: a=
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x3d61203a2b2b61
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #672
+str x0, [x4]
+
+# variable (a)
+sub x4, fp, #608
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+#  b (old)=
+sub sp, sp, #16
+ldr x0, =0x3d
+str x0, [sp, #8]
+ldr x0, =0x29646c6f28206220
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #704
+str x0, [x4]
+
+# variable (b)
+sub x4, fp, #656
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #672
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #608
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorld arg 2
+sub x4, fp, #704
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 3
+sub x4, fp, #656
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# inc/dec load var
+sub x4, fp, #608
+ldr w0, [x4]
+add w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #608
+str w0, [x4]
+
+# prefix: load new value
+sub x4, fp, #608
+ldr w0, [x4]
+
+# prefix: store result
+sub x4, fp, #752
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #752
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #768
+str w0, [x4]
+
+# ++a: a=
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x3d61203a612b2b
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #784
+str x0, [x4]
+
+# variable (a)
+sub x4, fp, #608
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+#  c (new)=
+sub sp, sp, #16
+ldr x0, =0x3d
+str x0, [sp, #8]
+ldr x0, =0x2977656e28206320
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #816
+str x0, [x4]
+
+# variable (c)
+sub x4, fp, #768
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #784
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #608
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorld arg 2
+sub x4, fp, #816
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 3
+sub x4, fp, #768
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #10
+sub x4, fp, #848
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #848
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #864
+str w0, [x4]
+
+# inc/dec load var
+sub x4, fp, #864
+ldr w0, [x4]
+
+# postfix: save old value
+sub x4, fp, #896
+str w0, [x4]
+sub w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #864
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #896
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #912
+str w0, [x4]
+
+# d--: d=
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x3d64203a2d2d64
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #928
+str x0, [x4]
+
+# variable (d)
+sub x4, fp, #864
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+#  e (old)=
+sub sp, sp, #16
+ldr x0, =0x3d
+str x0, [sp, #8]
+ldr x0, =0x29646c6f28206520
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #960
+str x0, [x4]
+
+# variable (e)
+sub x4, fp, #912
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #928
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #864
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorld arg 2
+sub x4, fp, #960
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 3
+sub x4, fp, #912
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# inc/dec load var
+sub x4, fp, #864
+ldr w0, [x4]
+sub w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #864
+str w0, [x4]
+
+# prefix: load new value
+sub x4, fp, #864
+ldr w0, [x4]
+
+# prefix: store result
+sub x4, fp, #1008
+str w0, [x4]
+
+# assign (int) load
+sub x4, fp, #1008
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1024
+str w0, [x4]
+
+# --d: d=
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x3d64203a642d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1040
+str x0, [x4]
+
+# variable (d)
+sub x4, fp, #864
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+#  f (new)=
+sub sp, sp, #16
+ldr x0, =0x3d
+str x0, [sp, #8]
+ldr x0, =0x2977656e28206620
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1072
+str x0, [x4]
+
+# variable (f)
+sub x4, fp, #1024
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1040
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #864
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorld arg 2
+sub x4, fp, #1072
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 3
+sub x4, fp, #1024
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+mov w0, #0
+b return_statement
+
+# assign default
+add x0, sp, #0
+
+# assign default store
+str x0, [fp, #-96]
 # start of "main"
 .globl main
 main:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #2112
+sub sp, sp, #2144
 
-sub sp, sp, #2128
+sub sp, sp, #2160
 
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x128f49500) 
+ # compound (0x600001f30240) 
 
 # Hello
 sub sp, sp, #16
@@ -5650,7 +6454,7 @@ mov x2, #4
 sub x4, fp, #592
 str x2, [x4]
 
- # compound (0x128f49ee0) 
+ # compound (0x600001f30900) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -5741,7 +6545,7 @@ mov x2, #2
 sub x4, fp, #784
 str x2, [x4]
 
- # compound (0x128f4a560) 
+ # compound (0x600001f30c00) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -5790,7 +6594,7 @@ mov x2, #4
 sub x4, fp, #912
 str x2, [x4]
 
- # compound (0x128f4a450) 
+ # compound (0x600001f30d80) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -5798,7 +6602,7 @@ mov x2, #3
 sub x4, fp, #880
 str x2, [x4]
 
- # compound (0x128f4a820) 
+ # compound (0x600001f30e40) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -6960,6 +7764,27 @@ str x0, [sp, #-16]!
 sub x4, fp, #2096
 str w0, [x4]
 add sp, sp, #16
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #2112
+str x2, [x4]
+
+# load arg 0 into x0
+sub x4, fp, #2112
+ldr x0, [x4]
+
+# call function testLoopUntil
+bl testLoopUntil
+
+# store return value
+str x0, [sp, #-16]!
+
+# assign call store (int)
+sub x4, fp, #2128
+str w0, [x4]
+add sp, sp, #16
 
 mov w0, #0
 b return_statement
@@ -6968,7 +7793,7 @@ b return_statement
 add x0, sp, #0
 
 # assign default store
-str x0, [fp, #-96]
+str x0, [fp, #-112]
 HelloWorld:
     stp x29, x30, [sp, #-16]!
     mov x29, sp

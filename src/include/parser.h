@@ -30,4 +30,8 @@ AST_t * parse_list(parser_t * parser);
 AST_t * parse_string(parser_t * parser);
 
 AST_t * parse_compound(parser_t * parser);
+
+AST_t * parse_if(parser_t * parser);
+
+AST_t * parse_loop_until(parser_t * parser);
 #endif

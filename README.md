@@ -138,6 +138,58 @@ if (Real) {
 };
 ```
 
+### Loop until
+
+A single construct that behaves as **while**, **for**, or **do-while** depending on syntax:
+
+1. **While** — condition first, then body: `loop until (condition) { body };`
+2. **For** — init; condition; step: `loop until (init; condition; step) { body };`
+3. **Do-while** — body first, then condition: `loop { body } until (condition);` or with for-style: `loop { body } until (init; condition; step);`
+
+Terminate the whole statement with a semicolon after the closing brace.
+
+**While-style:**
+
+```minusC
+{count} int = 0;
+loop until (count < 3) {
+    HelloWorldLine("count=", count);
+    count++;
+};
+```
+
+**For-style** (init can be assignment, e.g. `i = 0`):
+
+```minusC
+{i} int = 0;
+loop until (i = 0; i < 10; i++) {
+    HelloWorldLine("i=", i);
+};
+```
+
+**Do-while-style** (body runs at least once):
+
+```minusC
+{n} int = 0;
+loop {
+    HelloWorldLine("body n=", n);
+    n++;
+} until (n >= 2);
+```
+
+### Increment and decrement (++ / --)
+
+Prefix and postfix are supported: `++i`, `i++`, `--i`, `i--`. Postfix returns the value before the update; prefix returns the value after the update.
+
+```minusC
+{a} int = 5;
+{b} int = a++;   // b = 5, a = 6
+{c} int = ++a;   // c = 7, a = 7
+{d} int = 10;
+{e} int = d--;   // e = 10, d = 9
+{f} int = --d;   // f = 8, d = 8
+```
+
 ### Strings
 
 - Double-quoted literals: `"Hello, world!"`

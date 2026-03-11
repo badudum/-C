@@ -244,6 +244,43 @@ testBoolAndIf = ({x} int) function {
     return 0;
 } int;
 
+testLoopUntil = ({x} int) function {
+    HelloWorldLine("--- loop until & ++/-- tests ---");
+
+    {count} int = 0;
+    loop until (count < 3) {
+        HelloWorldLine("while-style count=", count);
+        count++;
+    };
+
+    HelloWorldLine("--- for-style: 0..2 ---");
+    {i} int = 0;
+    loop until (i = 0; i < 3; i++) {
+        HelloWorldLine("for i=", i);
+    };
+
+    HelloWorldLine("--- do-while: run once then until ---");
+    {n} int = 0;
+    loop {
+        HelloWorldLine("do-while body n=", n);
+        n++;
+    } until (n >= 2);
+
+    HelloWorldLine("--- ++/-- prefix and postfix ---");
+    {a} int = 5;
+    {b} int = a++;
+    HelloWorldLine("a++: a=", a, " b (old)=", b);
+    {c} int = ++a;
+    HelloWorldLine("++a: a=", a, " c (new)=", c);
+    {d} int = 10;
+    {e} int = d--;
+    HelloWorldLine("d--: d=", d, " e (old)=", e);
+    {f} int = --d;
+    HelloWorldLine("--d: d=", d, " f (new)=", f);
+
+    return 0;
+} int;
+
 main = ({x} int) function {
     {hello} str= "Hello";
     {name} str = "Taeyang Hi!Hello This is a \t longer string with newline \n haha "; 
@@ -314,6 +351,7 @@ main = ({x} int) function {
     {dummy} int = testStringOps(0);
     {dummy2} int = testArrayOps(0);
     {dummy3} int = testBoolAndIf(0);
+    {dummy4} int = testLoopUntil(0);
 
     return 0;
 } int;  

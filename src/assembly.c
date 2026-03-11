@@ -26,6 +26,7 @@
 
 /* Forward declaration */
 static void append_load_from_fp(char **s, int offset, int reg, const char *comment);
+char * assemble(AST_t * ast, dynamic_list_t * list);
 
 /* Helper: emit ldr w0 from [fp, offset]. Handles large offsets. */
 static void append_load_w_from_fp(char **s, int offset, const char *comment)
@@ -1067,6 +1068,10 @@ char * assemble_array_literal(AST_t * ast, dynamic_list_t * list)
 
 
 static int if_label_counter = 0;
+static int loop_label_counter = 0;
+
+char * assemble_loop_until(AST_t * ast, dynamic_list_t * list);
+char * assemble_inc_dec(AST_t * ast, dynamic_list_t * list);
 
 char * assemble_bool(AST_t * ast, dynamic_list_t * list)
 {
@@ -1177,6 +1182,158 @@ char * assemble_unary(AST_t * ast, dynamic_list_t * list)
     return s;
 }
 
+char * assemble_inc_dec(AST_t * ast, dynamic_list_t * list)
+{
+    char * s = calloc(1, sizeof(char));
+    int var_offset = ast->left->stack_index * -16;
+    int result_offset = ast->stack_index * -16;
+    int is_postfix = (ast->int_value != 0);
+    int is_inc = (ast->op == PLUS_PLUS_TOKEN);
+
+    append_load_w_from_fp(&s, var_offset, "inc/dec load var");
+    if (is_postfix) {
+        append_store_w_to_fp(&s, result_offset, "postfix: save old value");
+    }
+    if (is_inc) {
+        const char* add1 = "add w0, w0, #1\n";
+        s = realloc(s, strlen(s) + strlen(add1) + 1);
+        strcat(s, add1);
+    } else {
+        const char* sub1 = "sub w0, w0, #1\n";
+        s = realloc(s, strlen(s) + strlen(sub1) + 1);
+        strcat(s, sub1);
+    }
+    append_store_w_to_fp(&s, var_offset, "inc/dec store back");
+    if (!is_postfix) {
+        append_load_w_from_fp(&s, var_offset, "prefix: load new value");
+        append_store_w_to_fp(&s, result_offset, "prefix: store result");
+    }
+    return s;
+}
+
+static void loop_append_body(char **out, AST_t *loop_ast, dynamic_list_t *lst)
+{
+    for (unsigned int i = 0; i < loop_ast->children->size; i++) {
+        AST_t* child = (AST_t*)loop_ast->children->items[i];
+        char* child_asm = assemble(child, lst);
+        *out = realloc(*out, strlen(*out) + strlen(child_asm) + 1);
+        strcat(*out, child_asm);
+        free(child_asm);
+    }
+}
+
+char * assemble_loop_until(AST_t * ast, dynamic_list_t * list)
+{
+    int id = loop_label_counter++;
+    char * s = calloc(1, sizeof(char));
+    int body_first = ast->int_value;
+    int is_for = (ast->left->type == FOR_CLAUSE_AST);
+
+    if (body_first) {
+        char body_label[64];
+        sprintf(body_label, "_loop_body_%d:\n", id);
+        s = realloc(s, strlen(s) + strlen(body_label) + 1);
+        strcat(s, body_label);
+        loop_append_body(&s, ast, list);
+        if (!is_for) {
+            char* cond_asm = assemble(ast->left, list);
+            s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
+            strcat(s, cond_asm);
+            free(cond_asm);
+            int cond_off = ast->left->stack_index * -16;
+            append_load_w_from_fp(&s, cond_off, "do-while condition");
+            char branch[64];
+            sprintf(branch, "cbnz w0, _loop_body_%d\n", id);
+            s = realloc(s, strlen(s) + strlen(branch) + 1);
+            strcat(s, branch);
+        } else {
+            char branch[64];
+            AST_t* for_clause = ast->left;
+            AST_t* init = (AST_t*)for_clause->children->items[0];
+            AST_t* cond = (AST_t*)for_clause->children->items[1];
+            AST_t* step = (AST_t*)for_clause->children->items[2];
+            char* init_asm = assemble(init, list);
+            s = realloc(s, strlen(s) + strlen(init_asm) + 1);
+            strcat(s, init_asm);
+            free(init_asm);
+            sprintf(body_label, "_loop_cond_%d:\n", id);
+            s = realloc(s, strlen(s) + strlen(body_label) + 1);
+            strcat(s, body_label);
+            char* cond_asm = assemble(cond, list);
+            s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
+            strcat(s, cond_asm);
+            free(cond_asm);
+            append_load_w_from_fp(&s, cond->stack_index * -16, "for condition");
+            sprintf(branch, "cbz w0, _loop_end_%d\n", id);
+            s = realloc(s, strlen(s) + strlen(branch) + 1);
+            strcat(s, branch);
+            loop_append_body(&s, ast, list);
+            char* step_asm = assemble(step, list);
+            s = realloc(s, strlen(s) + strlen(step_asm) + 1);
+            strcat(s, step_asm);
+            free(step_asm);
+            sprintf(branch, "b _loop_cond_%d\n", id);
+            s = realloc(s, strlen(s) + strlen(branch) + 1);
+            strcat(s, branch);
+        }
+    } else {
+        if (!is_for) {
+            char cond_label[64];
+            sprintf(cond_label, "_loop_cond_%d:\n", id);
+            s = realloc(s, strlen(s) + strlen(cond_label) + 1);
+            strcat(s, cond_label);
+            char* cond_asm = assemble(ast->left, list);
+            s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
+            strcat(s, cond_asm);
+            free(cond_asm);
+            append_load_w_from_fp(&s, ast->left->stack_index * -16, "while condition");
+            char branch[64];
+            sprintf(branch, "cbz w0, _loop_end_%d\n", id);
+            s = realloc(s, strlen(s) + strlen(branch) + 1);
+            strcat(s, branch);
+            loop_append_body(&s, ast, list);
+            sprintf(branch, "b _loop_cond_%d\n", id);
+            s = realloc(s, strlen(s) + strlen(branch) + 1);
+            strcat(s, branch);
+        } else {
+            AST_t* for_clause = ast->left;
+            AST_t* init = (AST_t*)for_clause->children->items[0];
+            AST_t* cond = (AST_t*)for_clause->children->items[1];
+            AST_t* step = (AST_t*)for_clause->children->items[2];
+            char* init_asm = assemble(init, list);
+            s = realloc(s, strlen(s) + strlen(init_asm) + 1);
+            strcat(s, init_asm);
+            free(init_asm);
+            char cond_label[64];
+            sprintf(cond_label, "_loop_cond_%d:\n", id);
+            s = realloc(s, strlen(s) + strlen(cond_label) + 1);
+            strcat(s, cond_label);
+            char* cond_asm = assemble(cond, list);
+            s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
+            strcat(s, cond_asm);
+            free(cond_asm);
+            append_load_w_from_fp(&s, cond->stack_index * -16, "for condition");
+            char branch[64];
+            sprintf(branch, "cbz w0, _loop_end_%d\n", id);
+            s = realloc(s, strlen(s) + strlen(branch) + 1);
+            strcat(s, branch);
+            loop_append_body(&s, ast, list);
+            char* step_asm = assemble(step, list);
+            s = realloc(s, strlen(s) + strlen(step_asm) + 1);
+            strcat(s, step_asm);
+            free(step_asm);
+            sprintf(branch, "b _loop_cond_%d\n", id);
+            s = realloc(s, strlen(s) + strlen(branch) + 1);
+            strcat(s, branch);
+        }
+    }
+    char end_label[64];
+    sprintf(end_label, "_loop_end_%d:\n", id);
+    s = realloc(s, strlen(s) + strlen(end_label) + 1);
+    strcat(s, end_label);
+    return s;
+}
+
 char * assemble(AST_t * ast, dynamic_list_t * list)
 {
     // printf("Current : %d", ast->type);
@@ -1201,6 +1358,8 @@ char * assemble(AST_t * ast, dynamic_list_t * list)
         case BOOL_AST : next = assemble_bool(ast, list); break;
         case IF_AST : next = assemble_if(ast, list); break;
         case UNARY_AST : next = assemble_unary(ast, list); break;
+        case LOOP_UNTIL_AST : next = assemble_loop_until(ast, list); break;
+        case INC_DEC_AST : next = assemble_inc_dec(ast, list); break;
         default : {printf("ASSEMBLER: No front for AST of type `%d`\n", ast->type); exit(1);} break;
 
     }
