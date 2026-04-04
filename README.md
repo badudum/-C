@@ -158,7 +158,15 @@ loop until (count < 3) {
 };
 ```
 
-**For-style** (init can be assignment, e.g. `i = 0`):
+**For-style** — init can be a **declaration in the bracket** or an assignment. You can initialize the loop variable in the `until` clause:
+
+```minusC
+loop until ({i} int = 0; i < 10; i++) {
+    HelloWorldLine("i=", i);
+};
+```
+
+Or declare the variable outside and use assignment in the clause:
 
 ```minusC
 {i} int = 0;
@@ -175,6 +183,20 @@ loop {
     HelloWorldLine("body n=", n);
     n++;
 } until (n >= 2);
+```
+
+### Compound assignment (+= and -=)
+
+`x += expr` adds the value of `expr` to `x` and stores the result back in `x`. `x -= expr` subtracts `expr` from `x`. The variable must already be declared.
+
+```minusC
+{x} int = 100;
+x += 10;   // x is now 110
+x -= 25;   // x is now 85
+{sum} int = 0;
+loop until ({k} int = 0; k < 5; k++) {
+    sum += k;
+};
 ```
 
 ### Increment and decrement (++ / --)

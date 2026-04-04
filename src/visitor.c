@@ -6,17 +6,17 @@
 
  AST_t* variable_lookup(dynamic_list_t* list, char* name)
 {
+    if (!list || !name) return 0;
     for (int i = 0; i < list->size; i++)
     {
         AST_t* children = (AST_t*)list->items[i];
-        if((children->type != VAR_AST && children->type != FUNC_AST) || !children->name)
-        {
-            continue;
-        }
-        if (strcmp(children->name, name) == 0)
-        {
+        if (!children) continue;
+        int has_name = (children->name && strcmp(children->name, name) == 0);
+        if (!has_name) continue;
+        if (children->type == VAR_AST || children->type == FUNC_AST)
             return children;
-        }
+        if (children->type == ASSIGNEMENT_AST)
+            return children; /* variable declaration/assignment has name and stack_index */
     }
     return 0;
 }
@@ -99,10 +99,31 @@ AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, 
     AST_t* variable = init_ast(ASSIGNEMENT_AST);
     variable->name = node->name;
     variable->datatype = node->datatype;
+    variable->op = node->op;
 
     if (node->parent)
     {
         variable->parent = visitor_visit(visitor, node->parent, list, stackframe);
+    }
+
+    /* += and -= require an existing variable; find its stack slot from stackframe */
+    if (variable->op == PLUS_EQUALS_TOKEN || variable->op == MINUS_EQUALS_TOKEN) {
+        int found = 0;
+        for (int i = 0; i < (int)stackframe->stack->size; i++) {
+            char* var_name = (char*)stackframe->stack->items[i];
+            if (var_name && strcmp(var_name, node->name) == 0) {
+                variable->stack_index = i + 1;
+                variable->stackframe = stackframe;
+                variable->datatype = TYPE_INT;
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            fprintf(stderr, "Error: variable '%s' not defined for += or -=\n", node->name);
+            exit(1);
+        }
+        return variable;
     }
 
     /* Type mismatch checks (only for unambiguous literal/array mismatches) */
@@ -258,6 +279,10 @@ AST_t* visit_binop(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stack
     binop->op = node->op;
     if (node->op == PLUS_TOKEN && is_string_node(binop->left, list) && is_string_node(binop->right, list))
         binop->datatype = TYPE_STR;
+    else if (node->op == DEQUALS_TOKEN || node->op == NOT_EQUALS_TOKEN || node->op == LT_TOKEN
+             || node->op == GT_TOKEN || node->op == LTE_TOKEN || node->op == GTE_TOKEN
+             || node->op == AND_TOKEN || node->op == OR_TOKEN)
+        binop->datatype = TYPE_BOOL;
     list_enqueue(stackframe->stack, mkstr("0"));
     binop->stack_index = stackframe->stack->size;
     binop->stackframe = stackframe;
@@ -363,6 +388,8 @@ AST_t* visit_unary(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stack
     list_enqueue(stackframe->stack, mkstr("0"));
     unary->stack_index = stackframe->stack->size;
     unary->stackframe = stackframe;
+    if (node->op == NOT_TOKEN)
+        unary->datatype = TYPE_BOOL;
     return unary;
 }
 

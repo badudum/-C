@@ -6,7 +6,7 @@ mov x0, #0
 mov x16, #1
 svc #0
 
- # compound (0x600001f3b5a0) 
+ # compound (0x600003860060) 
 # start of "print"
 .globl print
 print:
@@ -19,7 +19,7 @@ sub sp, sp, #96
 # load parameter test from x0
 str x0, [fp, #-48]
 
- # compound (0x600001f3b720) 
+ # compound (0x6000038601e0) 
 
 # variable (test)
 ldr x0, [fp, #-48]
@@ -52,7 +52,7 @@ sub sp, sp, #112
 # load parameter pushed from x0
 str x0, [fp, #-48]
 
- # compound (0x600001f3b960) 
+ # compound (0x600003860420) 
 
 # Taken string : 
 sub sp, sp, #16
@@ -116,7 +116,7 @@ sub sp, sp, #1200
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600001f3bb40) 
+ # compound (0x600003860600) 
 
 # --- String ops tests ---
 sub sp, sp, #32
@@ -816,11 +816,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #976
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #976
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_0
 
 # PASS: string length is 5
@@ -944,11 +944,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1136
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1136
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_2
 
 # PASS: index 0 access
@@ -1032,7 +1032,7 @@ sub sp, sp, #2576
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600001f34720) 
+ # compound (0x6000038611a0) 
 
 # --- Array tests ---
 sub sp, sp, #32
@@ -2418,11 +2418,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1792
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1792
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_4
 
 # PASS: arr[0]==10
@@ -2506,7 +2506,7 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1920
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2525,23 +2525,23 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1872
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #1872
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #1920
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #1936
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1936
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_6
 
 # PASS: arr[1]==20 and arr[2]==30
@@ -2623,11 +2623,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2016
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2016
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_8
 
 # PASS: single[0]==42
@@ -2704,7 +2704,7 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2144
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2724,23 +2724,23 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2096
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2096
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2144
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2160
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2160
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_10
 
 # PASS: zeros all 0
@@ -2817,7 +2817,7 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2288
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2837,23 +2837,23 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2240
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2240
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2288
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2304
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2304
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_12
 
 # PASS: sevens all 7
@@ -2930,7 +2930,7 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2496
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2950,7 +2950,7 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2432
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -2970,35 +2970,35 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2384
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2384
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2432
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2448
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2448
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2496
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2512
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2512
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_14
 
 # PASS: range values correct
@@ -3081,7 +3081,7 @@ sub sp, sp, #2656
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600001f35c20) 
+ # compound (0x6000038626a0) 
 
 # --- Bool & If tests ---
 sub sp, sp, #32
@@ -3111,24 +3111,28 @@ bl HelloWorldLine
 str x0, [sp, #-16]!
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
-str w2, [fp, #-80]
+mov w0, #1
 
-# assign (int) load
-ldr w0, [fp, #-80]
+# bool (1 byte)
+strb w0, [fp, #-80]
 
-# assign (int) store
-str w0, [fp, #-96]
+# assign (bool) load
+ldrb w0, [fp, #-80]
+
+# assign (bool) store
+strb w0, [fp, #-96]
 # bool (Fake)
 str x0, [sp, #-16]!
-mov w2, #0
-str w2, [fp, #-112]
+mov w0, #0
 
-# assign (int) load
-ldr w0, [fp, #-112]
+# bool (1 byte)
+strb w0, [fp, #-112]
 
-# assign (int) store
-str w0, [fp, #-128]
+# assign (bool) load
+ldrb w0, [fp, #-112]
+
+# assign (bool) store
+strb w0, [fp, #-128]
 
 # t = 
 sub sp, sp, #16
@@ -3152,7 +3156,7 @@ ldr x0, [fp, #-144]
 bl HelloWorld
 
 # HelloWorld arg 1
-ldr w0, [fp, #-96]
+ldrb w0, [fp, #-96]
 cmp w0, #0
 b.eq _btos_fake_0
 sub sp, sp, #16
@@ -3209,7 +3213,7 @@ ldr x0, [fp, #-176]
 bl HelloWorld
 
 # HelloWorld arg 1
-ldr w0, [fp, #-128]
+ldrb w0, [fp, #-128]
 cmp w0, #0
 b.eq _btos_fake_1
 sub sp, sp, #16
@@ -3253,14 +3257,14 @@ ldr w0, [fp, #-128]
 cmp w0, #0
 cset w0, eq
 
-# logical not store
-str w0, [fp, #-224]
+# logical not store (bool)
+strb w0, [fp, #-224]
 
-# assign (int) load
-ldr w0, [fp, #-224]
+# assign (bool) load
+ldrb w0, [fp, #-224]
 
-# assign (int) store
-str w0, [fp, #-240]
+# assign (bool) store
+strb w0, [fp, #-240]
 
 # not Fake = 
 sub sp, sp, #16
@@ -3285,7 +3289,7 @@ ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 1
-ldr w0, [fp, #-240]
+ldrb w0, [fp, #-240]
 cmp w0, #0
 b.eq _btos_fake_2
 sub sp, sp, #16
@@ -3338,15 +3342,15 @@ cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #320
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #320
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #336
-str w0, [x4]
+strb w0, [x4]
 
 # variable (f)
 ldr x0, [fp, #-128]
@@ -3366,15 +3370,15 @@ cmp w1, #0
 cset w1, ne
 orr w0, w0, w1
 sub x4, fp, #384
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #384
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #400
-str w0, [x4]
+strb w0, [x4]
 
 # Real and Fake = 
 sub sp, sp, #32
@@ -3407,7 +3411,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #336
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_3
 sub sp, sp, #16
@@ -3467,7 +3471,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #400
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_4
 sub sp, sp, #16
@@ -3708,15 +3712,15 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #784
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #784
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #800
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -3737,15 +3741,15 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, ne
 sub x4, fp, #848
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #848
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #864
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -3766,15 +3770,15 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, lt
 sub x4, fp, #912
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #912
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #928
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -3795,15 +3799,15 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, gt
 sub x4, fp, #976
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #976
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #992
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -3824,15 +3828,15 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, le
 sub x4, fp, #1040
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #1040
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #1056
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -3853,15 +3857,15 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, ge
 sub x4, fp, #1104
-str w0, [x4]
+strb w0, [x4]
 
-# assign (int) load
+# assign (bool) load
 sub x4, fp, #1104
-ldr w0, [x4]
+ldrb w0, [x4]
 
-# assign (int) store
+# assign (bool) store
 sub x4, fp, #1120
-str w0, [x4]
+strb w0, [x4]
 
 # 5==5: 
 sub sp, sp, #16
@@ -3889,7 +3893,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #800
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_5
 sub sp, sp, #16
@@ -3950,7 +3954,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #864
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_6
 sub sp, sp, #16
@@ -4011,7 +4015,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #928
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_7
 sub sp, sp, #16
@@ -4072,7 +4076,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #992
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_8
 sub sp, sp, #16
@@ -4133,7 +4137,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #1056
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_9
 sub sp, sp, #16
@@ -4194,7 +4198,7 @@ bl HelloWorld
 
 # HelloWorld arg 1
 sub x4, fp, #1120
-ldr w0, [x4]
+ldrb w0, [x4]
 cmp w0, #0
 b.eq _btos_fake_10
 sub sp, sp, #16
@@ -4261,11 +4265,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1392
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1392
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _endif_16
 
 # if: val is 42
@@ -4326,11 +4330,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, gt
 sub x4, fp, #1488
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1488
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_17
 
 # if: n>20
@@ -4378,11 +4382,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, gt
 sub x4, fp, #1552
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1552
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_18
 
 # else if: n>5
@@ -4438,13 +4442,15 @@ _endif_18:
 _endif_17:
 # bool (Fake)
 str x0, [sp, #-16]!
-mov w2, #0
-sub x4, fp, #1600
-str w2, [x4]
+mov w0, #0
 
-# if condition
+# bool (1 byte)
 sub x4, fp, #1600
-ldr w0, [x4]
+strb w0, [x4]
+
+# if condition (bool)
+sub x4, fp, #1600
+ldrb w0, [x4]
 cbz w0, _else_20
 
 # ERROR: should not print
@@ -4537,9 +4543,11 @@ bl HelloWorldLine
 str x0, [sp, #-16]!
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #1680
-str w2, [x4]
+strb w0, [x4]
 
 # variable (t)
 ldr x0, [fp, #-96]
@@ -4548,15 +4556,15 @@ str x0, [sp, #-16]!
 sub x4, fp, #96
 ldr w0, [x4]
 sub x4, fp, #1680
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1696
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1696
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_22
 
 # PASS: t is Real
@@ -4616,9 +4624,11 @@ str x0, [sp, #-16]!
 _endif_22:
 # bool (Fake)
 str x0, [sp, #-16]!
-mov w2, #0
+mov w0, #0
+
+# bool (1 byte)
 sub x4, fp, #1760
-str w2, [x4]
+strb w0, [x4]
 
 # variable (f)
 ldr x0, [fp, #-128]
@@ -4627,15 +4637,15 @@ str x0, [sp, #-16]!
 sub x4, fp, #128
 ldr w0, [x4]
 sub x4, fp, #1760
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1776
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1776
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_24
 
 # PASS: f is Fake
@@ -4695,9 +4705,11 @@ str x0, [sp, #-16]!
 _endif_24:
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #1840
-str w2, [x4]
+strb w0, [x4]
 
 # variable (r)
 ldr x0, [fp, #-240]
@@ -4706,15 +4718,15 @@ str x0, [sp, #-16]!
 sub x4, fp, #240
 ldr w0, [x4]
 sub x4, fp, #1840
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1856
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1856
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_26
 
 # PASS: not Fake == Real
@@ -4779,9 +4791,11 @@ str x0, [sp, #-16]!
 _endif_26:
 # bool (Fake)
 str x0, [sp, #-16]!
-mov w2, #0
+mov w0, #0
+
+# bool (1 byte)
 sub x4, fp, #1920
-str w2, [x4]
+strb w0, [x4]
 
 # variable (a)
 sub x4, fp, #336
@@ -4791,15 +4805,15 @@ str x0, [sp, #-16]!
 sub x4, fp, #336
 ldr w0, [x4]
 sub x4, fp, #1920
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1936
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1936
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_28
 
 # PASS: Real and Fake == Fake
@@ -4862,9 +4876,11 @@ str x0, [sp, #-16]!
 _endif_28:
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #2000
-str w2, [x4]
+strb w0, [x4]
 
 # variable (o)
 sub x4, fp, #400
@@ -4874,15 +4890,15 @@ str x0, [sp, #-16]!
 sub x4, fp, #400
 ldr w0, [x4]
 sub x4, fp, #2000
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2016
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2016
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_30
 
 # PASS: Real or Fake == Real
@@ -4962,11 +4978,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2096
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2096
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_32
 
 # PASS: 5&3==1
@@ -5038,11 +5054,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2176
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2176
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_34
 
 # PASS: 5|3==7
@@ -5097,9 +5113,11 @@ str x0, [sp, #-16]!
 _endif_34:
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #2480
-str w2, [x4]
+strb w0, [x4]
 
 # variable (le)
 sub x4, fp, #1056
@@ -5109,16 +5127,18 @@ str x0, [sp, #-16]!
 sub x4, fp, #1056
 ldr w0, [x4]
 sub x4, fp, #2480
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2496
-str w0, [x4]
+strb w0, [x4]
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #2416
-str w2, [x4]
+strb w0, [x4]
 
 # variable (gt)
 sub x4, fp, #992
@@ -5128,16 +5148,18 @@ str x0, [sp, #-16]!
 sub x4, fp, #992
 ldr w0, [x4]
 sub x4, fp, #2416
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2432
-str w0, [x4]
+strb w0, [x4]
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #2352
-str w2, [x4]
+strb w0, [x4]
 
 # variable (lt)
 sub x4, fp, #928
@@ -5147,16 +5169,18 @@ str x0, [sp, #-16]!
 sub x4, fp, #928
 ldr w0, [x4]
 sub x4, fp, #2352
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2368
-str w0, [x4]
+strb w0, [x4]
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #2288
-str w2, [x4]
+strb w0, [x4]
 
 # variable (ne)
 sub x4, fp, #864
@@ -5166,16 +5190,18 @@ str x0, [sp, #-16]!
 sub x4, fp, #864
 ldr w0, [x4]
 sub x4, fp, #2288
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2304
-str w0, [x4]
+strb w0, [x4]
 # bool (Real)
 str x0, [sp, #-16]!
-mov w2, #1
+mov w0, #1
+
+# bool (1 byte)
 sub x4, fp, #2240
-str w2, [x4]
+strb w0, [x4]
 
 # variable (eq)
 sub x4, fp, #800
@@ -5185,63 +5211,63 @@ str x0, [sp, #-16]!
 sub x4, fp, #800
 ldr w0, [x4]
 sub x4, fp, #2240
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2256
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2256
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2304
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2320
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2320
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2368
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2384
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2384
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2432
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2448
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #2448
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #2496
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #2512
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2512
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_36
 
 # PASS: comparisons correct
@@ -5305,9 +5331,11 @@ str x0, [sp, #-16]!
 _endif_36:
 # bool (Fake)
 str x0, [sp, #-16]!
-mov w2, #0
+mov w0, #0
+
+# bool (1 byte)
 sub x4, fp, #2576
-str w2, [x4]
+strb w0, [x4]
 
 # variable (ge)
 sub x4, fp, #1120
@@ -5317,15 +5345,15 @@ str x0, [sp, #-16]!
 sub x4, fp, #1120
 ldr w0, [x4]
 sub x4, fp, #2576
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #2592
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #2592
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_38
 
 # PASS: 3>=5 is Fake
@@ -5397,14 +5425,14 @@ str x0, [fp, #-80]
 testLoopUntil:
 stp x29, x30, [sp, #-16]!
 mov x29, sp
-sub sp, sp, #1104
+sub sp, sp, #1600
 
-sub sp, sp, #1120
+sub sp, sp, #1616
 
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600001f379c0) 
+ # compound (0x600003864480) 
 
 # --- loop until & ++/-- tests ---
 sub sp, sp, #48
@@ -5463,10 +5491,10 @@ ldr w0, [fp, #-96]
 ldr w1, [fp, #-128]
 cmp w0, w1
 cset w0, lt
-str w0, [fp, #-144]
+strb w0, [fp, #-144]
 
-# while condition
-ldr w0, [fp, #-144]
+# while condition (bool)
+ldrb w0, [fp, #-144]
 cbz w0, _loop_end_0
 
 # while-style count=
@@ -5517,14 +5545,18 @@ str w0, [fp, #-96]
 b _loop_cond_0
 _loop_end_0:
 
-# --- for-style: 0..2 ---
-sub sp, sp, #32
+# --- for-style: init in bracket ---
+sub sp, sp, #48
 
 mov x0, #0
+str x0, [sp, #40]
+ldr x0, =0x2d2d
+str x0, [sp, #32]
+ldr x0, =0x2d2074656b636172
 str x0, [sp, #24]
-ldr x0, =0x2d2d2d20322e2e
+ldr x0, =0x62206e692074696e
 str x0, [sp, #16]
-ldr x0, =0x30203a656c797473
+ldr x0, =0x69203a656c797473
 str x0, [sp, #8]
 ldr x0, =0x2d726f66202d2d2d
 str x0, [sp, #0]
@@ -5555,25 +5587,12 @@ ldr w0, [fp, #-240]
 # assign (int) store
 sub x4, fp, #256
 str w0, [x4]
-# integer
-str x0, [sp, #-16]!
-ldr x1, [sp]
-mov x2, #0
-sub x4, fp, #272
-str x2, [x4]
-
-# assign default
-add x0, sp, #0
-
-# assign default store
-sub x4, fp, #288
-str x0, [x4]
 _loop_cond_1:
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
 mov x2, #3
-sub x4, fp, #320
+sub x4, fp, #288
 str x2, [x4]
 
 # variable (i)
@@ -5583,16 +5602,16 @@ str x0, [sp, #-16]!
 # comparison
 sub x4, fp, #256
 ldr w0, [x4]
-sub x4, fp, #320
+sub x4, fp, #288
 ldr w1, [x4]
 cmp w0, w1
 cset w0, lt
-sub x4, fp, #336
-str w0, [x4]
+sub x4, fp, #304
+strb w0, [x4]
 
-# for condition
-sub x4, fp, #336
-ldr w0, [x4]
+# for condition (bool)
+sub x4, fp, #304
+ldrb w0, [x4]
 cbz w0, _loop_end_1
 
 # for i=
@@ -5606,7 +5625,7 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #384
+sub x4, fp, #352
 str x0, [x4]
 
 # variable (i)
@@ -5615,7 +5634,7 @@ ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #384
+sub x4, fp, #352
 ldr x0, [x4]
 bl HelloWorld
 
@@ -5636,7 +5655,7 @@ sub x4, fp, #256
 ldr w0, [x4]
 
 # postfix: save old value
-sub x4, fp, #368
+sub x4, fp, #336
 str w0, [x4]
 add w0, w0, #1
 
@@ -5645,6 +5664,138 @@ sub x4, fp, #256
 str w0, [x4]
 b _loop_cond_1
 _loop_end_1:
+
+# --- for-style: init outside ---
+sub sp, sp, #32
+ldr x0, =0x2d2d2d20656469
+str x0, [sp, #24]
+ldr x0, =0x7374756f2074696e
+str x0, [sp, #16]
+ldr x0, =0x69203a656c797473
+str x0, [sp, #8]
+ldr x0, =0x2d726f66202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #384
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #384
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #400
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #400
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #416
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #432
+str x2, [x4]
+
+# assign default
+add x0, sp, #0
+
+# assign default store
+sub x4, fp, #448
+str x0, [x4]
+_loop_cond_2:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #2
+sub x4, fp, #480
+str x2, [x4]
+
+# variable (j)
+sub x4, fp, #416
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #416
+ldr w0, [x4]
+sub x4, fp, #480
+ldr w1, [x4]
+cmp w0, w1
+cset w0, lt
+sub x4, fp, #496
+strb w0, [x4]
+
+# for condition (bool)
+sub x4, fp, #496
+ldrb w0, [x4]
+cbz w0, _loop_end_2
+
+# for j=
+sub sp, sp, #16
+
+mov x0, #0
+str x0, [sp, #8]
+ldr x0, =0x3d6a20726f66
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #544
+str x0, [x4]
+
+# variable (j)
+sub x4, fp, #416
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #544
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #416
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# inc/dec load var
+sub x4, fp, #416
+ldr w0, [x4]
+
+# postfix: save old value
+sub x4, fp, #528
+str w0, [x4]
+add w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #416
+str w0, [x4]
+b _loop_cond_2
+_loop_end_2:
 
 # --- do-while: run once then until ---
 sub sp, sp, #48
@@ -5665,11 +5816,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #416
+sub x4, fp, #576
 str x0, [x4]
 
 # HelloWorld arg 0
-sub x4, fp, #416
+sub x4, fp, #576
 ldr x0, [x4]
 bl HelloWorld
 
@@ -5682,17 +5833,17 @@ str x0, [sp, #-16]!
 str x0, [sp, #-16]!
 ldr x1, [sp]
 mov x2, #0
-sub x4, fp, #432
+sub x4, fp, #592
 str x2, [x4]
 
 # assign (int) load
-sub x4, fp, #432
+sub x4, fp, #592
 ldr w0, [x4]
 
 # assign (int) store
-sub x4, fp, #448
+sub x4, fp, #608
 str w0, [x4]
-_loop_body_2:
+_loop_body_3:
 
 # do-while body n=
 sub sp, sp, #32
@@ -5710,21 +5861,21 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #512
+sub x4, fp, #672
 str x0, [x4]
 
 # variable (n)
-sub x4, fp, #448
+sub x4, fp, #608
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #512
+sub x4, fp, #672
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 1
-sub x4, fp, #448
+sub x4, fp, #608
 ldr x0, [x4]
 bl itos
 bl HelloWorld
@@ -5736,43 +5887,43 @@ bl HelloWorldLine
 str x0, [sp, #-16]!
 
 # inc/dec load var
-sub x4, fp, #448
+sub x4, fp, #608
 ldr w0, [x4]
 
 # postfix: save old value
-sub x4, fp, #560
+sub x4, fp, #720
 str w0, [x4]
 add w0, w0, #1
 
 # inc/dec store back
-sub x4, fp, #448
+sub x4, fp, #608
 str w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
 mov x2, #2
-sub x4, fp, #480
+sub x4, fp, #640
 str x2, [x4]
 
 # variable (n)
-sub x4, fp, #448
+sub x4, fp, #608
 ldr x0, [x4]
 str x0, [sp, #-16]!
 # comparison
-sub x4, fp, #448
+sub x4, fp, #608
 ldr w0, [x4]
-sub x4, fp, #480
+sub x4, fp, #640
 ldr w1, [x4]
 cmp w0, w1
 cset w0, ge
-sub x4, fp, #496
-str w0, [x4]
+sub x4, fp, #656
+strb w0, [x4]
 
-# do-while condition
-sub x4, fp, #496
-ldr w0, [x4]
-cbnz w0, _loop_body_2
-_loop_end_2:
+# do-while condition (bool)
+sub x4, fp, #656
+ldrb w0, [x4]
+cbnz w0, _loop_body_3
+_loop_end_3:
 
 # --- ++/-- prefix and postfix ---
 sub sp, sp, #48
@@ -5794,11 +5945,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #576
+sub x4, fp, #736
 str x0, [x4]
 
 # HelloWorld arg 0
-sub x4, fp, #576
+sub x4, fp, #736
 ldr x0, [x4]
 bl HelloWorld
 
@@ -5811,36 +5962,36 @@ str x0, [sp, #-16]!
 str x0, [sp, #-16]!
 ldr x1, [sp]
 mov x2, #5
-sub x4, fp, #592
+sub x4, fp, #752
 str x2, [x4]
 
 # assign (int) load
-sub x4, fp, #592
+sub x4, fp, #752
 ldr w0, [x4]
 
 # assign (int) store
-sub x4, fp, #608
+sub x4, fp, #768
 str w0, [x4]
 
 # inc/dec load var
-sub x4, fp, #608
+sub x4, fp, #768
 ldr w0, [x4]
 
 # postfix: save old value
-sub x4, fp, #640
+sub x4, fp, #800
 str w0, [x4]
 add w0, w0, #1
 
 # inc/dec store back
-sub x4, fp, #608
+sub x4, fp, #768
 str w0, [x4]
 
 # assign (int) load
-sub x4, fp, #640
+sub x4, fp, #800
 ldr w0, [x4]
 
 # assign (int) store
-sub x4, fp, #656
+sub x4, fp, #816
 str w0, [x4]
 
 # a++: a=
@@ -5854,11 +6005,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #672
+sub x4, fp, #832
 str x0, [x4]
 
 # variable (a)
-sub x4, fp, #608
+sub x4, fp, #768
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
@@ -5872,32 +6023,32 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #704
+sub x4, fp, #864
 str x0, [x4]
 
 # variable (b)
-sub x4, fp, #656
+sub x4, fp, #816
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #672
+sub x4, fp, #832
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 1
-sub x4, fp, #608
+sub x4, fp, #768
 ldr x0, [x4]
 bl itos
 bl HelloWorld
 
 # HelloWorld arg 2
-sub x4, fp, #704
+sub x4, fp, #864
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 3
-sub x4, fp, #656
+sub x4, fp, #816
 ldr x0, [x4]
 bl itos
 bl HelloWorld
@@ -5909,28 +6060,28 @@ bl HelloWorldLine
 str x0, [sp, #-16]!
 
 # inc/dec load var
-sub x4, fp, #608
+sub x4, fp, #768
 ldr w0, [x4]
 add w0, w0, #1
 
 # inc/dec store back
-sub x4, fp, #608
+sub x4, fp, #768
 str w0, [x4]
 
 # prefix: load new value
-sub x4, fp, #608
+sub x4, fp, #768
 ldr w0, [x4]
 
 # prefix: store result
-sub x4, fp, #752
+sub x4, fp, #912
 str w0, [x4]
 
 # assign (int) load
-sub x4, fp, #752
+sub x4, fp, #912
 ldr w0, [x4]
 
 # assign (int) store
-sub x4, fp, #768
+sub x4, fp, #928
 str w0, [x4]
 
 # ++a: a=
@@ -5944,11 +6095,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #784
+sub x4, fp, #944
 str x0, [x4]
 
 # variable (a)
-sub x4, fp, #608
+sub x4, fp, #768
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
@@ -5962,32 +6113,32 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #816
+sub x4, fp, #976
 str x0, [x4]
 
 # variable (c)
-sub x4, fp, #768
+sub x4, fp, #928
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #784
+sub x4, fp, #944
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 1
-sub x4, fp, #608
+sub x4, fp, #768
 ldr x0, [x4]
 bl itos
 bl HelloWorld
 
 # HelloWorld arg 2
-sub x4, fp, #816
+sub x4, fp, #976
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 3
-sub x4, fp, #768
+sub x4, fp, #928
 ldr x0, [x4]
 bl itos
 bl HelloWorld
@@ -6001,36 +6152,36 @@ str x0, [sp, #-16]!
 str x0, [sp, #-16]!
 ldr x1, [sp]
 mov x2, #10
-sub x4, fp, #848
+sub x4, fp, #1008
 str x2, [x4]
 
 # assign (int) load
-sub x4, fp, #848
+sub x4, fp, #1008
 ldr w0, [x4]
 
 # assign (int) store
-sub x4, fp, #864
+sub x4, fp, #1024
 str w0, [x4]
 
 # inc/dec load var
-sub x4, fp, #864
+sub x4, fp, #1024
 ldr w0, [x4]
 
 # postfix: save old value
-sub x4, fp, #896
+sub x4, fp, #1056
 str w0, [x4]
 sub w0, w0, #1
 
 # inc/dec store back
-sub x4, fp, #864
+sub x4, fp, #1024
 str w0, [x4]
 
 # assign (int) load
-sub x4, fp, #896
+sub x4, fp, #1056
 ldr w0, [x4]
 
 # assign (int) store
-sub x4, fp, #912
+sub x4, fp, #1072
 str w0, [x4]
 
 # d--: d=
@@ -6044,11 +6195,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #928
+sub x4, fp, #1088
 str x0, [x4]
 
 # variable (d)
-sub x4, fp, #864
+sub x4, fp, #1024
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
@@ -6062,32 +6213,32 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #960
+sub x4, fp, #1120
 str x0, [x4]
 
 # variable (e)
-sub x4, fp, #912
+sub x4, fp, #1072
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #928
+sub x4, fp, #1088
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 1
-sub x4, fp, #864
+sub x4, fp, #1024
 ldr x0, [x4]
 bl itos
 bl HelloWorld
 
 # HelloWorld arg 2
-sub x4, fp, #960
+sub x4, fp, #1120
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 3
-sub x4, fp, #912
+sub x4, fp, #1072
 ldr x0, [x4]
 bl itos
 bl HelloWorld
@@ -6099,28 +6250,28 @@ bl HelloWorldLine
 str x0, [sp, #-16]!
 
 # inc/dec load var
-sub x4, fp, #864
+sub x4, fp, #1024
 ldr w0, [x4]
 sub w0, w0, #1
 
 # inc/dec store back
-sub x4, fp, #864
+sub x4, fp, #1024
 str w0, [x4]
 
 # prefix: load new value
-sub x4, fp, #864
+sub x4, fp, #1024
 ldr w0, [x4]
 
 # prefix: store result
-sub x4, fp, #1008
+sub x4, fp, #1168
 str w0, [x4]
 
 # assign (int) load
-sub x4, fp, #1008
+sub x4, fp, #1168
 ldr w0, [x4]
 
 # assign (int) store
-sub x4, fp, #1024
+sub x4, fp, #1184
 str w0, [x4]
 
 # --d: d=
@@ -6134,11 +6285,11 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #1040
+sub x4, fp, #1200
 str x0, [x4]
 
 # variable (d)
-sub x4, fp, #864
+sub x4, fp, #1024
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
@@ -6152,32 +6303,306 @@ str x0, [sp, #0]
  add x0, sp, #0
 
 # store string address
-sub x4, fp, #1072
+sub x4, fp, #1232
 str x0, [x4]
 
 # variable (f)
-sub x4, fp, #1024
+sub x4, fp, #1184
 ldr x0, [x4]
 str x0, [sp, #-16]!
 
 # HelloWorld arg 0
-sub x4, fp, #1040
+sub x4, fp, #1200
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 1
-sub x4, fp, #864
+sub x4, fp, #1024
 ldr x0, [x4]
 bl itos
 bl HelloWorld
 
 # HelloWorld arg 2
-sub x4, fp, #1072
+sub x4, fp, #1232
 ldr x0, [x4]
 bl HelloWorld
 
 # HelloWorld arg 3
-sub x4, fp, #1024
+sub x4, fp, #1184
+ldr x0, [x4]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+
+# --- += and -= ---
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x2d
+str x0, [sp, #16]
+ldr x0, =0x2d2d203d2d20646e
+str x0, [sp, #8]
+ldr x0, =0x61203d2b202d2d2d
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1264
+str x0, [x4]
+
+# HelloWorld arg 0
+sub x4, fp, #1264
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #100
+sub x4, fp, #1280
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #1280
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1296
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #10
+sub x4, fp, #1312
+str x2, [x4]
+
+# +=/-= load rhs
+sub x4, fp, #1312
+ldr w0, [x4]
+mov w1, w0
+
+# +=/-= load var
+ldr w0, [fp, #-48]
+add w0, w0, w1
+
+# +=/-= store
+str w0, [fp, #-48]
+
+# x += 10: x=
+sub sp, sp, #16
+ldr x0, =0x3d7820
+str x0, [sp, #8]
+ldr x0, =0x3a3031203d2b2078
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1328
+str x0, [x4]
+
+# variable (x)
+ldr x0, [fp, #-48]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1328
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+ldr x0, [fp, #-48]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #25
+sub x4, fp, #1360
+str x2, [x4]
+
+# +=/-= load rhs
+sub x4, fp, #1360
+ldr w0, [x4]
+mov w1, w0
+
+# +=/-= load var
+ldr w0, [fp, #-48]
+sub w0, w0, w1
+
+# +=/-= store
+str w0, [fp, #-48]
+
+# x -= 25: x=
+sub sp, sp, #16
+ldr x0, =0x3d7820
+str x0, [sp, #8]
+ldr x0, =0x3a3532203d2d2078
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1376
+str x0, [x4]
+
+# variable (x)
+ldr x0, [fp, #-48]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1376
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+ldr x0, [fp, #-48]
+bl itos
+bl HelloWorld
+
+# HelloWorldLine newline
+bl HelloWorldLine
+
+# store return value
+str x0, [sp, #-16]!
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1408
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #1408
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1424
+str w0, [x4]
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #0
+sub x4, fp, #1440
+str x2, [x4]
+
+# assign (int) load
+sub x4, fp, #1440
+ldr w0, [x4]
+
+# assign (int) store
+sub x4, fp, #1456
+str w0, [x4]
+_loop_cond_4:
+# integer
+str x0, [sp, #-16]!
+ldr x1, [sp]
+mov x2, #5
+sub x4, fp, #1488
+str x2, [x4]
+
+# variable (k)
+sub x4, fp, #1456
+ldr x0, [x4]
+str x0, [sp, #-16]!
+# comparison
+sub x4, fp, #1456
+ldr w0, [x4]
+sub x4, fp, #1488
+ldr w1, [x4]
+cmp w0, w1
+cset w0, lt
+sub x4, fp, #1504
+strb w0, [x4]
+
+# for condition (bool)
+sub x4, fp, #1504
+ldrb w0, [x4]
+cbz w0, _loop_end_4
+
+# variable (k)
+sub x4, fp, #1456
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# +=/-= load rhs
+sub x4, fp, #1456
+ldr w0, [x4]
+mov w1, w0
+
+# +=/-= load var
+sub x4, fp, #1424
+ldr w0, [x4]
+add w0, w0, w1
+
+# +=/-= store
+sub x4, fp, #1424
+str w0, [x4]
+
+# inc/dec load var
+sub x4, fp, #1456
+ldr w0, [x4]
+
+# postfix: save old value
+sub x4, fp, #1536
+str w0, [x4]
+add w0, w0, #1
+
+# inc/dec store back
+sub x4, fp, #1456
+str w0, [x4]
+b _loop_cond_4
+_loop_end_4:
+
+# sum 0+1+2+3+4 = 
+sub sp, sp, #32
+
+mov x0, #0
+str x0, [sp, #16]
+
+mov x0, #0
+str x0, [sp, #24]
+ldr x0, =0x203d20342b332b32
+str x0, [sp, #8]
+ldr x0, =0x2b312b30206d7573
+str x0, [sp, #0]
+
+ add x0, sp, #0
+
+# store string address
+sub x4, fp, #1568
+str x0, [x4]
+
+# variable (sum)
+sub x4, fp, #1424
+ldr x0, [x4]
+str x0, [sp, #-16]!
+
+# HelloWorld arg 0
+sub x4, fp, #1568
+ldr x0, [x4]
+bl HelloWorld
+
+# HelloWorld arg 1
+sub x4, fp, #1424
 ldr x0, [x4]
 bl itos
 bl HelloWorld
@@ -6208,7 +6633,7 @@ sub sp, sp, #2160
 # load parameter x from x0
 str x0, [fp, #-48]
 
- # compound (0x600001f30240) 
+ # compound (0x6000038650e0) 
 
 # Hello
 sub sp, sp, #16
@@ -6454,7 +6879,7 @@ mov x2, #4
 sub x4, fp, #592
 str x2, [x4]
 
- # compound (0x600001f30900) 
+ # compound (0x6000038657a0) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -6545,7 +6970,7 @@ mov x2, #2
 sub x4, fp, #784
 str x2, [x4]
 
- # compound (0x600001f30c00) 
+ # compound (0x600003865aa0) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -6594,7 +7019,7 @@ mov x2, #4
 sub x4, fp, #912
 str x2, [x4]
 
- # compound (0x600001f30d80) 
+ # compound (0x600003865c20) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -6602,7 +7027,7 @@ mov x2, #3
 sub x4, fp, #880
 str x2, [x4]
 
- # compound (0x600001f30e40) 
+ # compound (0x600003865ce0) 
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -7027,11 +7452,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1296
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1296
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_40
 
 # PASS: 42+10==52
@@ -7103,11 +7528,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1376
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1376
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_42
 
 # PASS: 40-17==23
@@ -7179,11 +7604,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1456
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1456
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_44
 
 # PASS: 10*10==100
@@ -7261,11 +7686,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1536
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1536
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_46
 
 # PASS: 25/5==5
@@ -7337,7 +7762,7 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1664
-str w0, [x4]
+strb w0, [x4]
 # integer
 str x0, [sp, #-16]!
 ldr x1, [sp]
@@ -7357,23 +7782,23 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1616
-str w0, [x4]
+strb w0, [x4]
 # logical and
 sub x4, fp, #1616
-ldr w0, [x4]
+ldrb w0, [x4]
 sub x4, fp, #1664
-ldr w1, [x4]
+ldrb w1, [x4]
 cmp w0, #0
 cset w0, ne
 cmp w1, #0
 cset w1, ne
 and w0, w0, w1
 sub x4, fp, #1680
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1680
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_48
 
 # PASS: precedence correct
@@ -7456,11 +7881,11 @@ ldr w1, [x4]
 cmp w0, w1
 cset w0, eq
 sub x4, fp, #1760
-str w0, [x4]
+strb w0, [x4]
 
-# if condition
+# if condition (bool)
 sub x4, fp, #1760
-ldr w0, [x4]
+ldrb w0, [x4]
 cbz w0, _else_50
 
 # PASS: ((1+2)*3)+4==13

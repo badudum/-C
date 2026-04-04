@@ -335,11 +335,19 @@ token_t *lexer_get_next_token(lexer_t *lexer)
                 lexer_get_next(lexer);
                 return lexer_get_next_with_type(lexer, PLUS_PLUS_TOKEN);
             }
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, PLUS_EQUALS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, PLUS_TOKEN);
         case '-':
             if (lexer_peek(lexer, 1) == '-') {
                 lexer_get_next(lexer);
                 return lexer_get_next_with_type(lexer, MINUS_MINUS_TOKEN);
+            }
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_get_next(lexer);
+                return lexer_get_next_with_type(lexer, MINUS_EQUALS_TOKEN);
             }
             return lexer_get_next_with_type(lexer, MINUS_TOKEN);
         case '*':

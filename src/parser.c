@@ -120,15 +120,19 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
         }
     }
 
-    if (parser->token->type == EQUALS_TOKEN)
+    if (parser->token->type == EQUALS_TOKEN ||
+        parser->token->type == PLUS_EQUALS_TOKEN ||
+        parser->token->type == MINUS_EQUALS_TOKEN)
     {
-        parser_next(parser, EQUALS_TOKEN);
+        ast->op = parser->token->type;
+        parser_next(parser, parser->token->type);
         ast->type = ASSIGNEMENT_AST;
         ast->name = value;
 
         ast->parent = parse_expression(parser);
 
-        if (ast->parent->type != CALL_AST &&
+        if (ast->op == EQUALS_TOKEN &&
+            ast->parent->type != CALL_AST &&
             ast->parent->type != ACCESS_AST &&
             ast->parent->type != SLICE_AST)
         {

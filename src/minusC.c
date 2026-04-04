@@ -1,5 +1,9 @@
 #include "include/minusC.h"
+#include "include/preprocess.h"
+#include "include/list.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void compile(char * src)
 {
@@ -27,10 +31,28 @@ void compile(char * src)
 
 void minusCompile_file(const char* filename)
 {
-    char * src = read_file(filename);
+    char* src = read_file(filename);
 
-    compile(src);
+    /* Path to current file (for resolving relative references). Use as-is; avoid realpath to prevent blocking. */
+    char* current_path = strdup(filename);
+    if (!current_path) {
+        free(src);
+        return;
+    }
+
+    dynamic_list_t* included = init_list(sizeof(char*));
+    char* expanded = preprocess_source(src, current_path, included);
     free(src);
+    free(current_path);
+    list_free(included);
+
+    if (!expanded) {
+        fprintf(stderr, "Preprocessing failed\n");
+        return;
+    }
+
+    compile(expanded);
+    free(expanded);
 }
 
 

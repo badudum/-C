@@ -1,0 +1,6 @@
+reference "lib/helper.minusc"
+
+main = ({x} int) function {
+    greet("Hello from multi-file");
+    return 0;
+} int;

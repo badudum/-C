@@ -253,10 +253,15 @@ testLoopUntil = ({x} int) function {
         count++;
     };
 
-    HelloWorldLine("--- for-style: 0..2 ---");
-    {i} int = 0;
-    loop until (i = 0; i < 3; i++) {
+    HelloWorldLine("--- for-style: init in bracket ---");
+    loop until ({i} int = 0; i < 3; i++) {
         HelloWorldLine("for i=", i);
+    };
+
+    HelloWorldLine("--- for-style: init outside ---");
+    {j} int = 0;
+    loop until (j = 0; j < 2; j++) {
+        HelloWorldLine("for j=", j);
     };
 
     HelloWorldLine("--- do-while: run once then until ---");
@@ -277,6 +282,18 @@ testLoopUntil = ({x} int) function {
     HelloWorldLine("d--: d=", d, " e (old)=", e);
     {f} int = --d;
     HelloWorldLine("--d: d=", d, " f (new)=", f);
+
+    HelloWorldLine("--- += and -= ---");
+    {x} int = 100;
+    x += 10;
+    HelloWorldLine("x += 10: x=", x);
+    x -= 25;
+    HelloWorldLine("x -= 25: x=", x);
+    {sum} int = 0;
+    loop until ({k} int = 0; k < 5; k++) {
+        sum += k;
+    };
+    HelloWorldLine("sum 0+1+2+3+4 = ", sum);
 
     return 0;
 } int;

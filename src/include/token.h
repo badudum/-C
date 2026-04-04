@@ -38,6 +38,8 @@ typedef struct TOKEN_S
         FAKE_TOKEN,
         
         EQUALS_TOKEN,
+        PLUS_EQUALS_TOKEN,
+        MINUS_EQUALS_TOKEN,
         DEQUALS_TOKEN,
         NOT_EQUALS_TOKEN,
         PLUS_TOKEN,

@@ -39,6 +39,8 @@ const char * token_type_to_string(int type)
         case BITAND_TOKEN : return "BITAND_TOKEN";
         case BITOR_TOKEN : return "BITOR_TOKEN";
         case BITNOT_TOKEN : return "BITNOT_TOKEN";
+        case PLUS_EQUALS_TOKEN : return "PLUS_EQUALS_TOKEN";
+        case MINUS_EQUALS_TOKEN : return "MINUS_EQUALS_TOKEN";
         case IF_TOKEN : return "IF_TOKEN";
         case ELSE_TOKEN : return "ELSE_TOKEN";
         case LOOP_TOKEN : return "LOOP_TOKEN";

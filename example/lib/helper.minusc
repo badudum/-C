@@ -1,0 +1,4 @@
+greet = ({who} str) function {
+    HelloWorld(who);
+    return 0;
+} int;

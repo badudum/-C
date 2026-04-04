@@ -58,6 +58,35 @@ static void append_store_w_to_fp(char **s, int offset, const char *comment)
     free(instr);
 }
 
+/* Byte load/store for booleans (1 byte per value at same slot offset). */
+static void append_load_b_from_fp(char **s, int offset, const char *comment)
+{
+    int abs_off = offset < 0 ? -offset : offset;
+    char *instr = calloc(256, sizeof(char));
+    if (abs_off <= 255) {
+        sprintf(instr, "\n# %s\nldrb w0, [fp, #%d]\n", comment, offset);
+    } else {
+        sprintf(instr, "\n# %s\nsub x4, fp, #%d\nldrb w0, [x4]\n", comment, abs_off);
+    }
+    *s = realloc(*s, (strlen(*s) + strlen(instr) + 1) * sizeof(char));
+    strcat(*s, instr);
+    free(instr);
+}
+
+static void append_store_b_to_fp(char **s, int offset, const char *comment)
+{
+    int abs_off = offset < 0 ? -offset : offset;
+    char *instr = calloc(256, sizeof(char));
+    if (abs_off <= 255) {
+        sprintf(instr, "\n# %s\nstrb w0, [fp, #%d]\n", comment, offset);
+    } else {
+        sprintf(instr, "\n# %s\nsub x4, fp, #%d\nstrb w0, [x4]\n", comment, abs_off);
+    }
+    *s = realloc(*s, (strlen(*s) + strlen(instr) + 1) * sizeof(char));
+    strcat(*s, instr);
+    free(instr);
+}
+
 /* Helper: emit str xN to [fp, offset]. Handles large offsets. */
 static void append_store_to_fp(char **s, int offset, int reg, const char *comment)
 {
@@ -121,12 +150,37 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         free(assemble_value);
     }
 
+    /* += and -=: load rhs into w0, move to w1, load var into w0, add/sub (w0 = w0 op w1), store */
+    if (ast->op == PLUS_EQUALS_TOKEN || ast->op == MINUS_EQUALS_TOKEN) {
+        AST_t* rhs = ast->parent;
+        if (rhs->type == COMP_AST && rhs->children->size == 1)
+            rhs = (AST_t*) rhs->children->items[0];
+        int var_offset = ast->stack_index * -16;
+        int rhs_offset = rhs->stack_index * -16;
+        append_load_w_from_fp(&s, rhs_offset, "+=/-= load rhs");
+        { const char* mov = "mov w1, w0\n"; s = realloc(s, strlen(s) + strlen(mov) + 1); strcat(s, mov); }
+        append_load_w_from_fp(&s, var_offset, "+=/-= load var");
+        if (ast->op == PLUS_EQUALS_TOKEN) {
+            const char* add_op = "add w0, w0, w1\n";
+            s = realloc(s, strlen(s) + strlen(add_op) + 1);
+            strcat(s, add_op);
+        } else {
+            const char* sub_op = "sub w0, w0, w1\n";
+            s = realloc(s, strlen(s) + strlen(sub_op) + 1);
+            strcat(s, sub_op);
+        }
+        append_store_w_to_fp(&s, var_offset, "+=/-= store");
+        return s;
+    }
+
     if (ast->parent->type == CALL_AST)
     {
         /* Return value is in x0 after the call; store to variable and pop stack */
         int var_offset = ast->stack_index * -16;
         if (ast->datatype == TYPE_INT)
             append_store_w_to_fp(&s, var_offset, "assign call store (int)");
+        else if (ast->datatype == TYPE_BOOL)
+            append_store_b_to_fp(&s, var_offset, "assign call store (bool)");
         else
             append_store_to_fp(&s, var_offset, 0, "assign call store (ptr)");
         const char* pop = "add sp, sp, #16\n";
@@ -167,8 +221,13 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
             append_store_w_to_fp(&s, var_offset, "assign int from access");
         } else {
             int rhs_offset = rhs->stack_index * -16;
-            append_load_w_from_fp(&s, rhs_offset, "assign (int) load");
-            append_store_w_to_fp(&s, var_offset, "assign (int) store");
+            if (ast->datatype == TYPE_BOOL) {
+                append_load_b_from_fp(&s, rhs_offset, "assign (bool) load");
+                append_store_b_to_fp(&s, var_offset, "assign (bool) store");
+            } else {
+                append_load_w_from_fp(&s, rhs_offset, "assign (int) load");
+                append_store_w_to_fp(&s, var_offset, "assign (int) store");
+            }
         }
     }
 
@@ -184,8 +243,13 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
             strcat(s, pop_str);
             append_store_to_fp(&s, var_offset, 0, "assign binop store (str)");
         } else {
-            append_load_w_from_fp(&s, rhs_offset, "assign binop load");
-            append_store_w_to_fp(&s, var_offset, "assign binop store");
+            if (ast->datatype == TYPE_BOOL) {
+                append_load_b_from_fp(&s, rhs_offset, "assign binop load (bool)");
+                append_store_b_to_fp(&s, var_offset, "assign binop store (bool)");
+            } else {
+                append_load_w_from_fp(&s, rhs_offset, "assign binop load");
+                append_store_w_to_fp(&s, var_offset, "assign binop store");
+            }
         }
     }
 
@@ -320,7 +384,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
             char cmt[64];
             snprintf(cmt, sizeof(cmt), "HelloWorld arg %d", i);
             if (need_btos) {
-                append_load_w_from_fp(&s, off, cmt);
+                append_load_b_from_fp(&s, off, cmt);
             } else {
                 append_load_from_fp(&s, off, 0, cmt);
             }
@@ -613,6 +677,10 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
     int right_abs = right_offset < 0 ? -right_offset : right_offset;
     int result_abs = result_offset < 0 ? -result_offset : result_offset;
     int use_large = (left_abs > 255 || right_abs > 255 || result_abs > 255);
+    /* Byte load/store for bool operands and result */
+    const char *left_ldr = (ast->left->datatype == TYPE_BOOL) ? "ldrb" : "ldr";
+    const char *right_ldr = (ast->right->datatype == TYPE_BOOL) ? "ldrb" : "ldr";
+    const char *result_str = (ast->datatype == TYPE_BOOL) ? "strb" : "str";
 
     char * op_asm = calloc(1024, sizeof(char));
     switch(ast->op)
@@ -669,21 +737,21 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
             if (use_large) {
                 sprintf(op_asm,
                     "# comparison\n"
-                    "sub x4, fp, #%d\nldr w0, [x4]\n"
-                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "sub x4, fp, #%d\n%s w0, [x4]\n"
+                    "sub x4, fp, #%d\n%s w1, [x4]\n"
                     "cmp w0, w1\n"
                     "cset w0, %s\n"
-                    "sub x4, fp, #%d\nstr w0, [x4]\n",
-                    left_abs, right_abs, cond, result_abs);
+                    "sub x4, fp, #%d\n%s w0, [x4]\n",
+                    left_abs, left_ldr, right_abs, right_ldr, cond, result_abs, result_str);
             } else {
                 sprintf(op_asm,
                     "# comparison\n"
-                    "ldr w0, [fp, #%d]\n"
-                    "ldr w1, [fp, #%d]\n"
+                    "%s w0, [fp, #%d]\n"
+                    "%s w1, [fp, #%d]\n"
                     "cmp w0, w1\n"
                     "cset w0, %s\n"
-                    "str w0, [fp, #%d]\n",
-                    left_offset, right_offset, cond, result_offset);
+                    "%s w0, [fp, #%d]\n",
+                    left_ldr, left_offset, right_ldr, right_offset, cond, result_str, result_offset);
             }
             break;
         }
@@ -691,44 +759,44 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
             if (use_large) {
                 sprintf(op_asm,
                     "# logical and\n"
-                    "sub x4, fp, #%d\nldr w0, [x4]\n"
-                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "sub x4, fp, #%d\n%s w0, [x4]\n"
+                    "sub x4, fp, #%d\n%s w1, [x4]\n"
                     "cmp w0, #0\ncset w0, ne\n"
                     "cmp w1, #0\ncset w1, ne\n"
                     "and w0, w0, w1\n"
-                    "sub x4, fp, #%d\nstr w0, [x4]\n",
-                    left_abs, right_abs, result_abs);
+                    "sub x4, fp, #%d\n%s w0, [x4]\n",
+                    left_abs, left_ldr, right_abs, right_ldr, result_abs, result_str);
             } else {
                 sprintf(op_asm,
                     "# logical and\n"
-                    "ldr w0, [fp, #%d]\nldr w1, [fp, #%d]\n"
+                    "%s w0, [fp, #%d]\n%s w1, [fp, #%d]\n"
                     "cmp w0, #0\ncset w0, ne\n"
                     "cmp w1, #0\ncset w1, ne\n"
                     "and w0, w0, w1\n"
-                    "str w0, [fp, #%d]\n",
-                    left_offset, right_offset, result_offset);
+                    "%s w0, [fp, #%d]\n",
+                    left_ldr, left_offset, right_ldr, right_offset, result_str, result_offset);
             }
             break;
         case OR_TOKEN:
             if (use_large) {
                 sprintf(op_asm,
                     "# logical or\n"
-                    "sub x4, fp, #%d\nldr w0, [x4]\n"
-                    "sub x4, fp, #%d\nldr w1, [x4]\n"
+                    "sub x4, fp, #%d\n%s w0, [x4]\n"
+                    "sub x4, fp, #%d\n%s w1, [x4]\n"
                     "cmp w0, #0\ncset w0, ne\n"
                     "cmp w1, #0\ncset w1, ne\n"
                     "orr w0, w0, w1\n"
-                    "sub x4, fp, #%d\nstr w0, [x4]\n",
-                    left_abs, right_abs, result_abs);
+                    "sub x4, fp, #%d\n%s w0, [x4]\n",
+                    left_abs, left_ldr, right_abs, right_ldr, result_abs, result_str);
             } else {
                 sprintf(op_asm,
                     "# logical or\n"
-                    "ldr w0, [fp, #%d]\nldr w1, [fp, #%d]\n"
+                    "%s w0, [fp, #%d]\n%s w1, [fp, #%d]\n"
                     "cmp w0, #0\ncset w0, ne\n"
                     "cmp w1, #0\ncset w1, ne\n"
                     "orr w0, w0, w1\n"
-                    "str w0, [fp, #%d]\n",
-                    left_offset, right_offset, result_offset);
+                    "%s w0, [fp, #%d]\n",
+                    left_ldr, left_offset, right_ldr, right_offset, result_str, result_offset);
             }
             break;
         case BITAND_TOKEN:
@@ -938,10 +1006,13 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
         strcat(s, instr);
         free(instr);
     }
-    else if (expr->type == VAR_AST || expr->type == BINOP_AST)
+    else if (expr->type == VAR_AST || expr->type == BINOP_AST || expr->type == BOOL_AST || expr->type == UNARY_AST)
     {
         char * load = calloc(1, sizeof(char));
-        append_load_w_from_fp(&load, expr->stack_index * -16, "return load");
+        if (expr->datatype == TYPE_BOOL)
+            append_load_b_from_fp(&load, expr->stack_index * -16, "return load (bool)");
+        else
+            append_load_w_from_fp(&load, expr->stack_index * -16, "return load");
         s = realloc(s, strlen(load) + 32);
         strcat(s, load);
         strcat(s, "b return_statement\n");
@@ -1076,24 +1147,13 @@ char * assemble_inc_dec(AST_t * ast, dynamic_list_t * list);
 char * assemble_bool(AST_t * ast, dynamic_list_t * list)
 {
     int index = ast->stack_index * -16;
-    int abs_offset = index < 0 ? -index : index;
     char * s = calloc(256, sizeof(char));
-    if (abs_offset <= 255) {
-        sprintf(s,
-            "# bool (%s)\n"
-            "str x0, [sp, #-16]!\n"
-            "mov w2, #%d\n"
-            "str w2, [fp, #%d]\n",
-            ast->int_value ? "Real" : "Fake", ast->int_value, index);
-    } else {
-        sprintf(s,
-            "# bool (%s)\n"
-            "str x0, [sp, #-16]!\n"
-            "mov w2, #%d\n"
-            "sub x4, fp, #%d\n"
-            "str w2, [x4]\n",
-            ast->int_value ? "Real" : "Fake", ast->int_value, abs_offset);
-    }
+    sprintf(s,
+        "# bool (%s)\n"
+        "str x0, [sp, #-16]!\n"
+        "mov w0, #%d\n",
+        ast->int_value ? "Real" : "Fake", ast->int_value);
+    append_store_b_to_fp(&s, index, "bool (1 byte)");
     return s;
 }
 
@@ -1109,7 +1169,10 @@ char * assemble_if(AST_t * ast, dynamic_list_t * list)
         free(cond_asm);
 
         int cond_off = ast->left->stack_index * -16;
-        append_load_w_from_fp(&s, cond_off, "if condition");
+        if (ast->left->datatype == TYPE_BOOL)
+            append_load_b_from_fp(&s, cond_off, "if condition (bool)");
+        else
+            append_load_w_from_fp(&s, cond_off, "if condition");
 
         char label_buf[128];
         if (ast->right)
@@ -1167,11 +1230,19 @@ char * assemble_unary(AST_t * ast, dynamic_list_t * list)
     free(operand_asm);
 
     if (ast->op == NOT_TOKEN) {
-        append_load_w_from_fp(&s, ast->left->stack_index * -16, "logical not load");
+        int lo = ast->left->stack_index * -16;
+        int so = ast->stack_index * -16;
+        if (ast->left->datatype == TYPE_BOOL)
+            append_load_b_from_fp(&s, lo, "logical not load (bool)");
+        else
+            append_load_w_from_fp(&s, lo, "logical not load");
         const char* not_op = "cmp w0, #0\ncset w0, eq\n";
         s = realloc(s, strlen(s) + strlen(not_op) + 1);
         strcat(s, not_op);
-        append_store_w_to_fp(&s, ast->stack_index * -16, "logical not store");
+        if (ast->datatype == TYPE_BOOL)
+            append_store_b_to_fp(&s, so, "logical not store (bool)");
+        else
+            append_store_w_to_fp(&s, so, "logical not store");
     } else if (ast->op == BITNOT_TOKEN) {
         append_load_w_from_fp(&s, ast->left->stack_index * -16, "bitwise not load");
         const char* not_op = "mvn w0, w0\n";
@@ -1241,7 +1312,10 @@ char * assemble_loop_until(AST_t * ast, dynamic_list_t * list)
             strcat(s, cond_asm);
             free(cond_asm);
             int cond_off = ast->left->stack_index * -16;
-            append_load_w_from_fp(&s, cond_off, "do-while condition");
+            if (ast->left->datatype == TYPE_BOOL)
+                append_load_b_from_fp(&s, cond_off, "do-while condition (bool)");
+            else
+                append_load_w_from_fp(&s, cond_off, "do-while condition");
             char branch[64];
             sprintf(branch, "cbnz w0, _loop_body_%d\n", id);
             s = realloc(s, strlen(s) + strlen(branch) + 1);
@@ -1263,7 +1337,10 @@ char * assemble_loop_until(AST_t * ast, dynamic_list_t * list)
             s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
             strcat(s, cond_asm);
             free(cond_asm);
-            append_load_w_from_fp(&s, cond->stack_index * -16, "for condition");
+            if (cond->datatype == TYPE_BOOL)
+                append_load_b_from_fp(&s, cond->stack_index * -16, "for condition (bool)");
+            else
+                append_load_w_from_fp(&s, cond->stack_index * -16, "for condition");
             sprintf(branch, "cbz w0, _loop_end_%d\n", id);
             s = realloc(s, strlen(s) + strlen(branch) + 1);
             strcat(s, branch);
@@ -1286,7 +1363,10 @@ char * assemble_loop_until(AST_t * ast, dynamic_list_t * list)
             s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
             strcat(s, cond_asm);
             free(cond_asm);
-            append_load_w_from_fp(&s, ast->left->stack_index * -16, "while condition");
+            if (ast->left->datatype == TYPE_BOOL)
+                append_load_b_from_fp(&s, ast->left->stack_index * -16, "while condition (bool)");
+            else
+                append_load_w_from_fp(&s, ast->left->stack_index * -16, "while condition");
             char branch[64];
             sprintf(branch, "cbz w0, _loop_end_%d\n", id);
             s = realloc(s, strlen(s) + strlen(branch) + 1);
@@ -1312,7 +1392,10 @@ char * assemble_loop_until(AST_t * ast, dynamic_list_t * list)
             s = realloc(s, strlen(s) + strlen(cond_asm) + 1);
             strcat(s, cond_asm);
             free(cond_asm);
-            append_load_w_from_fp(&s, cond->stack_index * -16, "for condition");
+            if (cond->datatype == TYPE_BOOL)
+                append_load_b_from_fp(&s, cond->stack_index * -16, "for condition (bool)");
+            else
+                append_load_w_from_fp(&s, cond->stack_index * -16, "for condition");
             char branch[64];
             sprintf(branch, "cbz w0, _loop_end_%d\n", id);
             s = realloc(s, strlen(s) + strlen(branch) + 1);
