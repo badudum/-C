@@ -82,14 +82,23 @@ char * read_file(const char* filename)
         exit(1);
     }
 
+    size_t total = 0;
     char* buffer = (char*) calloc(1, sizeof(char));
 
-    buffer[0] = '\0';
-
-    while((read = getline(&line, &len, fp)) != -1)
-    {
-        buffer = (char*) realloc(buffer, (strlen(buffer) + strlen(line) + 1) *sizeof(char));
-        strcat(buffer, line);
+    while ((read = getline(&line, &len, fp)) != -1) {
+        char* next = realloc(buffer, total + read + 1);
+        if (!next) {
+            fprintf(stderr, "Out of memory reading file\n");
+            fclose(fp);
+            if (line)
+                free(line);
+            free(buffer);
+            exit(1);
+        }
+        buffer = next;
+        memcpy(buffer + total, line, read);
+        total += read;
+        buffer[total] = '\0';
     }
 
     fclose(fp);

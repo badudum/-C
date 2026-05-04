@@ -1,0 +1,48 @@
+{
+  "name": "minus-c",
+  "displayName": "minusC",
+  "description": "Syntax highlighting and formatting for minusC (.minusc)",
+  "version": "0.1.0",
+  "publisher": "minusc",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["Programming Languages", "Formatters"],
+  "activationEvents": ["onLanguage:minusc"],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "minusc",
+        "aliases": ["minusC", "minusc"],
+        "extensions": [".minusc"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "minusc",
+        "scopeName": "source.minusc",
+        "path": "./syntaxes/minusc.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "minusC",
+      "properties": {
+        "minusc.format.indentSize": {
+          "type": "number",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 16,
+          "description": "Spaces per indent level when formatting."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[minusc]": {
+        "editor.defaultFormatter": "minusc.minus-c"
+      }
+    }
+  },
+  "scripts": {}
+}

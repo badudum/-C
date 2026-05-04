@@ -28,6 +28,27 @@ visitor_t* init_visitor()
     return visitor;
 }
 
+/* Record ASSIGNEMENT_AST nodes on list so VAR_AST can resolve datatype (e.g. bool vs int loads). */
+static void collect_assignments_into_list(AST_t* n, dynamic_list_t* list)
+{
+    if (!n) return;
+    if (n->type == ASSIGNEMENT_AST) {
+        list_enqueue(list, n);
+        return;
+    }
+    if (n->type == FUNC_AST) {
+        for (unsigned int i = 0; i < n->children->size; i++)
+            collect_assignments_into_list((AST_t*)n->children->items[i], list);
+        if (n->parent)
+            collect_assignments_into_list(n->parent, list);
+        return;
+    }
+    if (n->type == COMP_AST && n->children) {
+        for (unsigned int i = 0; i < n->children->size; i++)
+            collect_assignments_into_list((AST_t*)n->children->items[i], list);
+    }
+}
+
 // visit the AST node, then determine what to do with it
 AST_t* visitor_visit(visitor_t* visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe)
 {
@@ -75,6 +96,10 @@ AST_t* visit_compound(visitor_t * visitor, AST_t* node, dynamic_list_t* list, st
         AST_t* child = (AST_t*)node->children->items[i];
         AST_t* new_child = visitor_visit(visitor, child, list, stackframe);
         list_enqueue(compound->children, new_child);
+        if (new_child->type == ASSIGNEMENT_AST)
+            list_enqueue(list, new_child);
+        else if (new_child->type == FUNC_AST)
+            collect_assignments_into_list(new_child, list);
     }
     if (compound->children->size == 1) {
         compound->stack_index = ((AST_t*)compound->children->items[0])->stack_index;
@@ -181,6 +206,15 @@ AST_t* visit_var(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackfr
 
     node->stack_index = index;
     node->stackframe = stackframe;
+    /* Latest matching declaration wins (inner scopes after outer on list) */
+    for (int j = (int)list->size - 1; j >= 0; j--) {
+        AST_t* def = (AST_t*)list->items[j];
+        if (def->type == ASSIGNEMENT_AST && def->name && node->name &&
+            strcmp(def->name, node->name) == 0) {
+            node->datatype = def->datatype;
+            break;
+        }
+    }
 
     return node;
 }
@@ -202,11 +236,6 @@ AST_t* visit_func(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackf
         AST_t* child = (AST_t*)node->children->items[i];
         AST_t* new_child = visitor_visit(visitor, child, list, new_stackframe);
         list_enqueue(func->children, new_child);
-    }
-
-    for(int i = 0; i < func->children->size; i++)
-    {
-        list_enqueue(list, func->children->items[i]);
     }
 
     func->parent = visitor_visit(visitor, node->parent, list, new_stackframe);

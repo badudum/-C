@@ -81,17 +81,27 @@ static int parse_reference_line(const char* line, const char** path_start, size_
         *path_len = (size_t)(p - *path_start);
         return 1;
     }
-    return 0;
+    /* Unquoted path: rest of line (e.g. reference array_tests) */
+    *path_start = p;
+    while (*p && *p != '\r' && *p != '\n')
+        p++;
+    while (p > *path_start && isspace((unsigned char)p[-1]))
+        p--;
+    *path_len = (size_t)(p - *path_start);
+    return *path_len > 0 ? 1 : 0;
 }
+
+#define REFERENCE_KW "reference"
+#define REFERENCE_KW_LEN (sizeof(REFERENCE_KW) - 1)
 
 /* Test if line (after trimming leading space) is a reference directive. */
 static int is_reference_line(const char* line)
 {
     while (*line && isspace((unsigned char)*line))
         line++;
-    if (strncmp(line, "reference", 8) != 0)
+    if (strncmp(line, REFERENCE_KW, REFERENCE_KW_LEN) != 0)
         return 0;
-    line += 8;
+    line += REFERENCE_KW_LEN;
     if (*line && !isspace((unsigned char)*line))
         return 0;
     return 1;
@@ -104,6 +114,20 @@ static char* path_from_substring(const char* start, size_t len)
     if (!out) return NULL;
     memcpy(out, start, len);
     out[len] = '\0';
+    return out;
+}
+
+/* References always resolve to a .minusc file. Omit the extension in source; it is appended here. */
+static char* ensure_minusc_suffix(const char* ref_path)
+{
+    static const char suf[] = ".minusc";
+    size_t n = strlen(ref_path);
+    if (n >= sizeof(suf) - 1 && strcmp(ref_path + n - (sizeof(suf) - 1), suf) == 0)
+        return strdup(ref_path);
+    char* out = calloc(n + sizeof(suf), 1);
+    if (!out) return NULL;
+    memcpy(out, ref_path, n);
+    memcpy(out + n, suf, sizeof(suf));
     return out;
 }
 
@@ -126,21 +150,29 @@ char* preprocess_source(const char* source, const char* current_file_path, dynam
         if (*p == '\n')
             p++;
 
-        /* Trim leading whitespace for check */
+        /* Trim leading whitespace only for reference detection; keep full line_len for copy */
         const char* trim = line_start;
-        while (line_len > 0 && isspace((unsigned char)*trim)) {
+        size_t trim_len = line_len;
+        while (trim_len > 0 && isspace((unsigned char)*trim)) {
             trim++;
-            line_len--;
+            trim_len--;
         }
 
-        if (line_len >= 8 && is_reference_line(trim)) {
+        if (trim_len >= REFERENCE_KW_LEN && is_reference_line(trim)) {
             const char* path_start = NULL;
             size_t path_len = 0;
             if (parse_reference_line(trim, &path_start, &path_len)) {
                 char* ref_path = path_from_substring(path_start, path_len);
                 if (ref_path) {
-                    char* full_path = resolve_include_path(base_dir, ref_path);
+                    char* ref_minusc = ensure_minusc_suffix(ref_path);
                     free(ref_path);
+                    if (!ref_minusc) {
+                        free(out);
+                        free(base_dir);
+                        return NULL;
+                    }
+                    char* full_path = resolve_include_path(base_dir, ref_minusc);
+                    free(ref_minusc);
                     if (full_path) {
                         if (path_already_included(included_paths, full_path)) {
                             fprintf(stderr, "Preprocess: circular reference to '%s'\n", full_path);

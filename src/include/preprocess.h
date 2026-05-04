@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 /* Expand all "reference <path>" and reference "path" lines in source.
+ * Paths are resolved only as .minusc files: if the path does not end with .minusc, that suffix is appended.
  * current_file_path: path to the file this source came from (used for relative resolution).
  * included_paths: list of (char*) paths already being included (for cycle detection); will be updated.
  * Returns new allocated source string (caller frees). */

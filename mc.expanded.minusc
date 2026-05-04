@@ -1,0 +1,373 @@
+testArrayOps = ({x} int) function {
+    HelloWorldLine("--- Array tests --
+
+    {arr} Array<int> = [10, 20, 
+    {a0} int = arr
+    {a1} int = arr
+    {a2} int = arr
+    HelloWorldLine("arr[0]: ", 
+    HelloWorldLine("arr[1]: ", 
+    HelloWorldLine("arr[2]: ", 
+
+    {single} Array<int> = [
+    {s0} int = single
+    HelloWorldLine("single[0]: ", 
+
+    {five} Array<int> = [1, 2, 3, 4,
+    {f0} int = five
+    {f4} int = five
+    HelloWorldLine("five[0]: ", 
+    HelloWorldLine("five[4]: ", 
+
+    {zeros} Array<int> = [0;
+    {z0} int = zeros
+    {z4} int = zeros
+    HelloWorldLine("zeros[0]: ", 
+    HelloWorldLine("zeros[4]: ", 
+
+    {sevens} Array<int> = [7;
+    {sv0} int = sevens
+    {sv2} int = sevens
+    HelloWorldLine("sevens[0]: ", s
+    HelloWorldLine("sevens[2]: ", s
+
+    {range} Array<int> = [0; 3, 1; 2, 99;
+    {r0} int = range
+    {r2} int = range
+    {r3} int = range
+    {r4} int = range
+    {r5} int = range
+    HelloWorldLine("range[0] (expect 0): ", 
+    HelloWorldLine("range[2] (expect 0): ", 
+    HelloWorldLine("range[3] (expect 1): ", 
+    HelloWorldLine("range[4] (expect 1): ", 
+    HelloWorldLine("range[5] (expect 99): ", 
+
+    HelloWorldLine("--- Array if-checks --
+    if (a0 == 1
+        HelloWorldLine("PASS: arr[0
+    } el
+        HelloWorldLine("FAIL: arr[0
+  
+    if (a1 == 20 and a2 == 3
+        HelloWorldLine("PASS: arr[1]==20 and arr[2
+    } el
+        HelloWorldLine("FAIL: arr v
+  
+    if (s0 == 4
+        HelloWorldLine("PASS: single[0
+    } el
+        HelloWorldLine("FAIL: sing
+  
+    if (z0 == 0 and z4 == 
+        HelloWorldLine("PASS: zeros 
+    } el
+        HelloWorldLine("FAIL: 
+  
+    if (sv0 == 7 and sv2 == 
+        HelloWorldLine("PASS: sevens 
+    } el
+        HelloWorldLine("FAIL: s
+  
+    if (r0 == 0 and r3 == 1 and r5 == 9
+        HelloWorldLine("PASS: range values co
+    } el
+        HelloWorldLine("FAIL: range v
+  
+
+    retur
+} int;
+testBoolAndIf = ({x} int) function {
+    HelloWorldLine("--- Bool & If tests --
+
+    {t} bool = R
+    {f} bool = F
+    HelloWorldLine("t = ",
+    HelloWorldLine("f = ",
+
+    {r} bool = no
+    HelloWorldLine("not Fake = ",
+
+    {a} bool = t an
+    {o} bool = t o
+    HelloWorldLine("Real and Fake = ",
+    HelloWorldLine("Real or Fake = ",
+
+    {ba} int = 5 
+    {bo} int = 5 
+    {bn} int =
+    HelloWorldLine("5 & 3 = ", 
+    HelloWorldLine("5 | 3 = ", 
+    HelloWorldLine("~0 = ", 
+
+    {eq} bool = 5 =
+    {ne} bool = 5 !
+    {lt} bool = 3 
+    {gt} bool = 5 
+    {le} bool = 5 <
+    {ge} bool = 3 >
+    HelloWorldLine("5==5: ", 
+    HelloWorldLine("5!=3: ", 
+    HelloWorldLine("3<5: ", 
+    HelloWorldLine("5>3: ", 
+    HelloWorldLine("5<=5: ", 
+    HelloWorldLine("3>=5: ", 
+
+    {val} int =
+    if (val == 4
+        HelloWorldLine("if: val 
+  
+
+    {n} int =
+    if (n > 2
+        HelloWorldLine("if:
+    } else if (n > 
+        HelloWorldLine("else if
+    } el
+        HelloWorldLine("else:
+  
+
+    if (Fak
+        HelloWorldLine("ERROR: should not 
+    } el
+        HelloWorldLine("else: Fake branch sk
+  
+
+    HelloWorldLine("--- Bool if-checks --
+    if (t == Rea
+        HelloWorldLine("PASS: t is
+    } el
+        HelloWorldLine("FAIL: t is not
+  
+    if (f == Fak
+        HelloWorldLine("PASS: f is
+    } el
+        HelloWorldLine("FAIL: f is not
+  
+    if (r == Rea
+        HelloWorldLine("PASS: not Fake ==
+    } el
+        HelloWorldLine("FAIL: not Fake !=
+  
+    if (a == Fak
+        HelloWorldLine("PASS: Real and Fake ==
+    } el
+        HelloWorldLine("FAIL: Real and Fake !=
+  
+    if (o == Rea
+        HelloWorldLine("PASS: Real or Fake ==
+    } el
+        HelloWorldLine("FAIL: Real or Fake !=
+  
+    if (ba == 
+        HelloWorldLine("PASS: 5
+    } el
+        HelloWorldLine("FAIL
+  
+    if (bo == 
+        HelloWorldLine("PASS: 5
+    } el
+        HelloWorldLine("FAIL
+  
+    if (eq == Real and ne == Real and lt == Real and gt == Real and le == Rea
+        HelloWorldLine("PASS: comparisons co
+    } el
+        HelloWorldLine("FAIL: compar
+  
+    if (ge == Fak
+        HelloWorldLine("PASS: 3>=5 is
+    } el
+        HelloWorldLine("FAIL:
+  
+
+    retur
+} int;
+testLoopUntil = ({x} int) function {
+    HelloWorldLine("--- loop until & ++/-- tests --
+
+    {count} int 
+    loop until (count < 
+        HelloWorldLine("while-style count=",
+        
+  
+
+    HelloWorldLine("--- for-style: init in bracket --
+    loop until ({i} int = 0; i < 3; i+
+        HelloWorldLine("for 
+  
+
+    HelloWorldLine("--- for-style: init outside --
+    {j} int 
+    loop until (j = 0; j < 2; j+
+        HelloWorldLine("for 
+  
+
+    HelloWorldLine("--- do-while: run once then until --
+    {n} int 
+    lo
+        HelloWorldLine("do-while body 
+    
+    } until (n >=
+
+    HelloWorldLine("--- ++/-- prefix and postfix --
+    {a} int 
+    {b} int = 
+    HelloWorldLine("a++: a=", a, " b (old)=",
+    {c} int = 
+    HelloWorldLine("++a: a=", a, " c (new)=",
+    {d} int =
+    {e} int = 
+    HelloWorldLine("d--: d=", d, " e (old)=",
+    {f} int = 
+    HelloWorldLine("--d: d=", d, " f (new)=",
+
+    HelloWorldLine("--- += and -= --
+    {x} int = 
+    x +=
+    HelloWorldLine("x += 10: x=",
+    x -=
+    HelloWorldLine("x -= 25: x=",
+    {sum} int 
+    loop until ({k} int = 0; k < 5; k+
+        s
+  
+    HelloWorldLine("sum 0+1+2+3+4 = ", s
+
+    retur
+} int;
+
+print = ({test} str) function {
+     HelloWorld(t
+     retur
+} int;
+
+stringReturn = ({pushed} str) function {
+    HelloWorldLine("Taken string : ", push
+    return "Do
+} str;
+
+testStringOps = ({x} int) function {
+    HelloWorldLine("--- String ops tests --
+
+    {a} str = "Hel
+    {b} str = "Wor
+    {c} str = a 
+    HelloWorldLine("concat a+b: ",
+
+    {s} str = "hel
+    {sub} str = SmolString(s, 1,
+    HelloWorldLine("s[1:4]: ", s
+
+    {subsi} str = s[1
+    HelloWorldLine("s[one to four] " , subs
+
+    {ch} str = s
+    HelloWorldLine("s[0]: ", 
+
+    {t} str = "foo bar b
+    {r} str = Change(t, "bar", "qu
+    HelloWorldLine("Change: ",
+
+    {sp} str = "  trim me
+    {sm} str = Clipper(
+    HelloWorldLine("Clipper: ", 
+
+    {split} str = "a,b
+    {parts} str = SmolStrings(split, "
+    HelloWorldLine("SmolStrings: ", par
+
+    HelloWorldLine("--- String if-checks --
+    {slen} int 
+    if (slen == 
+        HelloWorldLine("PASS: string length
+    } el
+        HelloWorldLine("FAIL: string l
+  
+
+    {idx} int 
+    {ch2} str = s[i
+    if (idx == 
+        HelloWorldLine("PASS: index 0 a
+    } el
+        HelloWorldLine("FAIL: index 0 a
+  
+
+    retur
+} int;
+
+main = ({x} int) function {
+    {hello} str= "Hel
+    {name} str = "Taeyang Hi!Hello This is a \t longer string with newline \n haha
+    {name2} str = "David Hel
+    {what} str= "whatw
+
+    {add} int = 42 +
+    {sub} int = 40 -
+    {mul} int = 10 *
+    {div} int = 25 
+    {mixed1} int = 2 + 3 
+    {mixed2} int = (2 + 3) 
+    {mixed3} int = 20 - 4 
+    {mixed4} int = (20 - 4) 
+    {nested} int = ((1 + 2) * 3) 
+
+    HelloWorldLine("add 42+10=", a
+    HelloWorldLine("sub 40-17=", s
+    HelloWorldLine("mul 10*10=", m
+    HelloWorldLine("div 25/5=", d
+    HelloWorldLine("2+3*4 (no paren)=", mixe
+    HelloWorldLine("(2+3)*4 (paren)=", mixe
+    HelloWorldLine("20-4/2 (no paren)=", mixe
+    HelloWorldLine("(20-4)/2 (paren)=", mixe
+    HelloWorldLine("((1+2)*3)+4=", nest
+
+    HelloWorldLine("--- Arithmetic if-checks --
+    if (add == 5
+        HelloWorldLine("PASS: 42+1
+    } el
+        HelloWorldLine("FAIL: 
+  
+    if (sub == 2
+        HelloWorldLine("PASS: 40-1
+    } el
+        HelloWorldLine("FAIL: 
+  
+    if (mul == 10
+        HelloWorldLine("PASS: 10*10
+    } el
+        HelloWorldLine("FAIL: 
+  
+    if (div == 
+        HelloWorldLine("PASS: 25
+    } el
+        HelloWorldLine("FAIL:
+  
+    if (mixed1 == 14 and mixed2 == 2
+        HelloWorldLine("PASS: precedence co
+    } el
+        HelloWorldLine("FAIL: prece
+  
+    if (nested == 1
+        HelloWorldLine("PASS: ((1+2)*3)+
+    } el
+        HelloWorldLine("FAIL: n
+  
+
+    HelloWorld(wh
+    HelloWorld(name, nam
+    HelloWorld("Hello ", name2, "!\
+    {returnVal} int = print(na
+    HelloWorldLine("returned value: ", returnV
+
+    {returnStr} str = stringReturn("ha
+    HelloWorldLine(returnS
+
+    {dummy} int = testStringOps
+    {dummy2} int = testArrayOps
+    {dummy3} int = testBoolAndIf
+    {dummy4} int = testLoopUntil
+
+    retur
+} int;  
+
+

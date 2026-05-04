@@ -1,0 +1,79 @@
+testArrayOps = ({x} int) function {
+    HelloWorldLine("--- Array tests ---");
+
+    {arr} Array<int> = [10, 20, 30];
+    {a0} int = arr[0];
+    {a1} int = arr[1];
+    {a2} int = arr[2];
+    HelloWorldLine("arr[0]: ", a0);
+    HelloWorldLine("arr[1]: ", a1);
+    HelloWorldLine("arr[2]: ", a2);
+
+    {single} Array<int> = [42];
+    {s0} int = single[0];
+    HelloWorldLine("single[0]: ", s0);
+
+    {five} Array<int> = [1, 2, 3, 4, 5];
+    {f0} int = five[0];
+    {f4} int = five[4];
+    HelloWorldLine("five[0]: ", f0);
+    HelloWorldLine("five[4]: ", f4);
+
+    {zeros} Array<int> = [0; 5];
+    {z0} int = zeros[0];
+    {z4} int = zeros[4];
+    HelloWorldLine("zeros[0]: ", z0);
+    HelloWorldLine("zeros[4]: ", z4);
+
+    {sevens} Array<int> = [7; 3];
+    {sv0} int = sevens[0];
+    {sv2} int = sevens[2];
+    HelloWorldLine("sevens[0]: ", sv0);
+    HelloWorldLine("sevens[2]: ", sv2);
+
+    {range} Array<int> = [0; 3, 1; 2, 99; 1];
+    {r0} int = range[0];
+    {r2} int = range[2];
+    {r3} int = range[3];
+    {r4} int = range[4];
+    {r5} int = range[5];
+    HelloWorldLine("range[0] (expect 0): ", r0);
+    HelloWorldLine("range[2] (expect 0): ", r2);
+    HelloWorldLine("range[3] (expect 1): ", r3);
+    HelloWorldLine("range[4] (expect 1): ", r4);
+    HelloWorldLine("range[5] (expect 99): ", r5);
+
+    HelloWorldLine("--- Array if-checks ---");
+    if (a0 == 10) {
+        HelloWorldLine("PASS: arr[0]==10");
+    } else {
+        HelloWorldLine("FAIL: arr[0]!=10");
+    };
+    if (a1 == 20 and a2 == 30) {
+        HelloWorldLine("PASS: arr[1]==20 and arr[2]==30");
+    } else {
+        HelloWorldLine("FAIL: arr values");
+    };
+    if (s0 == 42) {
+        HelloWorldLine("PASS: single[0]==42");
+    } else {
+        HelloWorldLine("FAIL: single[0]");
+    };
+    if (z0 == 0 and z4 == 0) {
+        HelloWorldLine("PASS: zeros all 0");
+    } else {
+        HelloWorldLine("FAIL: zeros");
+    };
+    if (sv0 == 7 and sv2 == 7) {
+        HelloWorldLine("PASS: sevens all 7");
+    } else {
+        HelloWorldLine("FAIL: sevens");
+    };
+    if (r0 == 0 and r3 == 1 and r5 == 99) {
+        HelloWorldLine("PASS: range values correct");
+    } else {
+        HelloWorldLine("FAIL: range values");
+    };
+
+    return 0;
+} int;

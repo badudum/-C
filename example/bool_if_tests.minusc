@@ -1,0 +1,105 @@
+testBoolAndIf = ({x} int) function {
+    HelloWorldLine("--- Bool & If tests ---");
+
+    {t} bool = Real;
+    {f} bool = Fake;
+    HelloWorldLine("t = ", t);
+    HelloWorldLine("f = ", f);
+
+    {r} bool = not f;
+    HelloWorldLine("not Fake = ", r);
+
+    {a} bool = t and f;
+    {o} bool = t or f;
+    HelloWorldLine("Real and Fake = ", a);
+    HelloWorldLine("Real or Fake = ", o);
+
+    {ba} int = 5 & 3;
+    {bo} int = 5 | 3;
+    {bn} int = ~0;
+    HelloWorldLine("5 & 3 = ", ba);
+    HelloWorldLine("5 | 3 = ", bo);
+    HelloWorldLine("~0 = ", bn);
+
+    {eq} bool = 5 == 5;
+    {ne} bool = 5 != 3;
+    {lt} bool = 3 < 5;
+    {gt} bool = 5 > 3;
+    {le} bool = 5 <= 5;
+    {ge} bool = 3 >= 5;
+    HelloWorldLine("5==5: ", eq);
+    HelloWorldLine("5!=3: ", ne);
+    HelloWorldLine("3<5: ", lt);
+    HelloWorldLine("5>3: ", gt);
+    HelloWorldLine("5<=5: ", le);
+    HelloWorldLine("3>=5: ", ge);
+
+    {val} int = 42;
+    if (val == 42) {
+        HelloWorldLine("if: val is 42");
+    };
+
+    {n} int = 10;
+    if (n > 20) {
+        HelloWorldLine("if: n>20");
+    } else if (n > 5) {
+        HelloWorldLine("else if: n>5");
+    } else {
+        HelloWorldLine("else: n<=5");
+    };
+
+    if (Fake) {
+        HelloWorldLine("ERROR: should not print");
+    } else {
+        HelloWorldLine("else: Fake branch skipped");
+    };
+
+    HelloWorldLine("--- Bool if-checks ---");
+    if (t == Real) {
+        HelloWorldLine("PASS: t is Real");
+    } else {
+        HelloWorldLine("FAIL: t is not Real");
+    };
+    if (f == Fake) {
+        HelloWorldLine("PASS: f is Fake");
+    } else {
+        HelloWorldLine("FAIL: f is not Fake");
+    };
+    if (r == Real) {
+        HelloWorldLine("PASS: not Fake == Real");
+    } else {
+        HelloWorldLine("FAIL: not Fake != Real");
+    };
+    if (a == Fake) {
+        HelloWorldLine("PASS: Real and Fake == Fake");
+    } else {
+        HelloWorldLine("FAIL: Real and Fake != Fake");
+    };
+    if (o == Real) {
+        HelloWorldLine("PASS: Real or Fake == Real");
+    } else {
+        HelloWorldLine("FAIL: Real or Fake != Real");
+    };
+    if (ba == 1) {
+        HelloWorldLine("PASS: 5&3==1");
+    } else {
+        HelloWorldLine("FAIL: 5&3");
+    };
+    if (bo == 7) {
+        HelloWorldLine("PASS: 5|3==7");
+    } else {
+        HelloWorldLine("FAIL: 5|3");
+    };
+    if (eq == Real and ne == Real and lt == Real and gt == Real and le == Real) {
+        HelloWorldLine("PASS: comparisons correct");
+    } else {
+        HelloWorldLine("FAIL: comparisons");
+    };
+    if (ge == Fake) {
+        HelloWorldLine("PASS: 3>=5 is Fake");
+    } else {
+        HelloWorldLine("FAIL: 3>=5");
+    };
+
+    return 0;
+} int;
