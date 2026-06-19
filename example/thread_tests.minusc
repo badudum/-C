@@ -1,0 +1,205 @@
+busyWork = ({n} int) function {
+    {i} int = 0;
+    {acc} int = 0;
+    loop until (i < n) {
+        acc = acc + i;
+        i++;
+    };
+    return acc;
+} int;
+
+timerWorker = ({id} int) function {
+    return id;
+} int;
+
+heavyWorker = ({n} int) function {
+    return busyWork(n);
+} int;
+
+unsafeRaceBumpWorker = ({buf} adr) function {
+    {i} int = 0;
+    loop until (i < 250) {
+        {v} int = PeekInt(buf, 0);
+        {nv} int = v + 1;
+        PokeInt(buf, 0, nv);
+        i++;
+    };
+    return 0;
+} int;
+
+safeRaceBumpWorker = ({buf} adr) function {
+    {i} int = 0;
+    loop until (i < 250) {
+        AddInt(buf, 0, 1);
+        i++;
+    };
+    return 0;
+} int;
+
+testTimer = ({x} int) function {
+    HelloWorldLine("--- [1] timer() builtin ---");
+    {t0} int = timer();
+    {junk} int = busyWork(5000);
+    {t1} int = timer();
+    {elapsed} int = t1 - t0;
+    HelloWorldLine("busyWork(5000) elapsed_us=", elapsed);
+    if (elapsed >= 0) {
+        HelloWorldLine("PASS: timer() returns comparable timestamps");
+    } else {
+        HelloWorldLine("FAIL: timer elapsed negative");
+    };
+    return 0;
+} int;
+
+testDupeBasic = ({x} int) function {
+    HelloWorldLine("--- [2] dupe() spawns thread ---");
+    {threadSlot} int = dupe(timerWorker, 7);
+    if (threadSlot >= 0) {
+        HelloWorldLine("PASS: dupe returned thread slot ", threadSlot);
+    } else {
+        HelloWorldLine("FAIL: dupe returned error");
+    };
+    {jr} int = join(threadSlot);
+    if (jr == 0) {
+        HelloWorldLine("PASS: join(threadSlot) succeeded");
+    } else {
+        HelloWorldLine("FAIL: join returned error code ", jr);
+    };
+    return 0;
+} int;
+
+testSerialVsParallel = ({x} int) function {
+    HelloWorldLine("--- [3] serial vs parallel timing ---");
+    {half} int = 10000;
+    {w1} int = half + half;
+    {w2} int = w1 + w1;
+    {work} int = w2 + w2;
+
+    HelloWorldLine("same work twice: heavyWorker(", work, ")");
+
+    HelloWorldLine("  serial (call, call)...");
+    {t0} int = timer();
+    {s1} int = heavyWorker(work);
+    {s2} int = heavyWorker(work);
+    {t1} int = timer();
+    {serialUs} int = t1 - t0;
+    HelloWorldLine("  serial elapsed_us=", serialUs);
+
+    HelloWorldLine("  parallel (dupe x2, join x2)...");
+    {t2} int = timer();
+    {ta} int = dupe(heavyWorker, work);
+    {tb} int = dupe(heavyWorker, work);
+    {ja} int = join(ta);
+    {jb} int = join(tb);
+    {t3} int = timer();
+    {parallelUs} int = t3 - t2;
+    HelloWorldLine("  parallel elapsed_us=", parallelUs);
+
+    HelloWorldLine("comparison: serial_us=", serialUs, " parallel_us=", parallelUs);
+    if (ja == 0 and jb == 0 and ta >= 0 and tb >= 0) {
+        if (parallelUs < serialUs) {
+            HelloWorldLine("PASS: parallel faster than serial");
+        } else if (parallelUs == serialUs) {
+            HelloWorldLine("PASS: equal wall time");
+        } else {
+            HelloWorldLine("NOTE: serial faster at this work size (spawn overhead)");
+            HelloWorldLine("PASS: serial vs parallel comparison completed");
+        };
+    } else {
+        HelloWorldLine("FAIL: parallel dupe/join");
+    };
+    return 0;
+} int;
+
+testUnsafeRmwRace = ({x} int) function {
+    HelloWorldLine("--- [4a] unsafe peek/inc/poke RMW (must lose updates) ---");
+    {shared} adr = rent(16);
+    PokeInt(shared, 0, 0);
+
+    {workers} int = 4;
+    {perWorker} int = 250;
+    {expected} int = workers * perWorker;
+
+    HelloWorldLine("4 threads x 250 PeekInt + PokeInt (not one atomic op)");
+
+    {t0} int = dupe(unsafeRaceBumpWorker, shared);
+    {t1} int = dupe(unsafeRaceBumpWorker, shared);
+    {t2} int = dupe(unsafeRaceBumpWorker, shared);
+    {t3} int = dupe(unsafeRaceBumpWorker, shared);
+    {j0} int = join(t0);
+    {j1} int = join(t1);
+    {j2} int = join(t2);
+    {j3} int = join(t3);
+
+    {final} int = PeekInt(shared, 0);
+    HelloWorldLine("expected if serialized=", expected);
+    HelloWorldLine("actual after unsafe RMW=", final);
+
+    if (j0 == 0 and j1 == 0 and j2 == 0 and j3 == 0) {
+        if (final < expected) {
+            {lost} int = expected - final;
+            HelloWorldLine("PASS: unsafe pattern lost ", lost, " updates (race demonstrated)");
+        } else {
+            HelloWorldLine("FAIL: expected unsafe peek/poke to lose updates");
+        };
+    } else {
+        HelloWorldLine("FAIL: unsafe race test dupe/join error");
+    };
+
+    {fd} int = moveOut(shared);
+    return 0;
+} int;
+
+testParallelHeapSafe = ({x} int) function {
+    HelloWorldLine("--- [4b] parallel AddInt counter (thread-safe) ---");
+    {shared} adr = rent(16);
+    PokeInt(shared, 0, 0);
+
+    {workers} int = 4;
+    {perWorker} int = 250;
+    {expected} int = workers * perWorker;
+
+    HelloWorldLine("4 threads x 250 AddInt(buf, 0, 1)");
+
+    {t0} int = dupe(safeRaceBumpWorker, shared);
+    {t1} int = dupe(safeRaceBumpWorker, shared);
+    {t2} int = dupe(safeRaceBumpWorker, shared);
+    {t3} int = dupe(safeRaceBumpWorker, shared);
+    {j0} int = join(t0);
+    {j1} int = join(t1);
+    {j2} int = join(t2);
+    {j3} int = join(t3);
+
+    {final} int = PeekInt(shared, 0);
+    HelloWorldLine("expected=", expected, " actual=", final);
+
+    if (j0 == 0 and j1 == 0 and j2 == 0 and j3 == 0) {
+        if (final == expected) {
+            HelloWorldLine("PASS: parallel AddInt counter exact");
+        } else {
+            HelloWorldLine("FAIL: parallel AddInt counter wrong");
+        };
+    } else {
+        HelloWorldLine("FAIL: safe parallel test dupe/join error");
+    };
+
+    {fd} int = moveOut(shared);
+    return 0;
+} int;
+
+testThreadOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     THREAD / TIMER TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testTimer(0);
+    {b} int = testDupeBasic(0);
+    {c} int = testSerialVsParallel(0);
+    {d} int = testUnsafeRmwRace(0);
+    {e} int = testParallelHeapSafe(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     THREAD TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;

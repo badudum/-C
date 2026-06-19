@@ -29,6 +29,8 @@ typedef struct TOKEN_S
         WHILE_TOKEN,
         LOOP_TOKEN,
         UNTIL_TOKEN,
+        DUPE_TOKEN,
+        CUST_TOKEN,
         FUNCTION_TOKEN,
 
         INT_TOKEN,

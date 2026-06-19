@@ -1,0 +1,276 @@
+printAdr = ({label} str, {a} adr) function {
+    {lo} int = AdrLo(a);
+    {hi} int = AdrHi(a);
+    HelloWorldLine(label);
+    HelloWorldLine("  adr_lo=", lo);
+    HelloWorldLine("  adr_hi=", hi);
+    return 0;
+} int;
+
+logWriteInt = ({a} adr, {off} int, {val} int) function {
+    {lo} int = AdrLo(a);
+    {hi} int = AdrHi(a);
+    HelloWorldLine("WRITE PokeInt | offset=", off, " value=", val);
+    HelloWorldLine("  adr_lo=", lo, " adr_hi=", hi);
+    {w} int = PokeInt(a, off, val);
+    return w;
+} int;
+
+logReadInt = ({a} adr, {off} int) function {
+    {v} int = PeekInt(a, off);
+    {lo} int = AdrLo(a);
+    {hi} int = AdrHi(a);
+    HelloWorldLine("READ  PeekInt | offset=", off, " -> ", v);
+    HelloWorldLine("  adr_lo=", lo, " adr_hi=", hi);
+    return v;
+} int;
+
+logWriteByte = ({a} adr, {off} int, {val} int) function {
+    {lo} int = AdrLo(a);
+    {hi} int = AdrHi(a);
+    HelloWorldLine("WRITE PokeByte | offset=", off, " byte=", val);
+    HelloWorldLine("  adr_lo=", lo, " adr_hi=", hi);
+    return PokeByte(a, off, val);
+} int;
+
+logReadByte = ({a} adr, {off} int) function {
+    {v} int = PeekByte(a, off);
+    {lo} int = AdrLo(a);
+    {hi} int = AdrHi(a);
+    HelloWorldLine("READ  PeekByte | offset=", off, " -> ", v);
+    HelloWorldLine("  adr_lo=", lo, " adr_hi=", hi);
+    return v;
+} int;
+
+testHeapBasic = ({x} int) function {
+    HelloWorldLine("--- [1-5] rent, read/write, zero-init ---");
+    {buf} adr = rent(64);
+    printAdr("rent(64) main buffer", buf);
+
+    {w0} int = logWriteInt(buf, 0, 42);
+    {r0} int = logReadInt(buf, 0);
+    if (r0 == 42) {
+        HelloWorldLine("PASS: rent + PokeInt/PeekInt basic");
+    } else {
+        HelloWorldLine("FAIL: rent + PokeInt/PeekInt basic");
+    };
+
+    {w1} int = logWriteInt(buf, 4, 100);
+    {w2} int = logWriteInt(buf, 8, 200);
+    {w3} int = logWriteInt(buf, 12, 300);
+    {v1} int = logReadInt(buf, 4);
+    {v2} int = logReadInt(buf, 8);
+    {v3} int = logReadInt(buf, 12);
+    if (v1 == 100 and v2 == 200 and v3 == 300) {
+        HelloWorldLine("PASS: multiple int slots");
+    } else {
+        HelloWorldLine("FAIL: multiple int slots");
+    };
+
+    {pb0} int = logWriteByte(buf, 20, 65);
+    {pb1} int = logWriteByte(buf, 21, 66);
+    {pb2} int = logWriteByte(buf, 22, 67);
+    {cb0} int = logReadByte(buf, 20);
+    {cb1} int = logReadByte(buf, 21);
+    {cb2} int = logReadByte(buf, 22);
+    if (cb0 == 65 and cb1 == 66 and cb2 == 67) {
+        HelloWorldLine("PASS: byte read/write (ABC)");
+    } else {
+        HelloWorldLine("FAIL: byte read/write");
+    };
+
+    HelloWorldLine("READ  adr[20] via PeekByte:");
+    {br} int = buf[20];
+    HelloWorldLine("  offset=20 -> ", br);
+    if (br == 65) {
+        HelloWorldLine("PASS: adr[offset] byte access");
+    } else {
+        HelloWorldLine("FAIL: adr[offset] byte access");
+    };
+
+    {buf2} adr = rent(16);
+    printAdr("rent(16) zero-init check", buf2);
+    {z0} int = logReadByte(buf2, 0);
+    {z1} int = logReadByte(buf2, 1);
+    if (z0 == 0 and z1 == 0) {
+        HelloWorldLine("PASS: rent zero-initializes memory");
+    } else {
+        HelloWorldLine("FAIL: rent zero-init");
+    };
+    {f2} int = moveOut(buf2);
+    {f1} int = moveOut(buf);
+    HelloWorldLine("moveOut results: ", f1, " ", f2);
+    return 0;
+} int;
+
+testHeapStringCoexist = ({x} int) function {
+    HelloWorldLine("--- [6] heap + stack string coexistence ---");
+
+    {stackMsg} str = "heap";
+    HelloWorldLine("stack str literal: ", stackMsg);
+
+    {hstr} adr = rent(32);
+    printAdr("rent(32) for string bytes", hstr);
+
+    {wb0} int = logWriteByte(hstr, 0, 104);
+    {wb1} int = logWriteByte(hstr, 1, 101);
+    {wb2} int = logWriteByte(hstr, 2, 97);
+    {wb3} int = logWriteByte(hstr, 3, 112);
+
+    {rb0} int = logReadByte(hstr, 0);
+    {rb1} int = logReadByte(hstr, 1);
+    {rb2} int = logReadByte(hstr, 2);
+    {rb3} int = logReadByte(hstr, 3);
+
+    if (rb0 == 104 and rb1 == 101 and rb2 == 97 and rb3 == 112) {
+        HelloWorldLine("PASS: heap bytes match stack string 'heap'");
+    } else {
+        HelloWorldLine("FAIL: heap string bytes mismatch");
+    };
+
+    {concat} str = stackMsg + " memory";
+    HelloWorldLine("stack concat while heap active: ", concat);
+
+    {fs} int = moveOut(hstr);
+    return 0;
+} int;
+
+testHeapArrayMirror = ({x} int) function {
+    HelloWorldLine("--- [7] stack Array<int> mirrored to heap ---");
+
+    {stackArr} Array<int> = [10, 20, 30, 40, 50];
+    HelloWorldLine("stack arr[0]=", stackArr[0]);
+    HelloWorldLine("stack arr[2]=", stackArr[2]);
+    HelloWorldLine("stack arr[4]=", stackArr[4]);
+
+    {heapArr} adr = rent(5, int);
+    printAdr("rent(5, int) for 5 ints", heapArr);
+
+    {i} int = 0;
+    loop until (i < 5) {
+        {src} int = stackArr[i];
+        {off} int = i * 4;
+        HelloWorldLine("copy stack->heap slot ", i, " offset=", off, " value=", src);
+        {w} int = logWriteInt(heapArr, off, src);
+        i++;
+    };
+
+    {j} int = 0;
+    loop until (j < 5) {
+        {off2} int = j * 4;
+        {got} int = logReadInt(heapArr, off2);
+        {expect} int = stackArr[j];
+        if (got == expect) {
+            HelloWorldLine("PASS: heap slot ", j, " == stack ", expect);
+        } else {
+            HelloWorldLine("FAIL: heap slot ", j, " got=", got, " expect=", expect);
+        };
+        j++;
+    };
+
+    {fa} int = moveOut(heapArr);
+    return 0;
+} int;
+
+testHeapCoexistLive = ({x} int) function {
+    HelloWorldLine("--- [8] stack array/str alongside active heap ---");
+
+    {buf} adr = rent(64);
+    printAdr("rent(64) coexist buffer", buf);
+    {w} int = logWriteInt(buf, 0, 42);
+
+    {liveArr} Array<int> = [7, 8, 9];
+    {liveStr} str = "live";
+    HelloWorldLine("stack arr[1]=", liveArr[1], " str=", liveStr);
+    {lv} int = logReadInt(buf, 0);
+
+    if (lv == 42 and liveArr[1] == 8) {
+        HelloWorldLine("PASS: stack array/str OK alongside heap adr");
+    } else {
+        HelloWorldLine("FAIL: stack/heap coexistence");
+    };
+    {f} int = moveOut(buf);
+    return 0;
+} int;
+
+testHeapStress = ({x} int) function {
+    HelloWorldLine("--- [9-12] stress, large block, locks ---");
+
+    {i} int = 0;
+    loop until (i < 10) {
+        {tmp} adr = rent(32);
+        HelloWorldLine("cycle ", i, " rent(32) adr_lo=", AdrLo(tmp));
+        {tw} int = logWriteInt(tmp, 0, i);
+        {tr} int = logReadInt(tmp, 0);
+        if (tr != i) {
+            HelloWorldLine("FAIL: alloc cycle at i=", i);
+        };
+        {fd} int = moveOut(tmp);
+        i++;
+    };
+    HelloWorldLine("PASS: 10 alloc/free cycles");
+
+    {big} adr = rent(1024);
+    printAdr("rent(1024)", big);
+    {bw} int = logWriteInt(big, 1020, 999);
+    {br2} int = logReadInt(big, 1020);
+    if (br2 == 999) {
+        HelloWorldLine("PASS: large block (1024 bytes)");
+    } else {
+        HelloWorldLine("FAIL: large block");
+    };
+    {fb} int = moveOut(big);
+
+    {locked} adr = rent(64);
+    printAdr("rent(64) locked block", locked);
+    {lw} int = logWriteInt(locked, 0, 99);
+    {lr} int = logReadInt(locked, 0);
+    {lw2} int = logWriteInt(locked, 4, 88);
+    {lr2} int = logReadInt(locked, 4);
+    if (lr == 99 and lr2 == 88) {
+        HelloWorldLine("PASS: locked read/write sequence");
+    } else {
+        HelloWorldLine("FAIL: locked read/write sequence");
+    };
+    {fl} int = moveOut(locked);
+    return 0;
+} int;
+
+testHeapFuncReturn = ({x} int) function {
+    HelloWorldLine("--- [13] function returning adr ---");
+    {fromFunc} adr = makeHeapBlock(77);
+    printAdr("makeHeapBlock(77)", fromFunc);
+    {fv} int = logReadInt(fromFunc, 0);
+    if (fv == 77) {
+        HelloWorldLine("PASS: heap adr from function return");
+    } else {
+        HelloWorldLine("FAIL: heap adr from function");
+    };
+    {ff} int = moveOut(fromFunc);
+    return 0;
+} int;
+
+testHeapOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("       HEAP MEMORY TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testHeapBasic(0);
+    {b} int = testHeapStringCoexist(0);
+    {c} int = testHeapArrayMirror(0);
+    {d} int = testHeapCoexistLive(0);
+    {e} int = testHeapStress(0);
+    {f} int = testHeapFuncReturn(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("       HEAP TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;
+
+makeHeapBlock = ({val} int) function {
+    {p} adr = rent(16);
+    HelloWorldLine("makeHeapBlock: rent(16) adr_lo=", AdrLo(p));
+    {w} int = logWriteInt(p, 0, val);
+    return p;
+} adr;

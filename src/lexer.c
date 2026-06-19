@@ -210,6 +210,10 @@ token_t *lexer_collect_id(lexer_t *lexer)
         token_type = LOOP_TOKEN;
     else if (strcmp(value, "until") == 0)
         token_type = UNTIL_TOKEN;
+    else if (strcmp(value, "dupe") == 0)
+        token_type = DUPE_TOKEN;
+    else if (strcmp(value, "cust") == 0)
+        token_type = CUST_TOKEN;
 
     return init_token(token_type, value);
 }

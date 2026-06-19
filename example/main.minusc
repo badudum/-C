@@ -1,6 +1,11 @@
 reference array_tests
 reference bool_if_tests
 reference loop_tests
+reference heap_tests
+reference thread_tests
+reference borrow_tests
+reference mem_tests
+reference cust_tests
 
 print = ({test} str) function {
      HelloWorld(test);
@@ -132,6 +137,11 @@ main = ({x} int) function {
     {dummy2} int = testArrayOps(0);
     {dummy3} int = testBoolAndIf(0);
     {dummy4} int = testLoopUntil(0);
+    {dummy5} int = testHeapOps(0);
+    {dummy6} int = testThreadOps(0);
+    {dummy7} int = testBorrowOps(0);
+    {dummy8} int = testMemOps(0);
+    {dummy9} int = testCustOps(0);
 
     return 0;
 } int;  

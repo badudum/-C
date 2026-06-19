@@ -11,6 +11,8 @@
 typedef struct VISITOR_S
 {
     AST_t* object;
+    dynamic_list_t * borrow;       /* current function: list of adr_state_t */
+    dynamic_list_t * borrow_stack;   /* saved borrow frames */
 }visitor_t;
 
 AST_t* variable_lookup(dynamic_list_t* list, char* name);
@@ -54,5 +56,13 @@ AST_t* visit_loop_until(visitor_t * visitor, AST_t* node, dynamic_list_t* list, 
 AST_t* visit_for_clause(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
 
 AST_t* visit_inc_dec(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
+AST_t* visit_type_size(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
+AST_t* visit_cust_def(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
+
+AST_t* visit_cust_init(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
+
+AST_t* visit_field_access(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
 
 #endif

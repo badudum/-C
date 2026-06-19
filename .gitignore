@@ -1,2 +1,9 @@
 **/.DS_Store
 **/.vscode
+*.o
+minusC.out
+mc.out
+mc.o
+mc.s
+mc.s.txt
+mc.expanded.minusc

@@ -1,0 +1,74 @@
+testSizeofAndRent = ({x} int) function {
+    HelloWorldLine("--- [mem-1] sizeof + rent(count, type) ---");
+    {sz} int = sizeof(int);
+    {buf} adr = rent(5, int);
+    PokeInt(buf, 0, 10);
+    PokeInt(buf, 4, 20);
+    PokeInt(buf, 8, 30);
+    {a} int = PeekInt(buf, 0);
+    {b} int = PeekInt(buf, 4);
+    {c} int = PeekInt(buf, 8);
+    if (sz == 4 and a == 10 and b == 20 and c == 30) {
+        HelloWorldLine("PASS: rent(5, int) holds 5 ints (", sz, " bytes each)");
+    } else {
+        HelloWorldLine("FAIL: sizeof/rent typed alloc sz=", sz, " a=", a);
+    };
+    {fd} int = moveOut(buf);
+    return 0;
+} int;
+
+testMemcpyMemset = ({x} int) function {
+    HelloWorldLine("--- [mem-2] Memcpy + Memset ---");
+    {src} adr = rent(16);
+    {dst} adr = rent(16);
+    Memset(src, 0, 16);
+    PokeInt(src, 0, 111);
+    PokeInt(src, 4, 222);
+    {mc} int = Memcpy(dst, src, 8);
+    {d0} int = PeekInt(dst, 0);
+    {d1} int = PeekInt(dst, 4);
+    {ms} int = Memset(dst, 55, 4);
+    {b0} int = PeekByte(dst, 0);
+    if (mc == 0 and ms == 0 and d0 == 111 and d1 == 222 and b0 == 55) {
+        HelloWorldLine("PASS: Memcpy and Memset");
+    } else {
+        HelloWorldLine("FAIL: Memcpy/Memset mc=", mc, " d0=", d0, " b0=", b0);
+    };
+    {fs} int = moveOut(src);
+    {fd} int = moveOut(dst);
+    return 0;
+} int;
+
+testRentGrow = ({x} int) function {
+    HelloWorldLine("--- [mem-3] RentGrow preserves data ---");
+    {small} adr = rent(2, int);
+    PokeInt(small, 0, 42);
+    PokeInt(small, 4, 99);
+    {big} adr = RentGrow(small, 32);
+    {v0} int = PeekInt(big, 0);
+    {v1} int = PeekInt(big, 4);
+    PokeInt(big, 8, 7);
+    {v2} int = PeekInt(big, 8);
+    if (v0 == 42 and v1 == 99 and v2 == 7) {
+        HelloWorldLine("PASS: RentGrow copied old ints and allows new writes");
+    } else {
+        HelloWorldLine("FAIL: RentGrow v0=", v0, " v1=", v1, " v2=", v2);
+    };
+    {fb} int = moveOut(big);
+    return 0;
+} int;
+
+testMemOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     MEMORY BUILTIN TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testSizeofAndRent(0);
+    {b} int = testMemcpyMemset(0);
+    {c} int = testRentGrow(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     MEMORY TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;
