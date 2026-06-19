@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "include/cust.h"
+#include "include/types.h"
 
 #include "include/assembly/function_ass.h"
 #include "include/assembly/call_ass.h"
@@ -28,6 +30,17 @@
 static void append_load_from_fp(char **s, int offset, int reg, const char *comment);
 char * assemble(AST_t * ast, dynamic_list_t * list);
 
+static const char assemble_return_epilogue_aarch64[] =
+    "mov sp, x29\n"
+    "ldp x29, x30, [sp], #16\n"
+    "ret\n";
+
+static void append_return_epilogue(char **s)
+{
+    *s = realloc(*s, strlen(*s) + sizeof(assemble_return_epilogue_aarch64));
+    strcat(*s, assemble_return_epilogue_aarch64);
+}
+
 /* Helper: emit ldr w0 from [fp, offset]. Handles large offsets. */
 static void append_load_w_from_fp(char **s, int offset, const char *comment)
 {
@@ -41,6 +54,30 @@ static void append_load_w_from_fp(char **s, int offset, const char *comment)
     *s = realloc(*s, (strlen(*s) + strlen(instr) + 1) * sizeof(char));
     strcat(*s, instr);
     free(instr);
+}
+
+static AST_t * unwrap_comp(AST_t *ast)
+{
+    if (ast && ast->type == COMP_AST && ast->children && ast->children->size == 1)
+        return (AST_t *)ast->children->items[0];
+    return ast;
+}
+
+static int asm_operand_on_stack(AST_t *ast)
+{
+    ast = unwrap_comp(ast);
+    if (!ast) return 0;
+    return ast->type == ACCESS_AST || ast->type == CALL_AST || ast->type == SLICE_AST ||
+           ast->type == FIELD_ACCESS_AST;
+}
+
+static int asm_arg_needs_assemble(AST_t *arg)
+{
+    arg = unwrap_comp(arg);
+    if (!arg) return 0;
+    if (asm_operand_on_stack(arg)) return 1;
+    if (arg->type == VAR_AST) return 0;
+    return 1;
 }
 
 /* Helper: emit str w0 to [fp, offset]. Handles large offsets. */
@@ -102,6 +139,88 @@ static void append_store_to_fp(char **s, int offset, int reg, const char *commen
     free(instr);
 }
 
+static int cust_fp_offset(int base_stack_index, int field_byte_offset)
+{
+    return -(base_stack_index * 16) + field_byte_offset;
+}
+
+static void append_store_value_to_fp_offset(char **s, int fp_offset, int dt, const char *comment)
+{
+    if (dt == TYPE_BOOL)
+        append_store_b_to_fp(s, fp_offset, comment);
+    else if (dt == TYPE_INT || IS_ARRAY_TYPE(dt))
+        append_store_w_to_fp(s, fp_offset, comment);
+    else
+        append_store_to_fp(s, fp_offset, 0, comment);
+}
+
+static void append_load_value_from_fp_offset(char **s, int fp_offset, int dt, const char *comment)
+{
+    if (dt == TYPE_BOOL)
+        append_load_b_from_fp(s, fp_offset, comment);
+    else if (dt == TYPE_INT || IS_ARRAY_TYPE(dt))
+        append_load_w_from_fp(s, fp_offset, comment);
+    else
+        append_load_from_fp(s, fp_offset, 0, comment);
+}
+
+static void append_copy_cust_fields(char **s, int dst_si, int src_si, int cust_id, const char *comment)
+{
+    cust_type_t *type = cust_get(cust_id);
+    if (!type)
+        return;
+    for (unsigned int i = 0; i < type->fields->size; i++) {
+        cust_field_t *f = (cust_field_t *)type->fields->items[i];
+        int dst_off = cust_fp_offset(dst_si, f->offset);
+        int src_off = cust_fp_offset(src_si, f->offset);
+        char cmt[96];
+        snprintf(cmt, sizeof(cmt), "%s load %s", comment, f->name);
+        append_load_value_from_fp_offset(s, src_off, f->datatype, cmt);
+        snprintf(cmt, sizeof(cmt), "%s store %s", comment, f->name);
+        append_store_value_to_fp_offset(s, dst_off, f->datatype, cmt);
+    }
+}
+
+static void append_init_cust_from_literal(char **s, AST_t *init, int dst_si, dynamic_list_t *list)
+{
+    for (unsigned int i = 0; i < init->children->size; i++) {
+        AST_t *entry = (AST_t *)init->children->items[i];
+        char *rhs_asm = assemble(entry->parent, list);
+        if (rhs_asm) {
+            *s = realloc(*s, strlen(*s) + strlen(rhs_asm) + 1);
+            strcat(*s, rhs_asm);
+            free(rhs_asm);
+        }
+        AST_t *rhs = unwrap_comp(entry->parent);
+        int fp_off = cust_fp_offset(dst_si, entry->int_value);
+        if (rhs && asm_operand_on_stack(rhs)) {
+            const char *pop = (entry->datatype == TYPE_INT || entry->datatype == TYPE_BOOL ||
+                               IS_ARRAY_TYPE(entry->datatype))
+                                  ? "\n# cust init pop w\nldr w0, [sp], #16\n"
+                                  : "\n# cust init pop x\nldr x0, [sp], #16\n";
+            *s = realloc(*s, strlen(*s) + strlen(pop) + 1);
+            strcat(*s, pop);
+        } else if (rhs && (rhs->type == VAR_AST || rhs->type == INT_AST || rhs->type == BOOL_AST)) {
+            int rhs_off = rhs->stack_index * -16;
+            if (entry->datatype == TYPE_BOOL)
+                append_load_b_from_fp(s, rhs_off, "cust init field load");
+            else if (entry->datatype == TYPE_INT || IS_ARRAY_TYPE(entry->datatype))
+                append_load_w_from_fp(s, rhs_off, "cust init field load");
+            else
+                append_load_from_fp(s, rhs_off, 0, "cust init field load");
+        } else if (rhs && rhs->type == CUST_INIT_AST) {
+            int nested_id = rhs->int_value;
+            int temp_base = rhs->stack_index;
+            append_init_cust_from_literal(s, rhs, temp_base, list);
+            append_copy_cust_fields(s, dst_si, temp_base, nested_id, "nested cust");
+            continue;
+        }
+        char cmt[64];
+        snprintf(cmt, sizeof(cmt), "cust init store %s", entry->name ? entry->name : "");
+        append_store_value_to_fp_offset(s, fp_off, entry->datatype, cmt);
+    }
+}
+
 /* Helper: return store instruction for xN to [fp, offset]. Caller frees. */
 static char* store_x_to_fp_instr(int offset, int reg, const char* comment)
 {
@@ -126,6 +245,13 @@ char * assemble_compound(AST_t* ast, dynamic_list_t* list)
         char * next = assemble(child, list);
         value = realloc(value, (strlen(value) + strlen(next) + 1) * sizeof(char));
         strcat(value, next);
+        free(next);
+        /* Standalone calls push a return slot; discard it to keep sp aligned. */
+        if (child->type == CALL_AST || child->type == DUPE_AST) {
+            const char *pop = "\n# discard standalone call result\nadd sp, sp, #16\n";
+            value = realloc(value, strlen(value) + strlen(pop) + 1);
+            strcat(value, pop);
+        }
     }
     return value;
 }
@@ -139,6 +265,38 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
     char* s = calloc(1, sizeof(char));
 
     list_enqueue(list, ast);
+
+    if (ast->left && ast->left->type == FIELD_ACCESS_AST) {
+        char *rhs_asm = assemble(ast->parent, list);
+        if (rhs_asm) {
+            s = realloc(s, strlen(s) + strlen(rhs_asm) + 1);
+            strcat(s, rhs_asm);
+            free(rhs_asm);
+        }
+        AST_t *fa = ast->left;
+        AST_t *rhs = unwrap_comp(ast->parent);
+        int fp_off = cust_fp_offset(fa->id, fa->int_value);
+        if (rhs && asm_operand_on_stack(rhs)) {
+            const char *pop = (fa->datatype == TYPE_INT || fa->datatype == TYPE_BOOL ||
+                               IS_ARRAY_TYPE(fa->datatype))
+                                  ? "\n# field assign pop w\nldr w0, [sp], #16\n"
+                                  : "\n# field assign pop x\nldr x0, [sp], #16\n";
+            s = realloc(s, strlen(s) + strlen(pop) + 1);
+            strcat(s, pop);
+        } else if (rhs) {
+            int rhs_off = rhs->stack_index * -16;
+            if (fa->datatype == TYPE_BOOL)
+                append_load_b_from_fp(&s, rhs_off, "field assign load");
+            else if (fa->datatype == TYPE_INT || IS_ARRAY_TYPE(fa->datatype))
+                append_load_w_from_fp(&s, rhs_off, "field assign load");
+            else
+                append_load_from_fp(&s, rhs_off, 0, "field assign load");
+        }
+        char cmt[64];
+        snprintf(cmt, sizeof(cmt), "field assign %s", fa->name ? fa->name : "");
+        append_store_value_to_fp_offset(&s, fp_off, fa->datatype, cmt);
+        return s;
+    }
 
     char* assemble_value = assemble(ast->parent , list);
 
@@ -173,7 +331,7 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         return s;
     }
 
-    if (ast->parent->type == CALL_AST)
+    if (ast->parent->type == CALL_AST || ast->parent->type == DUPE_AST)
     {
         /* Return value is in x0 after the call; store to variable and pop stack */
         int var_offset = ast->stack_index * -16;
@@ -207,6 +365,19 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         append_store_w_to_fp(&s, var_offset, "store array base slot");
     }
 
+    else if (IS_CUST_TYPE(ast->datatype))
+    {
+        int cust_id = CUST_TYPE_ID(ast->datatype);
+        AST_t *rhs = ast->parent;
+        if (rhs->type == COMP_AST && rhs->children->size == 1)
+            rhs = (AST_t *)rhs->children->items[0];
+        if (rhs->type == CUST_INIT_AST) {
+            append_init_cust_from_literal(&s, rhs, ast->stack_index, list);
+        } else if (rhs->type == VAR_AST && IS_CUST_TYPE(rhs->datatype)) {
+            append_copy_cust_fields(&s, ast->stack_index, rhs->stack_index, cust_id, "cust assign");
+        }
+    }
+
     else if(ast->datatype == TYPE_INT || ast->datatype == TYPE_BOOL)
     {
         AST_t* rhs = ast->parent;
@@ -219,6 +390,11 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
             s = realloc(s, strlen(s) + strlen(pop) + 1);
             strcat(s, pop);
             append_store_w_to_fp(&s, var_offset, "assign int from access");
+        } else if (rhs->type == FIELD_ACCESS_AST) {
+            const char* pop = "\n# assign int (pop from stack)\nldr w0, [sp], #16\n";
+            s = realloc(s, strlen(s) + strlen(pop) + 1);
+            strcat(s, pop);
+            append_store_w_to_fp(&s, var_offset, "assign int from field");
         } else {
             int rhs_offset = rhs->stack_index * -16;
             if (ast->datatype == TYPE_BOOL) {
@@ -253,21 +429,25 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         }
     }
 
-    else if (ast->datatype == TYPE_STR)
+    else if (ast->datatype == TYPE_STR || ast->datatype == TYPE_ADR)
     {
         AST_t* rhs = ast->parent->type == COMP_AST && ast->parent->children->size == 1
             ? (AST_t*) ast->parent->children->items[0] : ast->parent;
         int var_offset = ast->stack_index * -16;
         /* SLICE, ACCESS push result; STRING_AST stores to fp */
         if (rhs->type == SLICE_AST || rhs->type == ACCESS_AST) {
-            const char* pop_str = "\n# assign str (pop from stack)\nldr x0, [sp], #16\n";
+            const char* pop_str = "\n# assign str/ptr (pop from stack)\nldr x0, [sp], #16\n";
+            s = realloc(s, strlen(s) + strlen(pop_str) + 1);
+            strcat(s, pop_str);
+        } else if (rhs->type == CALL_AST || rhs->type == BINOP_AST) {
+            const char* pop_str = "\n# assign str/ptr call (pop from stack)\nldr x0, [sp], #16\n";
             s = realloc(s, strlen(s) + strlen(pop_str) + 1);
             strcat(s, pop_str);
         } else {
             int rhs_offset = rhs->stack_index * -16;
-            append_load_from_fp(&s, rhs_offset, 0, "assign str load");
+            append_load_from_fp(&s, rhs_offset, 0, "assign str/ptr load");
         }
-        append_store_to_fp(&s, var_offset, 0, "assign str store");
+        append_store_to_fp(&s, var_offset, 0, "assign str/ptr store");
     }
 
     else 
@@ -296,6 +476,68 @@ static void append_load_from_fp(char **s, int offset, int reg, const char *comme
     free(instr);
 }
 
+static int asm_arg_datatype(AST_t *arg, dynamic_list_t *list)
+{
+    arg = unwrap_comp(arg);
+    if (!arg) return TYPE_INT;
+    if (arg->datatype) return arg->datatype;
+    if (arg->type == INT_AST) return TYPE_INT;
+    if (arg->type == BOOL_AST) return TYPE_BOOL;
+    if (arg->type == VAR_AST && arg->name) {
+        for (unsigned int j = 0; j < list->size; j++) {
+            AST_t *def = (AST_t *)list->items[j];
+            if (def->type == ASSIGNEMENT_AST && def->name &&
+                strcmp(def->name, arg->name) == 0)
+                return def->datatype;
+        }
+    }
+    if (arg->type == BINOP_AST) {
+        if (arg->op == DEQUALS_TOKEN || arg->op == NOT_EQUALS_TOKEN ||
+            arg->op == LT_TOKEN || arg->op == GT_TOKEN ||
+            arg->op == LTE_TOKEN || arg->op == GTE_TOKEN ||
+            arg->op == AND_TOKEN || arg->op == OR_TOKEN)
+            return TYPE_BOOL;
+        return TYPE_INT;
+    }
+    if (arg->type == UNARY_AST && arg->op == NOT_TOKEN)
+        return TYPE_BOOL;
+    return TYPE_INT;
+}
+
+/* Load a call argument into register xN / wN (expression stack or frame slot). */
+static void append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
+                                        dynamic_list_t *list, const char *comment)
+{
+    arg = unwrap_comp(arg);
+    int dt = asm_arg_datatype(arg, list);
+    if (asm_operand_on_stack(arg)) {
+        char instr[128];
+        if (dt == TYPE_BOOL)
+            snprintf(instr, sizeof(instr), "\n# %s\nldrb w%d, [sp], #16\n", comment, reg);
+        else if (dt == TYPE_INT)
+            snprintf(instr, sizeof(instr), "\n# %s\nldr w%d, [sp], #16\n", comment, reg);
+        else
+            snprintf(instr, sizeof(instr), "\n# %s\nldr x%d, [sp], #16\n", comment, reg);
+        *s = realloc(*s, strlen(*s) + strlen(instr) + 1);
+        strcat(*s, instr);
+        return;
+    }
+    int off = arg->stack_index * -16;
+    if (dt == TYPE_BOOL) {
+        append_load_b_from_fp(s, off, comment);
+        if (reg != 0) {
+            char mov[32];
+            snprintf(mov, sizeof(mov), "mov w%d, w0\n", reg);
+            *s = realloc(*s, strlen(*s) + strlen(mov) + 1);
+            strcat(*s, mov);
+        }
+    } else if (dt == TYPE_INT) {
+        append_load_from_fp(s, off, reg, comment);
+    } else {
+        append_load_from_fp(s, off, reg, comment);
+    }
+}
+
 // making a variable
 char * assemble_variable(AST_t * ast, dynamic_list_t * list)
 {
@@ -309,20 +551,54 @@ char * assemble_variable(AST_t * ast, dynamic_list_t * list)
     return s;
 }
 
+char *assemble_field_access(AST_t *ast, dynamic_list_t *list)
+{
+    (void)list;
+    char *s = calloc(1, sizeof(char));
+    int fp_off = cust_fp_offset(ast->id, ast->int_value);
+    append_load_value_from_fp_offset(&s, fp_off, ast->datatype, "field access load");
+    int result_off = ast->stack_index * -16;
+    if (ast->datatype == TYPE_INT || ast->datatype == TYPE_BOOL || IS_ARRAY_TYPE(ast->datatype)) {
+        const char *push = "str w0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(push) + 1);
+        strcat(s, push);
+        if (ast->datatype == TYPE_BOOL)
+            append_store_b_to_fp(&s, result_off, "field access temp");
+        else
+            append_store_w_to_fp(&s, result_off, "field access temp");
+    } else {
+        const char *push = "str x0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(push) + 1);
+        strcat(s, push);
+        append_store_to_fp(&s, result_off, 0, "field access temp");
+    }
+    return s;
+}
+
+char *assemble_cust_def(AST_t *ast, dynamic_list_t *list)
+{
+    (void)ast;
+    (void)list;
+    return calloc(1, sizeof(char));
+}
+
+char *assemble_cust_init(AST_t *ast, dynamic_list_t *list)
+{
+    (void)ast;
+    (void)list;
+    return calloc(1, sizeof(char));
+}
+
+
 // making a function call
 char * assemble_call(AST_t * ast, dynamic_list_t * list)
 {
     char * s = calloc(1, sizeof(char));
 
-    // Assemble each argument first (so literals like 42 get stored in stack slots)
+    int is_hello_world = (strcmp(ast->name, "HelloWorld") == 0);
+    int is_hello_world_line = (strcmp(ast->name, "HelloWorldLine") == 0);
+
     unsigned int num_args = ast->parent->children->size;
-    for (unsigned int i = 0; i < num_args; i++) {
-        AST_t* arg = (AST_t*) ast->parent->children->items[i];
-        char* arg_asm = assemble(arg, list);
-        s = realloc(s, (strlen(s) + strlen(arg_asm) + 1) * sizeof(char));
-        strcat(s, arg_asm);
-        free(arg_asm);
-    }
 
     // Calculate stack space needed for arguments beyond the first 8
     unsigned int stack_args = (num_args > 8) ? (num_args - 8) : 0;
@@ -340,14 +616,17 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
         free(reserve);
     }
 
-    int is_hello_world = (strcmp(ast->name, "HelloWorld") == 0);
-    int is_hello_world_line = (strcmp(ast->name, "HelloWorldLine") == 0);
-
     if (is_hello_world || is_hello_world_line) {
         for (unsigned int i = 0; i < num_args; i++) {
             AST_t* arg = (AST_t*) ast->parent->children->items[i];
+            char* arg_asm = assemble(arg, list);
+            s = realloc(s, (strlen(s) + strlen(arg_asm) + 1) * sizeof(char));
+            strcat(s, arg_asm);
+            free(arg_asm);
+
             int need_itos = 0;
             int need_btos = 0;
+            int need_adrlo = 0;
             if (arg->type == INT_AST)
                 need_itos = 1;
             else if (arg->type == BOOL_AST)
@@ -367,6 +646,24 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
                 else
                     need_itos = 1;
             }
+            else if (arg->type == ACCESS_AST) {
+                if (arg->datatype == TYPE_INT)
+                    need_itos = 1;
+            }
+            else if (arg->type == FIELD_ACCESS_AST) {
+                if (arg->datatype == TYPE_INT)
+                    need_itos = 1;
+                else if (arg->datatype == TYPE_BOOL)
+                    need_btos = 1;
+            }
+            else if (arg->type == CALL_AST) {
+                if (arg->datatype == TYPE_INT)
+                    need_itos = 1;
+                else if (arg->datatype == TYPE_BOOL)
+                    need_btos = 1;
+                else if (arg->datatype == TYPE_ADR)
+                    need_adrlo = 1;
+            }
             else if (arg->type == VAR_AST) {
                 for (unsigned int j = 0; j < list->size; j++) {
                     AST_t* def = (AST_t*) list->items[j];
@@ -376,6 +673,8 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
                             need_itos = 1;
                         else if (def->datatype == TYPE_BOOL)
                             need_btos = 1;
+                        else if (def->datatype == TYPE_ADR)
+                            need_adrlo = 1;
                         break;
                     }
                 }
@@ -383,7 +682,13 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
             int off = arg->stack_index * -16;
             char cmt[64];
             snprintf(cmt, sizeof(cmt), "HelloWorld arg %d", i);
-            if (need_btos) {
+            int load_from_stack = (arg->type == ACCESS_AST || arg->type == CALL_AST ||
+                                   arg->type == SLICE_AST || arg->type == FIELD_ACCESS_AST);
+            if (load_from_stack) {
+                const char* pop = "\n# HelloWorld arg pop from stack\nldr x0, [sp], #16\n";
+                s = realloc(s, strlen(s) + strlen(pop) + 1);
+                strcat(s, pop);
+            } else if (need_btos) {
                 append_load_b_from_fp(&s, off, cmt);
             } else {
                 append_load_from_fp(&s, off, 0, cmt);
@@ -424,6 +729,10 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
                 s = realloc(s, strlen(s) + strlen(btos_buf) + 1);
                 strcat(s, btos_buf);
                 goto skip_hello_call;
+            } else if (need_adrlo) {
+                const char* adrlo = "bl AdrLo\nbl itos\n";
+                s = realloc(s, (strlen(s) + strlen(adrlo) + 1) * sizeof(char));
+                strcat(s, adrlo);
             } else if (need_itos) {
                 const char* itos = "bl itos\n";
                 s = realloc(s, (strlen(s) + strlen(itos) + 1) * sizeof(char));
@@ -440,29 +749,32 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
             strcat(s, newline_call);
         }
     } else {
-        // Pass arguments: first 8 in registers x0-x7, rest on stack
-        for(int i = 0; i < num_args; i++)
-        {
-            AST_t* arg = (AST_t*) ast->parent->children->items[i];
-
-            if(i < 8)
-            {
-                int off = arg->stack_index * -16;
-                char cmt[64];
-                snprintf(cmt, sizeof(cmt), "load arg %d into x%d", i, i);
-                append_load_from_fp(&s, off, i, cmt);
+        /* Phase 1: evaluate args (array access / calls leave results on expr stack). */
+        for (unsigned int i = 0; i < num_args; i++) {
+            AST_t *arg = (AST_t *)ast->parent->children->items[i];
+            if (asm_arg_needs_assemble(arg)) {
+                char *arg_asm = assemble(arg, list);
+                s = realloc(s, strlen(s) + strlen(arg_asm) + 1);
+                strcat(s, arg_asm);
+                free(arg_asm);
             }
-            else
-            {
-                int stack_offset = (i - 8) * 16;
-                int off = arg->stack_index * -16;
-                char cmt[64];
-                snprintf(cmt, sizeof(cmt), "load arg %d for stack", i);
-                append_load_from_fp(&s, off, 0, cmt);
-                const char* store_template = "\n# store arg on stack\nstr x0, [sp, #%d]\n";
-                char * store_str = calloc(strlen(store_template) + 64, sizeof(char));
+        }
+
+        /* Phase 2: load into registers without clobbering earlier args during assembly. */
+        for (unsigned int i = 0; i < num_args; i++) {
+            AST_t *arg = (AST_t *)ast->parent->children->items[i];
+            char cmt[64];
+            if (i < 8) {
+                snprintf(cmt, sizeof(cmt), "load arg %u into x%u", i, i);
+                append_load_call_arg_to_reg(&s, arg, (int)i, list, cmt);
+            } else {
+                snprintf(cmt, sizeof(cmt), "load arg %u for stack", i);
+                append_load_call_arg_to_reg(&s, arg, 0, list, cmt);
+                int stack_offset = (int)(i - 8) * 16;
+                const char *store_template = "\n# store arg on stack\nstr x0, [sp, #%d]\n";
+                char *store_str = calloc(strlen(store_template) + 64, sizeof(char));
                 sprintf(store_str, store_template, stack_offset);
-                s = realloc(s, (strlen(s) + strlen(store_str) + 1) * sizeof(char));
+                s = realloc(s, strlen(s) + strlen(store_str) + 1);
                 strcat(s, store_str);
                 free(store_str);
             }
@@ -734,24 +1046,69 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
                 case GTE_TOKEN:         cond = "ge"; break;
                 default:                cond = "eq"; break;
             }
+            AST_t *left_node = unwrap_comp(ast->left);
+            AST_t *right_node = unwrap_comp(ast->right);
+            int left_off = left_node ? left_node->stack_index * -16 : left_offset;
+            int right_off = right_node ? right_node->stack_index * -16 : right_offset;
+            int left_a = left_off < 0 ? -left_off : left_off;
+            int right_a = right_off < 0 ? -right_off : right_off;
+            const char *l_ldr = (left_node && left_node->datatype == TYPE_BOOL) ? "ldrb" : "ldr";
+            const char *r_ldr = (right_node && right_node->datatype == TYPE_BOOL) ? "ldrb" : "ldr";
+
+            if (asm_operand_on_stack(ast->left)) {
+                const char *pop = (left_node && left_node->datatype == TYPE_BOOL)
+                    ? "\n# comparison left pop\nldrb w0, [sp], #16\n"
+                    : "\n# comparison left pop\nldr w0, [sp], #16\n";
+                s = realloc(s, strlen(s) + strlen(pop) + 1);
+                strcat(s, pop);
+            } else if (use_large) {
+                char load[256];
+                snprintf(load, sizeof(load),
+                    "\n# comparison left\nsub x4, fp, #%d\n%s w0, [x4]\n", left_a, l_ldr);
+                s = realloc(s, strlen(s) + strlen(load) + 1);
+                strcat(s, load);
+            } else {
+                char load[256];
+                snprintf(load, sizeof(load),
+                    "\n# comparison left\n%s w0, [fp, #%d]\n", l_ldr, left_off);
+                s = realloc(s, strlen(s) + strlen(load) + 1);
+                strcat(s, load);
+            }
+
+            if (asm_operand_on_stack(ast->right)) {
+                const char *pop = (right_node && right_node->datatype == TYPE_BOOL)
+                    ? "\n# comparison right pop\nldrb w1, [sp], #16\n"
+                    : "\n# comparison right pop\nldr w1, [sp], #16\n";
+                s = realloc(s, strlen(s) + strlen(pop) + 1);
+                strcat(s, pop);
+            } else if (use_large) {
+                char load[256];
+                snprintf(load, sizeof(load),
+                    "\n# comparison right\nsub x4, fp, #%d\n%s w1, [x4]\n", right_a, r_ldr);
+                s = realloc(s, strlen(s) + strlen(load) + 1);
+                strcat(s, load);
+            } else {
+                char load[256];
+                snprintf(load, sizeof(load),
+                    "\n# comparison right\n%s w1, [fp, #%d]\n", r_ldr, right_off);
+                s = realloc(s, strlen(s) + strlen(load) + 1);
+                strcat(s, load);
+            }
+
             if (use_large) {
                 sprintf(op_asm,
                     "# comparison\n"
-                    "sub x4, fp, #%d\n%s w0, [x4]\n"
-                    "sub x4, fp, #%d\n%s w1, [x4]\n"
                     "cmp w0, w1\n"
                     "cset w0, %s\n"
                     "sub x4, fp, #%d\n%s w0, [x4]\n",
-                    left_abs, left_ldr, right_abs, right_ldr, cond, result_abs, result_str);
+                    cond, result_abs, result_str);
             } else {
                 sprintf(op_asm,
                     "# comparison\n"
-                    "%s w0, [fp, #%d]\n"
-                    "%s w1, [fp, #%d]\n"
                     "cmp w0, w1\n"
                     "cset w0, %s\n"
                     "%s w0, [fp, #%d]\n",
-                    left_ldr, left_offset, right_ldr, right_offset, cond, result_str, result_offset);
+                    cond, result_str, result_offset);
             }
             break;
         }
@@ -846,6 +1203,44 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
     return s;
 }
 
+char * assemble_dupe(AST_t * ast, dynamic_list_t * list)
+{
+    char * s = calloc(1, sizeof(char));
+
+    if (ast->left) {
+        char* arg_asm = assemble(ast->left, list);
+        s = realloc(s, strlen(s) + strlen(arg_asm) + 1);
+        strcat(s, arg_asm);
+        free(arg_asm);
+    }
+
+    char fn_load[256];
+    snprintf(fn_load, sizeof(fn_load),
+        "\n# dupe spawn %s\n"
+        "adrp x0, %s@PAGE\n"
+        "add x0, x0, %s@PAGEOFF\n",
+        ast->name, ast->name, ast->name);
+    s = realloc(s, strlen(s) + strlen(fn_load) + 1);
+    strcat(s, fn_load);
+
+    if (ast->left) {
+        AST_t *arg = ast->left;
+        if (arg->type == COMP_AST && arg->children && arg->children->size == 1)
+            arg = (AST_t *)arg->children->items[0];
+        if (arg->type == ACCESS_AST || arg->type == CALL_AST || arg->type == SLICE_AST) {
+            const char *pop = "\n# dupe arg pop from stack\nldr x1, [sp], #16\n";
+            s = realloc(s, strlen(s) + strlen(pop) + 1);
+            strcat(s, pop);
+        } else {
+            append_load_from_fp(&s, arg->stack_index * -16, 1, "dupe arg load");
+        }
+    }
+
+    const char *spawn = "\nbl rt_dupe_spawn\n# store dupe thread id\nstr x0, [sp, #-16]!\n";
+    s = realloc(s, strlen(s) + strlen(spawn) + 1);
+    strcat(s, spawn);
+    return s;
+}
 
 char * assemble_slice(AST_t * ast, dynamic_list_t * list)
 {
@@ -922,16 +1317,33 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
 
     /* Check if base is an array variable */
     int is_array = 0;
+    int is_adr = 0;
     for (unsigned int i = 0; i < list->size; i++) {
         AST_t* def = (AST_t*) list->items[i];
         if (def->type == ASSIGNEMENT_AST && def->name && ast->name &&
-            strcmp(def->name, ast->name) == 0 && IS_ARRAY_TYPE(def->datatype)) {
-            is_array = 1;
+            strcmp(def->name, ast->name) == 0) {
+            if (IS_ARRAY_TYPE(def->datatype))
+                is_array = 1;
+            else if (def->datatype == TYPE_ADR)
+                is_adr = 1;
             break;
         }
     }
 
-    if (is_array) {
+    if (is_adr) {
+        int idx_offset = ast->left->stack_index * -16;
+        append_load_from_fp(&s, base_offset, 0, "load adr for PeekByte");
+        const char* null_chk = "bl rt_heap_adr_check\n";
+        s = realloc(s, strlen(s) + strlen(null_chk) + 1);
+        strcat(s, null_chk);
+        const char* push = "str x0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(push) + 1);
+        strcat(s, push);
+        append_load_w_from_fp(&s, idx_offset, "load offset for PeekByte");
+        const char* call = "\n# PeekByte (adr[offset])\nmov w1, w0\nldr x0, [sp], #16\nbl PeekByte\nstr w0, [sp, #-16]!\n";
+        s = realloc(s, strlen(s) + strlen(call) + 1);
+        strcat(s, call);
+    } else if (is_array) {
         /* Array access: base_slot stored at [fp, base_offset], index at idx_offset */
         int idx_offset = ast->left->stack_index * -16;
         /* Find array size for bounds check */
@@ -1001,21 +1413,24 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
     if (expr->type == INT_AST)
     {
         char * instr = calloc(64, sizeof(char));
-        sprintf(instr, "\nmov w0, #%d\nb return_statement\n", expr->int_value);
+        sprintf(instr, "\nmov w0, #%d\n", expr->int_value);
         s = realloc(s, strlen(instr) + 1);
         strcat(s, instr);
         free(instr);
+        append_return_epilogue(&s);
     }
     else if (expr->type == VAR_AST || expr->type == BINOP_AST || expr->type == BOOL_AST || expr->type == UNARY_AST)
     {
         char * load = calloc(1, sizeof(char));
         if (expr->datatype == TYPE_BOOL)
             append_load_b_from_fp(&load, expr->stack_index * -16, "return load (bool)");
+        else if (expr->datatype == TYPE_STR || expr->datatype == TYPE_ADR)
+            append_load_from_fp(&load, expr->stack_index * -16, 0, "return load (ptr/str)");
         else
             append_load_w_from_fp(&load, expr->stack_index * -16, "return load");
-        s = realloc(s, strlen(load) + 32);
+        s = realloc(s, strlen(load) + sizeof(assemble_return_epilogue_aarch64) + 1);
         strcat(s, load);
-        strcat(s, "b return_statement\n");
+        append_return_epilogue(&s);
         free(load);
     }
     else if (expr->type == CALL_AST)
@@ -1025,17 +1440,18 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
         s = realloc(s, strlen(call_asm) + 64);
         strcat(s, call_asm);
         free(call_asm);
-        const char * pop_and_branch = "ldr x0, [sp], #16\nb return_statement\n";
-        s = realloc(s, strlen(s) + strlen(pop_and_branch) + 1);
-        strcat(s, pop_and_branch);
+        const char * pop = "ldr x0, [sp], #16\n";
+        s = realloc(s, strlen(s) + strlen(pop) + sizeof(assemble_return_epilogue_aarch64) + 1);
+        strcat(s, pop);
+        append_return_epilogue(&s);
     }
     else
     {
         /* Fallback: assemble and hope value ends up in x0 */
         char * value = assemble(ast->parent, list);
-        s = realloc(s, strlen(value) + 32);
+        s = realloc(s, strlen(value) + sizeof(assemble_return_epilogue_aarch64) + 1);
         strcat(s, value);
-        strcat(s, "\nb return_statement\n");
+        append_return_epilogue(&s);
         free(value);
     }
 
@@ -1443,6 +1859,11 @@ char * assemble(AST_t * ast, dynamic_list_t * list)
         case UNARY_AST : next = assemble_unary(ast, list); break;
         case LOOP_UNTIL_AST : next = assemble_loop_until(ast, list); break;
         case INC_DEC_AST : next = assemble_inc_dec(ast, list); break;
+        case DUPE_AST : next = assemble_dupe(ast, list); break;
+        case TYPE_SIZE_AST : next = assemble_int(ast, list); break;
+        case CUST_DEF_AST : next = assemble_cust_def(ast, list); break;
+        case CUST_INIT_AST : next = assemble_cust_init(ast, list); break;
+        case FIELD_ACCESS_AST : next = assemble_field_access(ast, list); break;
         default : {printf("ASSEMBLER: No front for AST of type `%d`\n", ast->type); exit(1);} break;
 
     }

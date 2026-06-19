@@ -45,6 +45,7 @@ const char * token_type_to_string(int type)
         case ELSE_TOKEN : return "ELSE_TOKEN";
         case LOOP_TOKEN : return "LOOP_TOKEN";
         case UNTIL_TOKEN : return "UNTIL_TOKEN";
+        case DUPE_TOKEN : return "DUPE_TOKEN";
         case PLUS_PLUS_TOKEN : return "PLUS_PLUS_TOKEN";
         case MINUS_MINUS_TOKEN : return "MINUS_MINUS_TOKEN";
 

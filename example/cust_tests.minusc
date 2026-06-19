@@ -1,0 +1,90 @@
+Point = cust {
+    {x} int;
+    {y} int;
+};
+
+Rect = cust {
+    {origin} Point;
+    {w} int;
+    {h} int;
+};
+
+testCustBasic = ({x} int) function {
+    HelloWorldLine("--- [cust-1] Point init and field access ---");
+    {p} Point = Point{x=3, y=4};
+    {sum} int = p.x + p.y;
+    {sz} int = sizeof(Point);
+    if (sum == 7 and sz == 8) {
+        HelloWorldLine("PASS: Point typed init + fields + sizeof");
+    } else {
+        HelloWorldLine("FAIL: Point basic", sum, sz);
+    };
+    return 0;
+} int;
+
+testCustBareInit = ({x} int) function {
+    HelloWorldLine("--- [cust-2] bare brace init ---");
+    {p} Point = {x=10, y=5};
+    if (p.x == 10 and p.y == 5) {
+        HelloWorldLine("PASS: bare cust init");
+    } else {
+        HelloWorldLine("FAIL: bare cust init");
+    };
+    return 0;
+} int;
+
+testCustFieldAssign = ({x} int) function {
+    HelloWorldLine("--- [cust-3] field assignment ---");
+    {p} Point = {x=1, y=2};
+    p.x = 20;
+    p.y = 22;
+    if (p.x == 20 and p.y == 22) {
+        HelloWorldLine("PASS: field assign");
+    } else {
+        HelloWorldLine("FAIL: field assign");
+    };
+    return 0;
+} int;
+
+testCustNested = ({x} int) function {
+    HelloWorldLine("--- [cust-4] nested cust ---");
+    {r} Rect = Rect{origin=Point{x=1, y=2}, w=30, h=40};
+    {ox} int = r.origin.x;
+    {oy} int = r.origin.y;
+    {area} int = r.w * r.h;
+    if (ox == 1 and oy == 2 and area == 1200 and sizeof(Rect) == 16) {
+        HelloWorldLine("PASS: nested cust");
+    } else {
+        HelloWorldLine("FAIL: nested cust", ox, oy, area);
+    };
+    return 0;
+} int;
+
+testCustCopy = ({x} int) function {
+    HelloWorldLine("--- [cust-5] cust copy assign ---");
+    {a} Point = {x=5, y=6};
+    {b} Point = a;
+    if (b.x == 5 and b.y == 6) {
+        HelloWorldLine("PASS: cust copy");
+    } else {
+        HelloWorldLine("FAIL: cust copy");
+    };
+    return 0;
+} int;
+
+testCustOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     CUST TYPE TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testCustBasic(0);
+    {b} int = testCustBareInit(0);
+    {c} int = testCustFieldAssign(0);
+    {d} int = testCustNested(0);
+    {e} int = testCustCopy(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     CUST TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;

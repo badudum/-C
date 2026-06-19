@@ -1,0 +1,41 @@
+testBorrowBasic = ({x} int) function {
+    HelloWorldLine("--- [borrow-1] rent then moveOut ---");
+    {buf} adr = rent(32);
+    PokeInt(buf, 0, 42);
+    {v} int = PeekInt(buf, 0);
+    {fd} int = moveOut(buf);
+    if (v == 42 and fd == 0) {
+        HelloWorldLine("PASS: rent / peek / moveOut");
+    } else {
+        HelloWorldLine("FAIL: rent / peek / moveOut");
+    };
+    return 0;
+} int;
+
+testBorrowMoveAssign = ({x} int) function {
+    HelloWorldLine("--- [borrow-2] adr assign moves ownership ---");
+    {src} adr = rent(16);
+    PokeInt(src, 0, 7);
+    {dst} adr = src;
+    {fd} int = moveOut(dst);
+    if (fd == 0) {
+        HelloWorldLine("PASS: move assign + moveOut on dst");
+    } else {
+        HelloWorldLine("FAIL: move assign");
+    };
+    return 0;
+} int;
+
+testBorrowOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     BORROW CHECKER TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testBorrowBasic(0);
+    {b} int = testBorrowMoveAssign(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     BORROW TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;

@@ -29,6 +29,11 @@ typedef struct AST_S
         LOOP_UNTIL_AST,
         FOR_CLAUSE_AST,
         INC_DEC_AST,
+        DUPE_AST,
+        TYPE_SIZE_AST,
+        CUST_DEF_AST,
+        CUST_INIT_AST,
+        FIELD_ACCESS_AST,
         NOOP_AST,
     }type;
 
