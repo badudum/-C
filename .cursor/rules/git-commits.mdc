@@ -1,0 +1,22 @@
+---
+description: Git commits must not add Cursor co-author trailers
+alwaysApply: true
+---
+
+# Git commits
+
+When creating git commits in this repo:
+
+- Never add `Co-authored-by: Cursor <cursoragent@cursor.com>` or any Cursor/cursoragent co-author line.
+- Do not use `git commit` from the agent environment (Cursor injects the co-author trailer automatically).
+- Stage changes with `git add`, then create the commit with `git commit-tree` on the staged tree:
+
+```bash
+git add <files>
+TREE=$(git write-tree)
+PARENT=$(git rev-parse HEAD)
+NEW=$(git commit-tree "$TREE" -p "$PARENT" -m "Subject" -m "Body paragraph if needed.")
+git reset --hard "$NEW"
+```
+
+- Push with a normal `git push` (no force push to `main` unless the user explicitly requests it).
