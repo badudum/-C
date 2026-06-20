@@ -1,0 +1,9 @@
+main = () function {
+    {buf} adr = rent(16);
+    if (Real) {
+        {r} &adr = buf;
+        {v} int = PeekInt(r, 0);
+    };
+    {bad} int = PeekInt(r, 0);
+    return 0;
+} int;

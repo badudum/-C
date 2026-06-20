@@ -1,9 +1,17 @@
 **/.DS_Store
 **/.vscode
 *.o
+*.arm64.o
+*.x86_64.o
 minusC.out
+minusC.arm64
+minusC.x86_64
 mc.out
 mc.o
 mc.s
 mc.s.txt
 mc.expanded.minusc
+minusC.asan
+minusC.asan.dSYM/
+minusC_asan
+minusC_asan.dSYM/

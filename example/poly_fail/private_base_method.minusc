@@ -1,0 +1,16 @@
+Animal2 = cust {
+    private ghost = (self) function {
+        return 99;
+    } int;
+};
+
+Pup = cust extends Animal2 {
+    peek = (self) function {
+        return self.ghost();
+    } int;
+};
+
+main = () function {
+    {p} adr = rent(1, Pup);
+    return p.peek();
+} int;

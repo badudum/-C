@@ -1,0 +1,8 @@
+reference oop_tests
+reference oop_complex
+
+main = () function {
+    testOopOps(0);
+    testOopComplexOps(0);
+    return 0;
+} int;

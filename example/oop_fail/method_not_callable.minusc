@@ -1,0 +1,13 @@
+OopPoint = cust {
+    public {x} int;
+
+    getX = (self) function {
+        return self.x;
+    } int;
+};
+
+main = () function {
+    {p} OopPoint = {x=1, y=0};
+    {bad} int = p.getX;
+    return bad;
+} int;

@@ -1,0 +1,10 @@
+main = () function {
+    {buf} adr = rent(16);
+    {i} int = 0;
+    loop until (i < 1) {
+        {r} &adr = buf;
+        i++;
+    };
+    {bad} int = PeekInt(r, 0);
+    return 0;
+} int;

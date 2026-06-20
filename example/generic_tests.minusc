@@ -1,0 +1,57 @@
+Point = cust {
+    {x} int;
+    {y} int;
+};
+
+Box<T> = cust {
+    {value} T;
+};
+
+testGenericIntBox = ({x} int) function {
+    HelloWorldLine("--- [generic-1] Box<int> field access ---");
+    {b} Box<int> = {value=42};
+    if (b.value == 42) {
+        HelloWorldLine("PASS: Box<int> stores int");
+    } else {
+        HelloWorldLine("FAIL: Box<int> value=", b.value);
+    };
+    return 0;
+} int;
+
+testGenericCustBox = ({x} int) function {
+    HelloWorldLine("--- [generic-2] Box<Point> distinct layout ---");
+    {b} Box<Point> = {value=Point{x=3, y=4}};
+    if (b.value.x == 3) {
+        if (b.value.y == 4) {
+            HelloWorldLine("PASS: Box<Point> nested cust field");
+        } else {
+            HelloWorldLine("FAIL: Box<Point> y field");
+        };
+    } else {
+        HelloWorldLine("FAIL: Box<Point> x field");
+    };
+    return 0;
+} int;
+
+testGenericDistinct = ({x} int) function {
+    HelloWorldLine("--- [generic-3] distinct monomorphized instances ---");
+    {bi} Box<int> = {value=1};
+    {bp} Box<Point> = {value=Point{x=10, y=20}};
+    if (bi.value == 1) {
+        if (bp.value.x == 10) {
+            HelloWorldLine("PASS: Box_int and Box_Point distinct instances");
+        } else {
+            HelloWorldLine("FAIL: bp.value.x");
+        };
+    } else {
+        HelloWorldLine("FAIL: bi.value");
+    };
+    return 0;
+} int;
+
+testGenericOps = ({x} int) function {
+    testGenericIntBox(0);
+    testGenericCustBox(0);
+    testGenericDistinct(0);
+    return 0;
+} int;

@@ -50,5 +50,8 @@ void list_clear(dynamic_list_t * list);
 
 void list_free(dynamic_list_t * list);
 
+/* Frees the list container only; does not free element pointers. */
+void list_free_shallow(dynamic_list_t * list);
+
 
 #endif

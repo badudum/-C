@@ -1,0 +1,6 @@
+reference heap_oop_tests
+
+main = () function {
+    testHeapOopOps(0);
+    return 0;
+} int;

@@ -1,0 +1,6 @@
+reference borrow_tests
+
+main = () function {
+    testBorrowOps(0);
+    return 0;
+} int;

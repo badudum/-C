@@ -1,0 +1,12 @@
+Blob = cust {
+    {data} adr;
+    {tag} int;
+};
+
+main = () function {
+    {b} Blob = Blob{data=rent(16), tag=1};
+    PokeInt(b.data, 0, 1);
+    {fd} int = moveOut(b.data);
+    {bad} int = PeekInt(b.data, 0);
+    return 0;
+} int;

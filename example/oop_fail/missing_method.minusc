@@ -1,0 +1,9 @@
+OopPoint = cust {
+    public {x} int;
+};
+
+main = () function {
+    {p} OopPoint = {x=1, y=0};
+    {bad} int = p.nope();
+    return bad;
+} int;

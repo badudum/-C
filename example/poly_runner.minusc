@@ -1,0 +1,8 @@
+reference poly_tests
+reference poly_complex
+
+main = () function {
+    testPolyOps(0);
+    testPolyComplexOps(0);
+    return 0;
+} int;

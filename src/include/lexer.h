@@ -15,10 +15,13 @@ typedef struct LEXER_S
     char * code; //source code
     size_t code_size; // size of the source code
     char c; // current character
-    unsigned int i; // index 
+    unsigned int i; // index
+    unsigned int line;
+    unsigned int column;
+    char *filename;
 }lexer_t;
 
-lexer_t* init_lexer(char * contents);
+lexer_t* init_lexer(char * contents, const char *filename);
 
 void lexer_get_next(lexer_t* lexer); //lexer_advance
 

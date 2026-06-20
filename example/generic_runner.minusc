@@ -1,0 +1,6 @@
+reference generic_tests
+
+main = () function {
+    testGenericOps(0);
+    return 0;
+} int;

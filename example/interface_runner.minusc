@@ -1,0 +1,6 @@
+reference interface_tests
+
+main = () function {
+    testInterfaceOps(0);
+    return 0;
+} int;

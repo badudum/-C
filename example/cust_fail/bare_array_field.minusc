@@ -1,0 +1,7 @@
+Bad = cust {
+    {items} Array;
+};
+
+main = () function {
+    return 0;
+} int;

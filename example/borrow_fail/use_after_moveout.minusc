@@ -1,4 +1,4 @@
-main = ({x} int) function {
+main = () function {
     {buf} adr = rent(16);
     {fd} int = moveOut(buf);
     {bad} int = PeekInt(buf, 0);

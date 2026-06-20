@@ -1,0 +1,251 @@
+OopPointExt = cust {
+    public {x} int;
+    private {y} int;
+
+    bumpX = (self) function {
+        self.x = self.x + 1;
+        return self.x;
+    } int;
+
+    private peekY = (self) function {
+        return self.y;
+    } int;
+
+    viaPeekY = (self) function {
+        {py} int = self.peekY();
+        return self.x + py;
+    } int;
+
+    init = (self) function {
+        self.x = 3;
+        self.y = 4;
+        return 0;
+    } int;
+
+    sumSq = (self) function {
+        return self.x * self.x + self.y * self.y;
+    } int;
+
+    manhattan = (self) function {
+        return self.x + self.y;
+    } int;
+
+    reBump = (self) function {
+        {ignored} int = self.bumpX();
+        return self.bumpX();
+    } int;
+
+    resetAndSum = (self) function {
+        self.x = 3;
+        self.y = 4;
+        return self.x * self.x + self.y * self.y;
+    } int;
+
+    countDown = (self) function {
+        return triSumFrom(self.x);
+    } int;
+};
+
+triSumFrom = ({n} int) function {
+    if (n == 4) {
+        return 10;
+    } else {
+        if (n == 3) {
+            return 6;
+        } else {
+            return 0;
+        };
+    };
+} int;
+
+Stick = cust {
+    public {tail} OopPointExt;
+
+    peekTailX = (self) function {
+        return self.tail.x;
+    } int;
+
+    bumpTail = (self) function {
+        self.tail.bumpX();
+        return self.tail.x;
+    } int;
+};
+
+Foo = cust {
+    public {n} int;
+
+    ping = (self) function {
+        return self.n + 100;
+    } int;
+};
+
+Bar = cust {
+    public {n} int;
+
+    ping = (self) function {
+        return self.n + 1000;
+    } int;
+};
+
+testOopMethodCallsMethod = ({x} int) function {
+    HelloWorldLine("--- [oop-8] method calls sibling via self ---");
+    {p} OopPointExt = {x=1, y=2};
+    {m} int = p.manhattan();
+    {rb} int = p.reBump();
+    if (m == 3 and rb == 3) {
+        HelloWorldLine("PASS: private self.y + chained bumpX via assignment");
+    } else {
+        HelloWorldLine("FAIL: manhattan=", m, " reBump=", rb);
+    };
+    return 0;
+} int;
+
+testOopPrivateMethodFacade = ({x} int) function {
+    HelloWorldLine("--- [oop-9] public method reads private field ---");
+    {p} OopPointExt = {x=5, y=7};
+    if (p.manhattan() == 12) {
+        HelloWorldLine("PASS: public manhattan() reads private self.y");
+    } else {
+        HelloWorldLine("FAIL: manhattan facade");
+    };
+    return 0;
+} int;
+
+testOopResetAndSum = ({x} int) function {
+    HelloWorldLine("--- [oop-10] init + sumSq orchestration ---");
+    {p} OopPointExt = {x=99, y=99};
+    {sq} int = p.resetAndSum();
+    if (sq == 25) {
+        HelloWorldLine("PASS: resetAndSum sets fields and computes sum");
+    } else {
+        HelloWorldLine("FAIL: resetAndSum got=", sq);
+    };
+    return 0;
+} int;
+
+testOopChainedMutations = ({x} int) function {
+    HelloWorldLine("--- [oop-11] chained mutating calls ---");
+    {p} OopPointExt = {x=0, y=0};
+    {a} int = p.bumpX();
+    {b} int = p.bumpX();
+    {c} int = p.bumpX();
+    if (a == 1 and b == 2 and c == 3 and p.x == 3) {
+        HelloWorldLine("PASS: three bumpX calls accumulate");
+    } else {
+        HelloWorldLine("FAIL: chain a=", a, " b=", b, " c=", c, " p.x=", p.x);
+    };
+    return 0;
+} int;
+
+testOopCopyIsolation = ({x} int) function {
+    HelloWorldLine("--- [oop-12] copy assign isolation + method ---");
+    {a} OopPointExt = {x=10, y=1};
+    {b} OopPointExt = a;
+    {before} int = a.x;
+    {got} int = b.bumpX();
+    if (before == 10 and got == 11 and a.x == 10 and b.x == 11) {
+        HelloWorldLine("PASS: method mutates copy not original");
+    } else {
+        HelloWorldLine("FAIL: copy isolate before=", before, " got=", got,
+                       " a.x=", a.x, " b.x=", b.x);
+    };
+    return 0;
+} int;
+
+testOopNestedFieldMethod = ({x} int) function {
+    HelloWorldLine("--- [oop-13] nested cust field + method ---");
+    {s} Stick = Stick{tail=OopPointExt{x=8, y=0}};
+    {tx} int = s.peekTailX();
+    {after} int = s.bumpTail();
+    if (tx == 8 and after == 9 and s.tail.x == 9) {
+        HelloWorldLine("PASS: self.tail.x + nested bumpX");
+    } else {
+        HelloWorldLine("FAIL: nested tail tx=", tx, " after=", after);
+    };
+    return 0;
+} int;
+
+testOopMangleCollision = ({x} int) function {
+    HelloWorldLine("--- [oop-14] same method name, different types ---");
+    {f} Foo = {n=7};
+    {b} Bar = {n=7};
+    {fp} int = f.ping();
+    {bp} int = b.ping();
+    if (fp == 107 and bp == 1007) {
+        HelloWorldLine("PASS: Foo_ping vs Bar_ping mangling");
+    } else {
+        HelloWorldLine("FAIL: fp=", fp, " bp=", bp);
+    };
+    return 0;
+} int;
+
+testOopLoopInMethod = ({x} int) function {
+    HelloWorldLine("--- [oop-15] method delegates to global helper ---");
+    {p} OopPointExt = {x=4, y=0};
+    {tri} int = p.countDown();
+    if (tri == 10) {
+        HelloWorldLine("PASS: countDown via triSumFrom(self.x)");
+    } else {
+        HelloWorldLine("FAIL: countDown got=", tri);
+    };
+    return 0;
+} int;
+
+testOopHowBigWithMethods = ({x} int) function {
+    HelloWorldLine("--- [oop-16] HowBig on method-heavy types ---");
+    {s1} int = HowBig(OopPointExt);
+    {s2} int = HowBig(Stick);
+    {s3} int = HowBig(Foo);
+    if (s1 == 8 and s2 == 8 and s3 == 8) {
+        HelloWorldLine("PASS: HowBig unchanged by methods");
+    } else {
+        HelloWorldLine("FAIL: sizes=", s1, s2, s3);
+    };
+    return 0;
+} int;
+
+testOopHelperDispatch = ({x} int) function {
+    HelloWorldLine("--- [oop-18] method passes self.x to global helper ---");
+    {small} OopPointExt = {x=3, y=0};
+    {four} OopPointExt = {x=4, y=0};
+    if (small.countDown() == 6 and four.countDown() == 10) {
+        HelloWorldLine("PASS: countDown -> triSumFrom(self.x)");
+    } else {
+        HelloWorldLine("FAIL: small=", small.countDown(), " four=", four.countDown());
+    };
+    return 0;
+} int;
+
+testOopPrivateMethodCall = ({x} int) function {
+    HelloWorldLine("--- [oop-17] public method calls private method ---");
+    {p} OopPointExt = {x=2, y=5};
+    if (p.viaPeekY() == 7) {
+        HelloWorldLine("PASS: viaPeekY() delegates to private peekY()");
+    } else {
+        HelloWorldLine("FAIL: viaPeekY");
+    };
+    return 0;
+} int;
+
+testOopComplexOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     OOP COMPLEX TEST SUITE");
+    HelloWorldLine("========================================");
+
+    testOopMethodCallsMethod(0);
+    testOopPrivateMethodFacade(0);
+    testOopResetAndSum(0);
+    testOopChainedMutations(0);
+    testOopCopyIsolation(0);
+    testOopNestedFieldMethod(0);
+    testOopMangleCollision(0);
+    testOopLoopInMethod(0);
+    testOopHowBigWithMethods(0);
+    testOopPrivateMethodCall(0);
+    testOopHelperDispatch(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     OOP COMPLEX TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;

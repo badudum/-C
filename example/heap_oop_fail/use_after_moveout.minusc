@@ -1,0 +1,18 @@
+HeapPoint = cust {
+    {x} int;
+    init = (self) function {
+        self.x = 1;
+        return 0;
+    } int;
+    readX = (self) function {
+        return self.x;
+    } int;
+};
+
+main = () function {
+    {p} adr = rent(1, HeapPoint);
+    p.init();
+    {fd} int = moveOut(p);
+    {bad} int = p.readX();
+    return bad;
+} int;

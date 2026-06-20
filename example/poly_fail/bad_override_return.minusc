@@ -1,0 +1,13 @@
+Animal = cust {
+    public {name} int;
+
+    virtual speak = (self) function {
+        return self.name;
+    } int;
+};
+
+Bad = cust extends Animal {
+    virtual speak = (self) function {
+        return 0;
+    } bool;
+};

@@ -49,6 +49,8 @@ ld -e _start -macos_version_min 11.0.0 -L/Library/Developer/CommandLineTools/SDK
 | `Array<int>` | Integer arrays on the stack |
 | `adr` | Heap pointer — owns a `rent` allocation until `moveOut` |
 | Custom (`cust`) | User-defined struct types (see below) |
+| Generic `cust` | Parameterized types monomorphized at use sites, e.g. `Box<int>` |
+| Interface | Named method contract; types declare `implements` (see below) |
 
 ### Variables
 
@@ -311,9 +313,154 @@ p.x = 20;
 {sz} int = sizeof(Point);              // 8
 ```
 
+The `class` keyword is an alias for `cust`.
+
+#### Methods, visibility, and `self`
+
+Methods are defined inside the type body. Instance methods take `(self)` as the first parameter; the compiler desugars `obj.method(args)` to a mangled call with the receiver as the first argument.
+
+```minusC
+Point = cust {
+    public {x} int;
+    private {y} int;
+
+    lenSq = (self) function {
+        return self.x * self.x + self.y * self.y;
+    } int;
+};
+
+{p} Point = Point{x=3, y=4};
+{n} int = p.lenSq();
+```
+
+Use `public` / `private` on fields and methods. Cross-type access to `private` members is rejected at compile time.
+
+#### Inheritance and virtual dispatch
+
+Single inheritance is supported with `extends`. Mark overriding methods with `virtual` for runtime dispatch through a vtable (required for heap objects passed to helpers that only know the base type).
+
+```minusC
+Animal = cust {
+    virtual speak = (self) function { return 1; } int;
+};
+
+Dog = cust extends Animal {
+    virtual speak = (self) function { return 2; } int;
+};
+
+speakThrough = ({p} adr) function {
+    return p.speak();   // virtual dispatch from heap handle
+} int;
+```
+
+Use `super.method()` inside a derived method to call the base implementation. See `example/poly_tests.minusc` and `make test-poly`.
+
+#### Heap objects (`rent` + methods)
+
+Heap-backed objects use `rent(1, MyType)` and treat `self` as an `adr` inside methods:
+
+```minusC
+Counter = cust {
+    {n} int;
+    init = (self) function { self.n = 0; return 0; } int;
+    inc = (self) function { self.n = self.n + 1; return self.n; } int;
+};
+
+{c} adr = rent(1, Counter);
+c.init();
+c.inc();
+c.drop();
+moveOut(c);
+```
+
+See `example/heap_oop_tests.minusc` and `make test-heap-oop`.
+
+### Generic types
+
+Generic `cust` / `class` types take type parameters in angle brackets. The compiler **monomorphizes** each use into a concrete type with a mangled name (for example `Box<int>` becomes `Box_int` internally).
+
+**Define a template:**
+
+```minusC
+Box<T> = cust {
+    {value} T;
+};
+```
+
+**Instantiate at use sites** with concrete type arguments:
+
+```minusC
+{b} Box<int> = {value=42};
+{p} Box<Point> = {value=Point{x=1, y=2}};
+```
+
+Rules and limits (v1):
+
+| Topic | Behavior |
+|-------|----------|
+| Type arguments | Any non-generic field type: `int`, `bool`, `str`, `adr`, nested `cust`, `Array<T>`, other monomorphized generics |
+| Monomorphization | First use of `Box<int>` registers `Box_int`; later uses share the same layout |
+| `extends` / `implements` | Not allowed on the template itself; instantiate first if you need inheritance on a concrete type |
+| Generic methods | Not supported — only generic data fields |
+| `sizeof` | Works on instantiated types: `sizeof(Box<int>)` |
+
+```minusC
+{si} int = sizeof(Box<int>);
+{sp} int = sizeof(Box<Point>);
+```
+
+See `example/generic_tests.minusc` and `make test-generic`.
+
+### Interfaces
+
+An **interface** declares method signatures that concrete types must implement. Satisfaction is **nominal**: the type must list the interface with `implements`, and the compiler checks that every interface method exists with a matching return type.
+
+**Define an interface** (method bodies are stubs — they are not emitted):
+
+```minusC
+Drawable = interface {
+    draw = (self) function {
+        return 0;
+    } int;
+};
+```
+
+**Implement on a type.** Interface methods must be `virtual` and occupy the vtable slot assigned by the interface (first method → slot 0, second → slot 1, …):
+
+```minusC
+Circle = cust implements Drawable {
+    {radius} int;
+
+    virtual draw = (self) function {
+        return self.radius;
+    } int;
+};
+```
+
+**Interface-typed parameters** accept heap handles (`adr`) whose runtime type implements the interface. The parameter erases to `adr` at codegen; calls to interface methods use virtual dispatch.
+
+```minusC
+drawIt = ({shape} Drawable) function {
+    return shape.draw();
+} int;
+
+{c} adr = rent(1, Circle);
+c.init();
+{v} int = drawIt(c);   // compile-time check: Circle implements Drawable
+```
+
+Requirements:
+
+- Implementors are checked at type definition time (`implements Drawable`).
+- Call sites are checked when passing a heap handle to an interface-typed parameter.
+- Virtual methods on the implementor must match the interface’s vtable slot index.
+- Heap allocation (`rent(1, T)`) is required for interface dispatch through a parameter — stack values do not carry a vtable.
+
+See `example/interface_tests.minusc` and `make test-interface`.
+
 ### `sizeof`
 
-Returns the byte size of a type at compile time. Works for primitives, `Array<int>`, and custom types.
+Returns the byte size of a type at compile time. Works for primitives, `Array<int>`, custom types, and monomorphized generics (`sizeof(Box<int>)`).
 
 ```minusC
 {si} int = sizeof(int);       // 4
@@ -434,6 +581,9 @@ comment:
 | Type mismatch | Incompatible assignment (e.g. `str` to `int`, mismatched `cust` types) |
 | Borrow error | Use of moved `adr`, double `moveOut`, invalid `adr` in call/return |
 | Unknown field | Invalid field name in `cust` initializer or field access |
+| Unknown type | Type name not found (including uninstantiated generic use) |
+| Generic arity | Wrong number of type arguments for a generic template |
+| Interface mismatch | Type missing `implements` method, wrong return type, or non-virtual / wrong vtable slot |
 | Invalid `sizeof` | Unsupported or zero-size type |
 
 ### Runtime errors
@@ -449,6 +599,20 @@ comment:
 | Double free | `moveOut` called twice on the same block |
 | Heap access out-of-bounds | `Peek`/`Poke`/`adr[offset]` past block end |
 
+## Testing
+
+Focused test suites (after `make`):
+
+| Command | Coverage |
+|---------|----------|
+| `make test-borrow` | `adr` ownership and borrow checking |
+| `make test-cust` | Custom types |
+| `make test-oop` | Methods, `self`, visibility |
+| `make test-heap-oop` | Heap objects + methods |
+| `make test-poly` | Inheritance + virtual dispatch |
+| `make test-generic` | Generic type monomorphization |
+| `make test-interface` | Interfaces + `implements` |
+
 ## Examples
 
 | File | Coverage |
@@ -463,6 +627,13 @@ comment:
 | `example/mem_tests.minusc` | `sizeof`, `Memcpy`, `Memset`, `RentGrow` |
 | `example/thread_tests.minusc` | `dupe`, `join`, `timer`, parallel races |
 | `example/cust_tests.minusc` | Custom types |
+| `example/oop_tests.minusc` | Methods and encapsulation |
+| `example/heap_oop_tests.minusc` | Heap-backed objects |
+| `example/poly_tests.minusc` | Virtual dispatch and inheritance |
+| `example/generic_tests.minusc` | Generic `Box<T>` monomorphization |
+| `example/interface_tests.minusc` | Interfaces and `implements` |
+
+Implementation progress and design notes: `docs/OOP_CHECKLIST.md`.
 
 ## Editor support
 

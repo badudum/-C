@@ -1,0 +1,11 @@
+Blob = cust {
+    {data} adr;
+    {tag} int;
+};
+
+main = () function {
+    {b} Blob = Blob{data=rent(16), tag=1};
+    {r} &adr = b.data;
+    b.data = rent(16);
+    return 0;
+} int;

@@ -22,6 +22,19 @@ char *asm_store_to_fp_instr(int offset, int reg, const char *comment);
 void asm_append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
                                      dynamic_list_t *list, const char *comment);
 
+void asm_append_load_cust_receiver_to_reg(char **s, AST_t *arg, int reg, const char *comment);
+void asm_append_load_cust_field_receiver_to_reg(char **s, int base_stack_index,
+                                                int field_byte_offset, int reg,
+                                                const char *comment);
+void asm_append_load_heap_cust_field_receiver_to_reg(char **s, int base_stack_index,
+                                                     int field_byte_offset, int reg,
+                                                     const char *comment);
+void asm_append_heap_field_load(char **s, int base_stack_index, int byte_offset,
+                                int dt, const char *comment);
+void asm_append_heap_field_store(char **s, int base_stack_index, int byte_offset,
+                                 int dt, const char *comment);
+int asm_arg_needs_cust_receiver(AST_t *arg, dynamic_list_t *list);
+
 void asm_append_pop_ptr_to_reg(char **s, int reg, const char *comment);
 void asm_append_pop_word_to_reg(char **s, int reg, int is_bool, const char *comment);
 void asm_append_push_ptr_from_reg(char **s, int reg);
@@ -76,6 +89,14 @@ void asm_append_mov_word_reg1_from_reg0(char **s);
 void asm_append_add_word_regs(char **s);
 void asm_append_sub_word_regs(char **s);
 void asm_append_call_runtime(char **s, const char *name, const char *comment);
+void asm_append_virtual_method_call(char **s, int vtable_slot);
+void asm_append_heap_vtable_init(char **s, int stack_index, const char *type_name);
 void assembly_patch_linux_output(char *ass);
+void assembly_patch_macos_x86_output(char *ass);
+
+/* Emit a unique runtime error string label; returns label name in label_buf. */
+void asm_append_runtime_err_site(char **s, const AST_t *ast, const char *kind,
+                                 char *label_buf, size_t label_cap);
+void asm_append_load_rt_err_ptr(char **s, const char *label, int reg_index);
 
 #endif

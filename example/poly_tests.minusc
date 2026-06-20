@@ -1,0 +1,118 @@
+Animal = cust {
+    public {name} int;
+
+    virtual speak = (self) function {
+        return self.name;
+    } int;
+
+    init = (self) function {
+        self.name = 1;
+        return 0;
+    } int;
+};
+
+Dog = cust extends Animal {
+    public {bark} int;
+
+    virtual speak = (self) function {
+        return self.name + 100;
+    } int;
+
+    init = (self) function {
+        super.init();
+        self.bark = 9;
+        return 0;
+    } int;
+
+    tag = (self) function {
+        return self.bark;
+    } int;
+};
+
+speakThrough = ({p} adr) function {
+    return p.speak();
+} int;
+
+testPolyOverride = ({x} int) function {
+    HelloWorldLine("--- [poly-1] virtual override via heap handle ---");
+    {d} adr = rent(1, Dog);
+    d.init();
+    {v} int = d.speak();
+    if (v == 101) {
+        HelloWorldLine("PASS: Dog.speak override");
+    } else {
+        HelloWorldLine("FAIL: Dog.speak v=", v);
+    };
+    return 0;
+} int;
+
+testPolyDispatch = ({x} int) function {
+    HelloWorldLine("--- [poly-2] runtime virtual dispatch ---");
+    {d} adr = rent(1, Dog);
+    d.init();
+    {v} int = speakThrough(d);
+    if (v == 101) {
+        HelloWorldLine("PASS: virtual dispatch through helper");
+    } else {
+        HelloWorldLine("FAIL: dispatch v=", v);
+    };
+    return 0;
+} int;
+
+testPolySuperInit = ({x} int) function {
+    HelloWorldLine("--- [poly-3] super.init chaining ---");
+    {d} adr = rent(1, Dog);
+    d.init();
+    {t} int = d.tag();
+    if (t == 9) {
+        HelloWorldLine("PASS: super.init + derived init");
+    } else {
+        HelloWorldLine("FAIL: super.init tag=", t);
+    };
+    return 0;
+} int;
+
+testPolySuperMethod = ({x} int) function {
+    HelloWorldLine("--- [poly-4] super.method static call ---");
+    {a} adr = rent(1, Animal);
+    a.init();
+    {d} adr = rent(1, Dog);
+    d.init();
+    {baseSpeak} int = a.speak();
+    {dogSpeak} int = d.speak();
+    if (baseSpeak == 1 and dogSpeak == 101) {
+        HelloWorldLine("PASS: static speak on Animal vs Dog");
+    } else {
+        HelloWorldLine("FAIL: super/static speak base=", baseSpeak, " dog=", dogSpeak);
+    };
+    return 0;
+} int;
+
+testPolyLayout = ({x} int) function {
+    HelloWorldLine("--- [poly-5] inherited field layout ---");
+    {szA} int = sizeof(Animal);
+    {szD} int = sizeof(Dog);
+    if (szA == 16 and szD == 24) {
+        HelloWorldLine("PASS: sizeof includes vtable header + fields");
+    } else {
+        HelloWorldLine("FAIL: sizeof Animal=", szA, " Dog=", szD);
+    };
+    return 0;
+} int;
+
+testPolyOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     POLYMORPHISM TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testPolyOverride(0);
+    {b} int = testPolyDispatch(0);
+    {c} int = testPolySuperInit(0);
+    {d} int = testPolySuperMethod(0);
+    {e} int = testPolyLayout(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     POLY TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;

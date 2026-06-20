@@ -1,0 +1,12 @@
+HeapBlob = cust {
+    {data} adr;
+};
+
+main = () function {
+    {b} adr = rent(1, HeapBlob);
+    {inner} adr = rent(8);
+    b.data = inner;
+    {fd} int = moveOut(b.data);
+    {bad} int = PeekInt(b.data, 0);
+    return bad;
+} int;

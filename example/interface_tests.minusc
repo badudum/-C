@@ -1,0 +1,54 @@
+Drawable = interface {
+    draw = (self) function {
+        return 0;
+    } int;
+};
+
+Circle = cust implements Drawable {
+    {radius} int;
+
+    virtual draw = (self) function {
+        return self.radius + 100;
+    } int;
+
+    init = (self) function {
+        self.radius = 7;
+        return 0;
+    } int;
+};
+
+drawThrough = ({p} Drawable) function {
+    return p.draw();
+} int;
+
+testInterfaceImplements = ({x} int) function {
+    HelloWorldLine("--- [iface-1] implements check + interface param ---");
+    {c} adr = rent(1, Circle);
+    c.init();
+    {v} int = drawThrough(c);
+    if (v == 107) {
+        HelloWorldLine("PASS: Circle implements Drawable, virtual draw via interface param");
+    } else {
+        HelloWorldLine("FAIL: drawThrough v=", v);
+    };
+    return 0;
+} int;
+
+testInterfaceDirect = ({x} int) function {
+    HelloWorldLine("--- [iface-2] direct virtual call on implementor ---");
+    {c} adr = rent(1, Circle);
+    c.init();
+    {v} int = c.draw();
+    if (v == 107) {
+        HelloWorldLine("PASS: Circle.draw virtual");
+    } else {
+        HelloWorldLine("FAIL: Circle.draw v=", v);
+    };
+    return 0;
+} int;
+
+testInterfaceOps = ({x} int) function {
+    testInterfaceImplements(0);
+    testInterfaceDirect(0);
+    return 0;
+} int;
