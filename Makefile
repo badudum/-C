@@ -2,12 +2,12 @@ exec = minusC.out
 sources = $(wildcard src/*.c)
 sources += $(wildcard src/*/*.c)
 objects = $(sources:.c=.o)
-flags = -g -std=c99
+flags = -g -std=gnu99
 
 $(exec) : $(objects)
 	gcc $(objects) $(flags) -o $(exec)
 
-%.o: %.c include/%.h
+%.o: %.c
 	gcc -c $(flags) $< -o $@
 
 install : 

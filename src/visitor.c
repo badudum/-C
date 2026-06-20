@@ -283,6 +283,27 @@ AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, 
         return variable;
     }
 
+    /* Reassignments to an existing variable reuse its stack slot and type. */
+    if (variable->op == EQUALS_TOKEN && node->name) {
+        int existing = stack_index_for_name(stackframe, node->name);
+        if (existing != 0) {
+            variable->stack_index = existing;
+            variable->stackframe = stackframe;
+            for (int j = (int)list->size - 1; j >= 0; j--) {
+                AST_t *def = (AST_t *)list->items[j];
+                if (def->type == ASSIGNEMENT_AST && def->name &&
+                    strcmp(def->name, node->name) == 0) {
+                    variable->datatype = def->datatype;
+                    break;
+                }
+            }
+            if (!variable->datatype)
+                variable->datatype = TYPE_INT;
+            list_enqueue(list, variable);
+            return variable;
+        }
+    }
+
     /* Type mismatch checks (only for unambiguous literal/array mismatches) */
     if (variable->parent && variable->datatype != TYPE_UNKNOWN) {
         AST_t* rhs = variable->parent;
@@ -525,6 +546,7 @@ AST_t* visit_int(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackfr
     list_enqueue(stackframe->stack, mkstr("0"));
     node->stack_index = stackframe->stack->size;
     node->stackframe = stackframe;
+    node->datatype = TYPE_INT;
     return node;
 }
 
