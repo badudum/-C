@@ -1,0 +1,10 @@
+main = () function {
+    {buf} adr = rent(16);
+    if (Real) {
+        {r} &adr = buf;
+        PokeInt(buf, 0, 1);
+    } else {
+        {v} int = PeekInt(buf, 0);
+    };
+    return 0;
+} int;

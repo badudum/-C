@@ -1,0 +1,7 @@
+main = () function {
+    {src} adr = rent(16);
+    {dst} adr = rent(16);
+    {fd} int = moveOut(src);
+    {bad} int = Memcpy(dst, src, 4);
+    return 0;
+} int;

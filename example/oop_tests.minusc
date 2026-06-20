@@ -1,0 +1,135 @@
+OopPoint = cust {
+    public {x} int;
+    private {y} int;
+
+    sumSq = (self) function {
+        return self.x * self.x + self.y * self.y;
+    } int;
+
+    init = (self) function {
+        self.x = 3;
+        self.y = 4;
+        return 0;
+    } int;
+
+    bumpX = (self) function {
+        self.x = self.x + 1;
+        return self.x;
+    } int;
+
+    peekY = (self) function {
+        return self.y;
+    } int;
+};
+
+OopBox = class {
+    public {w} int;
+    private {h} int;
+
+    area = (self) function {
+        return self.w * self.h;
+    } int;
+};
+
+testOopMethodCall = ({x} int) function {
+    HelloWorldLine("--- [oop-1] instance method call ---");
+    {p} OopPoint = {x=3, y=4};
+    {sq} int = p.sumSq();
+    if (sq == 25) {
+        HelloWorldLine("PASS: p.sumSq() == 25");
+    } else {
+        HelloWorldLine("FAIL: sumSq got=", sq);
+    };
+    return 0;
+} int;
+
+testOopInit = ({x} int) function {
+    HelloWorldLine("--- [oop-2] init method ---");
+    {p} OopPoint = {x=0, y=0};
+    {rc} int = p.init();
+    {sq} int = p.sumSq();
+    if (rc == 0 and sq == 25) {
+        HelloWorldLine("PASS: init() sets fields");
+    } else {
+        HelloWorldLine("FAIL: init rc=", rc, " sq=", sq);
+    };
+    return 0;
+} int;
+
+testOopPrivateInside = ({x} int) function {
+    HelloWorldLine("--- [oop-3] private field via method ---");
+    {p} OopPoint = {x=1, y=9};
+    {y} int = p.peekY();
+    if (y == 9) {
+        HelloWorldLine("PASS: method reads private y");
+    } else {
+        HelloWorldLine("FAIL: peekY got=", y);
+    };
+    return 0;
+} int;
+
+testOopPublicField = ({x} int) function {
+    HelloWorldLine("--- [oop-4] public field access ---");
+    {p} OopPoint = {x=7, y=2};
+    if (p.x == 7) {
+        HelloWorldLine("PASS: public field p.x");
+    } else {
+        HelloWorldLine("FAIL: public field");
+    };
+    return 0;
+} int;
+
+testOopHowBig = ({x} int) function {
+    HelloWorldLine("--- [oop-5] HowBig builtin alias ---");
+    {sz1} int = HowBig(OopPoint);
+    {sz2} int = sizeof(OopPoint);
+    if (sz1 == 8 and sz2 == 8) {
+        HelloWorldLine("PASS: HowBig matches sizeof");
+    } else {
+        HelloWorldLine("FAIL: HowBig sz1=", sz1, " sz2=", sz2);
+    };
+    return 0;
+} int;
+
+testOopClassKeyword = ({x} int) function {
+    HelloWorldLine("--- [oop-6] class keyword + method ---");
+    {b} OopBox = OopBox{w=6, h=7};
+    {a} int = b.area();
+    if (a == 42) {
+        HelloWorldLine("PASS: class method area()");
+    } else {
+        HelloWorldLine("FAIL: area got=", a);
+    };
+    return 0;
+} int;
+
+testOopMutatingMethod = ({x} int) function {
+    HelloWorldLine("--- [oop-7] mutating method on self ---");
+    {p} OopPoint = {x=10, y=0};
+    {nx} int = p.bumpX();
+    if (nx == 11 and p.x == 11) {
+        HelloWorldLine("PASS: bumpX mutates self.x");
+    } else {
+        HelloWorldLine("FAIL: bumpX nx=", nx, " p.x=", p.x);
+    };
+    return 0;
+} int;
+
+testOopOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     OOP / METHOD TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testOopMethodCall(0);
+    {b} int = testOopInit(0);
+    {c} int = testOopPrivateInside(0);
+    {d} int = testOopPublicField(0);
+    {e} int = testOopHowBig(0);
+    {f} int = testOopClassKeyword(0);
+    {g} int = testOopMutatingMethod(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     OOP TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;

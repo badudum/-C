@@ -1,0 +1,6 @@
+main = () function {
+    {buf} adr = rent(16);
+    {a} int = moveOut(buf);
+    {b} int = moveOut(buf);
+    return 0;
+} int;

@@ -60,24 +60,30 @@ void asm_append_load_from_fp(char **s, int offset, int reg, const char *comment)
     asm_append(s, instr);
 }
 
-void asm_append_load_w_from_fp(char **s, int offset, const char *comment)
+void asm_append_load_w_from_fp_reg(char **s, int offset, int reg, const char *comment)
 {
     int abs_off = offset < 0 ? -offset : offset;
     char instr[256];
     if (is_x86()) {
+        static const char *regs32[] = {"eax", "ebx", "ecx", "edx", "r8d", "r9d"};
+        const char *r = regs32[reg < 6 ? reg : 0];
         if (abs_off <= 255)
-            snprintf(instr, sizeof(instr), "\n# %s\nmov eax, [rbp-%d]\n", comment, abs_off);
+            snprintf(instr, sizeof(instr), "\n# %s\nmov %s, dword ptr [rbp-%d]\n", comment, r, abs_off);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov eax, [rcx]\n",
-                     comment, abs_off);
+            snprintf(instr, sizeof(instr), "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov %s, dword ptr [rcx]\n",
+                     comment, abs_off, r);
+    } else if (abs_off <= 255) {
+        snprintf(instr, sizeof(instr), "\n# %s\nldr w%d, [fp, #%d]\n", comment, reg, offset);
     } else {
-        if (abs_off <= 255)
-            snprintf(instr, sizeof(instr), "\n# %s\nldr w0, [fp, #%d]\n", comment, offset);
-        else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldr w0, [x4]\n",
-                     comment, abs_off);
+        snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldr w%d, [x4]\n",
+                 comment, abs_off, reg);
     }
     asm_append(s, instr);
+}
+
+void asm_append_load_w_from_fp(char **s, int offset, const char *comment)
+{
+    asm_append_load_w_from_fp_reg(s, offset, 0, comment);
 }
 
 void asm_append_store_w_to_fp(char **s, int offset, const char *comment)
@@ -100,25 +106,31 @@ void asm_append_store_w_to_fp(char **s, int offset, const char *comment)
     asm_append(s, instr);
 }
 
-void asm_append_load_b_from_fp(char **s, int offset, const char *comment)
+void asm_append_load_b_from_fp_reg(char **s, int offset, int reg, const char *comment)
 {
     int abs_off = offset < 0 ? -offset : offset;
     char instr[256];
     if (is_x86()) {
+        static const char *regs32[] = {"eax", "ebx", "ecx", "edx", "r8d", "r9d"};
+        const char *r = regs32[reg < 6 ? reg : 0];
         if (abs_off <= 255)
-            snprintf(instr, sizeof(instr), "\n# %s\nmovzx eax, byte ptr [rbp-%d]\n", comment, abs_off);
+            snprintf(instr, sizeof(instr), "\n# %s\nmovzx %s, byte ptr [rbp-%d]\n", comment, r, abs_off);
         else
             snprintf(instr, sizeof(instr),
-                     "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmovzx eax, byte ptr [rcx]\n",
-                     comment, abs_off);
+                     "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmovzx %s, byte ptr [rcx]\n",
+                     comment, abs_off, r);
+    } else if (abs_off <= 255) {
+        snprintf(instr, sizeof(instr), "\n# %s\nldrb w%d, [fp, #%d]\n", comment, reg, offset);
     } else {
-        if (abs_off <= 255)
-            snprintf(instr, sizeof(instr), "\n# %s\nldrb w0, [fp, #%d]\n", comment, offset);
-        else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldrb w0, [x4]\n",
-                     comment, abs_off);
+        snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldrb w%d, [x4]\n",
+                 comment, abs_off, reg);
     }
     asm_append(s, instr);
+}
+
+void asm_append_load_b_from_fp(char **s, int offset, const char *comment)
+{
+    asm_append_load_b_from_fp_reg(s, offset, 0, comment);
 }
 
 void asm_append_store_b_to_fp(char **s, int offset, const char *comment)
@@ -186,29 +198,53 @@ void asm_append_load_value_from_fp_offset(char **s, int fp_offset, int dt, const
 
 char *asm_store_to_fp_instr(int offset, int reg, const char *comment)
 {
-    char *instr = calloc(256, sizeof(char));
+    char buf[256];
     int abs_off = offset < 0 ? -offset : offset;
     if (is_x86()) {
         static const char *regs64[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
         const char *r = regs64[reg < 8 ? reg : 0];
         if (abs_off <= 255)
-            snprintf(instr, sizeof(instr), "\n# %s\nmov [rbp-%d], %s\n", comment, abs_off, r);
+            snprintf(buf, sizeof(buf), "\n# %s\nmov [rbp-%d], %s\n", comment, abs_off, r);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov [rcx], %s\n",
+            snprintf(buf, sizeof(buf), "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov [rcx], %s\n",
                      comment, abs_off, r);
     } else {
         if (abs_off <= 255)
-            snprintf(instr, sizeof(instr), "\n# %s\nstr x%d, [fp, #%d]\n", comment, reg, offset);
+            snprintf(buf, sizeof(buf), "\n# %s\nstr x%d, [fp, #%d]\n", comment, reg, offset);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nstr x%d, [x4]\n",
+            snprintf(buf, sizeof(buf), "\n# %s\nsub x4, fp, #%d\nstr x%d, [x4]\n",
                      comment, abs_off, reg);
     }
-    return instr;
+    return strdup(buf);
 }
 
 static int asm_arg_datatype(AST_t *arg, dynamic_list_t *list);
 static int asm_operand_on_stack(AST_t *ast);
 static AST_t *unwrap_comp(AST_t *ast);
+
+int asm_arg_needs_cust_receiver(AST_t *arg, dynamic_list_t *list)
+{
+    arg = unwrap_comp(arg);
+    if (!arg)
+        return 0;
+    if (IS_CUST_TYPE(arg->datatype))
+        return 1;
+    if (IS_HEAP_CUST_VAR(arg->datatype, arg->int_value))
+        return 1;
+    if (arg->type == VAR_AST && arg->name) {
+        for (unsigned int j = 0; j < list->size; j++) {
+            AST_t *def = (AST_t *)list->items[j];
+            if (def->type == ASSIGNEMENT_AST && def->name &&
+                strcmp(def->name, arg->name) == 0) {
+                if (IS_CUST_TYPE(def->datatype))
+                    return 1;
+                if (IS_HEAP_CUST_VAR(def->datatype, def->int_value))
+                    return 1;
+            }
+        }
+    }
+    return 0;
+}
 
 static AST_t *unwrap_comp(AST_t *ast)
 {
@@ -348,6 +384,164 @@ void asm_append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
     }
 }
 
+void asm_append_load_cust_receiver_to_reg(char **s, AST_t *arg, int reg, const char *comment)
+{
+    if (IS_HEAP_CUST_VAR(arg->datatype, arg->int_value)) {
+        int off = arg->stack_index * -16;
+        asm_append_load_from_fp(s, off, reg, comment);
+        return;
+    }
+    int abs_off = arg->stack_index * 16;
+    char instr[256];
+    if (is_x86()) {
+        static const char *regs[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
+        const char *dest = regs[reg < 8 ? reg : 0];
+        if (abs_off <= 255)
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nlea %s, [rbp-%d]\n", comment, dest, abs_off);
+        else
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov %s, rcx\n",
+                     comment, abs_off, dest);
+    } else {
+        if (abs_off <= 255)
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nsub x%d, fp, #%d\n", comment, reg, abs_off);
+        else
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nsub x4, fp, #%d\nmov x%d, x4\n", comment, abs_off, reg);
+    }
+    asm_append(s, instr);
+}
+
+void asm_append_load_cust_field_receiver_to_reg(char **s, int base_stack_index,
+                                                int field_byte_offset, int reg,
+                                                const char *comment)
+{
+    int abs_off = base_stack_index * 16 - field_byte_offset;
+    char instr[256];
+    if (is_x86()) {
+        static const char *regs[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
+        const char *dest = regs[reg < 8 ? reg : 0];
+        if (abs_off <= 255)
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nlea %s, [rbp-%d]\n", comment, dest, abs_off);
+        else
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov %s, rcx\n",
+                     comment, abs_off, dest);
+    } else {
+        if (abs_off <= 255)
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nsub x%d, fp, #%d\n", comment, reg, abs_off);
+        else
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nsub x4, fp, #%d\nmov x%d, x4\n", comment, abs_off, reg);
+    }
+    asm_append(s, instr);
+}
+
+void asm_append_load_heap_cust_field_receiver_to_reg(char **s, int base_stack_index,
+                                                     int field_byte_offset, int reg,
+                                                     const char *comment)
+{
+    int base_off = base_stack_index * -16;
+    char instr[256];
+    if (is_x86()) {
+        static const char *regs[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
+        const char *dest = regs[reg < 8 ? reg : 0];
+        int abs_base = base_stack_index * 16;
+        snprintf(instr, sizeof(instr),
+                 "\n# %s\nmov rcx, [rbp-%d]\nlea %s, [rcx+%d]\n",
+                 comment, abs_base, dest, field_byte_offset);
+    } else {
+        if (field_byte_offset == 0)
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x%d, [fp, #%d]\n", comment, reg, base_off);
+        else
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x1, [fp, #%d]\nadd x%d, x1, #%d\n",
+                     comment, base_off, reg, field_byte_offset);
+    }
+    asm_append(s, instr);
+}
+
+void asm_append_heap_field_load(char **s, int base_stack_index, int byte_offset,
+                                int dt, const char *comment)
+{
+    int base_off = base_stack_index * -16;
+    int abs_base = base_off < 0 ? -base_off : base_off;
+    char instr[384];
+    if (is_x86()) {
+        if (dt == TYPE_BOOL) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, [rbp-%d]\nmovzx eax, byte ptr [rcx+%d]\n",
+                     comment, abs_base, byte_offset);
+        } else if (dt == TYPE_INT || IS_ARRAY_TYPE(dt)) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, [rbp-%d]\nmov eax, dword ptr [rcx+%d]\n",
+                     comment, abs_base, byte_offset);
+        } else {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, [rbp-%d]\nmov rax, [rcx+%d]\n",
+                     comment, abs_base, byte_offset);
+        }
+    } else {
+        if (dt == TYPE_BOOL) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x1, [fp, #%d]\nldrb w0, [x1, #%d]\n",
+                     comment, base_off, byte_offset);
+        } else if (dt == TYPE_INT || IS_ARRAY_TYPE(dt)) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x1, [fp, #%d]\nldr w0, [x1, #%d]\n",
+                     comment, base_off, byte_offset);
+        } else {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x1, [fp, #%d]\nldr x0, [x1, #%d]\n",
+                     comment, base_off, byte_offset);
+        }
+    }
+    asm_append(s, instr);
+}
+
+void asm_append_heap_field_store(char **s, int base_stack_index, int byte_offset,
+                                 int dt, const char *comment)
+{
+    int base_off = base_stack_index * -16;
+    int abs_base = base_off < 0 ? -base_off : base_off;
+    char instr[384];
+    if (is_x86()) {
+        if (dt == TYPE_BOOL) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, [rbp-%d]\nmov byte ptr [rcx+%d], al\n",
+                     comment, abs_base, byte_offset);
+        } else if (dt == TYPE_INT || IS_ARRAY_TYPE(dt)) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, [rbp-%d]\nmov dword ptr [rcx+%d], eax\n",
+                     comment, abs_base, byte_offset);
+        } else {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nmov rcx, [rbp-%d]\nmov [rcx+%d], rax\n",
+                     comment, abs_base, byte_offset);
+        }
+    } else {
+        if (dt == TYPE_BOOL) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x1, [fp, #%d]\nstrb w0, [x1, #%d]\n",
+                     comment, base_off, byte_offset);
+        } else if (dt == TYPE_INT || IS_ARRAY_TYPE(dt)) {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x1, [fp, #%d]\nstr w0, [x1, #%d]\n",
+                     comment, base_off, byte_offset);
+        } else {
+            snprintf(instr, sizeof(instr),
+                     "\n# %s\nldr x1, [fp, #%d]\nstr x0, [x1, #%d]\n",
+                     comment, base_off, byte_offset);
+        }
+    }
+    asm_append(s, instr);
+}
+
 void asm_append_pop_ptr_to_reg(char **s, int reg, const char *comment)
 {
     char instr[128];
@@ -425,7 +619,10 @@ void asm_append_store_call_result(char **s)
 void asm_append_call(char **s, const char *name, const char *comment)
 {
     char buf[256];
-    snprintf(buf, sizeof(buf), "\n# %s\ncall %s\n", comment, name);
+    if (is_x86())
+        snprintf(buf, sizeof(buf), "\n# %s\ncall %s\n", comment, name);
+    else
+        snprintf(buf, sizeof(buf), "\n# %s\nbl %s\n", comment, name);
     asm_append(s, buf);
 }
 
@@ -884,9 +1081,9 @@ void asm_append_load_binop_operand(char **s, AST_t *node, dynamic_list_t *list,
         return;
     }
     if (is_bool)
-        asm_append_load_b_from_fp(s, off, comment);
+        asm_append_load_b_from_fp_reg(s, off, reg, comment);
     else if (node->datatype == TYPE_INT || IS_ARRAY_TYPE(node->datatype))
-        asm_append_load_w_from_fp(s, off, comment);
+        asm_append_load_w_from_fp_reg(s, off, reg, comment);
     else
         asm_append_load_from_fp(s, off, reg, comment);
 }
@@ -911,6 +1108,71 @@ void asm_append_call_runtime(char **s, const char *name, const char *comment)
     asm_append_call(s, name, comment);
 }
 
+void asm_append_virtual_method_call(char **s, int vtable_slot)
+{
+    char buf[256];
+    int off = vtable_slot * 8;
+    if (is_x86()) {
+        snprintf(buf, sizeof(buf),
+                 "\n# virtual method call slot %d\n"
+                 "mov rcx, [rax]\n"
+                 "call [rcx + %d]\n",
+                 vtable_slot, off);
+    } else {
+        snprintf(buf, sizeof(buf),
+                 "\n# virtual method call slot %d\n"
+                 "ldr x9, [x0]\n"
+                 "ldr x9, [x9, #%d]\n"
+                 "blr x9\n",
+                 vtable_slot, off);
+    }
+    asm_append(s, buf);
+}
+
+void asm_append_heap_vtable_init(char **s, int stack_index, const char *type_name)
+{
+    if (!type_name)
+        return;
+    char label[128];
+    snprintf(label, sizeof(label), "%s__vtable", type_name);
+    char buf[384];
+    int abs_off = stack_index * 16;
+    if (is_x86()) {
+        if (abs_off <= 255)
+            snprintf(buf, sizeof(buf),
+                     "\n# init heap vtable for %s\n"
+                     "mov rax, [rbp-%d]\n"
+                     "lea rcx, [%s]\n"
+                     "mov [rax], rcx\n",
+                     type_name, abs_off, label);
+        else
+            snprintf(buf, sizeof(buf),
+                     "\n# init heap vtable for %s\n"
+                     "mov rcx, rbp\nsub rcx, %d\nmov rax, [rcx]\n"
+                     "lea rcx, [%s]\n"
+                     "mov [rax], rcx\n",
+                     type_name, abs_off, label);
+    } else {
+        if (abs_off <= 255)
+            snprintf(buf, sizeof(buf),
+                     "\n# init heap vtable for %s\n"
+                     "ldr x0, [fp, #-%d]\n"
+                     "adrp x1, %s@PAGE\n"
+                     "add x1, x1, %s@PAGEOFF\n"
+                     "str x1, [x0]\n",
+                     type_name, abs_off, label, label);
+        else
+            snprintf(buf, sizeof(buf),
+                     "\n# init heap vtable for %s\n"
+                     "sub x4, fp, #%d\nldr x0, [x4]\n"
+                     "adrp x1, %s@PAGE\n"
+                     "add x1, x1, %s@PAGEOFF\n"
+                     "str x1, [x0]\n",
+                     type_name, abs_off, label, label);
+    }
+    asm_append(s, buf);
+}
+
 static void patch_str(char *haystack, const char *needle, const char *replacement)
 {
     size_t needle_len = strlen(needle);
@@ -929,10 +1191,10 @@ void assembly_patch_linux_output(char *ass)
 {
     if (!ass || assembly_os_get() != ASSEMBLY_OS_LINUX)
         return;
-    patch_str(ass, "0x2000004", "1");
-    patch_str(ass, "0x2000001", "60");
     patch_str(ass, ".section __DATA,__bss", ".section .bss");
     patch_str(ass, ".section __DATA,__data", ".section .data");
+    patch_str(ass, "0x2000004", "1");
+    patch_str(ass, "0x2000001", "60");
     patch_str(ass, "call _pthread_create", "call pthread_create");
     patch_str(ass, "call _pthread_attr_init", "call pthread_attr_init");
     patch_str(ass, "call _pthread_attr_setstacksize", "call pthread_attr_setstacksize");
@@ -951,4 +1213,54 @@ void assembly_patch_linux_output(char *ass)
     patch_str(ass, ".extern _memcpy", ".extern memcpy");
     patch_str(ass, ".extern _memset", ".extern memset");
     patch_str(ass, ".extern _gettimeofday", ".extern gettimeofday");
+}
+
+void assembly_patch_macos_x86_output(char *ass)
+{
+    if (!ass || assembly_os_get() != ASSEMBLY_OS_MACOS ||
+        assembly_target_get() != ASSEMBLY_TARGET_X86_64)
+        return;
+    patch_str(ass, ".section .rodata", ".section __TEXT,__cstring,cstring_literals");
+    patch_str(ass, ".section .data", ".section __DATA,__data");
+    patch_str(ass, ".align 1", ".p2align 1");
+    patch_str(ass, ".asciz", ".asciz");
+}
+
+static int rt_err_site_seq = 0;
+
+void asm_append_runtime_err_site(char **s, const AST_t *ast, const char *kind,
+                                 char *label_buf, size_t label_cap)
+{
+    snprintf(label_buf, label_cap, "_rt_site_%d", rt_err_site_seq++);
+    char skip_label[32];
+    snprintf(skip_label, sizeof(skip_label), "_rt_skip_%s", label_buf + 1);
+
+    const char *file = (ast && ast->source_file) ? ast->source_file : "unknown";
+    int line = (ast && ast->source_line > 0) ? ast->source_line : 0;
+    char msg[480];
+    snprintf(msg, sizeof(msg), "Runtime Error: %s at %s:%d\\n", kind, file, line);
+    char frag[768];
+    snprintf(frag, sizeof(frag),
+             "b %s\n"
+             "%s:\n"
+             ".asciz \"%s\"\n"
+             ".p2align 2\n"
+             "%s:\n",
+             skip_label, label_buf, msg, skip_label);
+    asm_append(s, frag);
+}
+
+void asm_append_load_rt_err_ptr(char **s, const char *label, int reg_index)
+{
+    char frag[128];
+    if (is_x86()) {
+        const char *reg = (reg_index == 2) ? "rdx" : "rsi";
+        snprintf(frag, sizeof(frag), "lea %s, [rip + %s]\n", reg, label);
+    } else {
+        const char *reg = (reg_index == 2) ? "x2" : "x1";
+        snprintf(frag, sizeof(frag),
+                 "adrp %s, %s@PAGE\nadd %s, %s, %s@PAGEOFF\n",
+                 reg, label, reg, reg, label);
+    }
+    asm_append(s, frag);
 }

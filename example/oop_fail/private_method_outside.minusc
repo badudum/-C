@@ -1,0 +1,14 @@
+OopPoint = cust {
+    public {x} int;
+    private {y} int;
+
+    private peekY = (self) function {
+        return self.y;
+    } int;
+};
+
+main = () function {
+    {p} OopPoint = {x=1, y=2};
+    {bad} int = p.peekY();
+    return bad;
+} int;

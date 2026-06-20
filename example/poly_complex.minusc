@@ -1,0 +1,242 @@
+PolyBase = cust {
+    public {tag} int;
+
+    virtual id = (self) function {
+        return 10;
+    } int;
+
+    virtual score = (self) function {
+        return self.tag;
+    } int;
+
+    init = (self) function {
+        self.tag = 1;
+        return 0;
+    } int;
+};
+
+PolyMid = cust extends PolyBase {
+    public {mid} int;
+
+    virtual id = (self) function {
+        return super.id() + 100;
+    } int;
+
+    init = (self) function {
+        super.init();
+        self.mid = 2;
+        return 0;
+    } int;
+};
+
+PolyLeaf = cust extends PolyMid {
+    public {leaf} int;
+
+    virtual score = (self) function {
+        return super.score() + 1000;
+    } int;
+
+    virtual id = (self) function {
+        return super.id() + 10000;
+    } int;
+
+    init = (self) function {
+        super.init();
+        self.leaf = 3;
+        return 0;
+    } int;
+};
+
+DualBase = cust {
+    public {val} int;
+
+    virtual slotA = (self) function {
+        return self.val;
+    } int;
+
+    virtual slotB = (self) function {
+        return 77;
+    } int;
+
+    init = (self) function {
+        self.val = 5;
+        return 0;
+    } int;
+};
+
+DualDerived = cust extends DualBase {
+    virtual slotA = (self) function {
+        return self.val + 20;
+    } int;
+};
+
+polySpeakTwice = ({p} adr) function {
+    {a} int = p.speak();
+    {b} int = p.speak();
+    return a + b;
+} int;
+
+testPolyThreeLevel = ({x} int) function {
+    HelloWorldLine("--- [poly-6] three-level init + virtual chain ---");
+    {p} adr = rent(1, PolyLeaf);
+    p.init();
+    {idv} int = p.id();
+    {sc} int = p.score();
+    if (idv == 10110 and sc == 1001) {
+        HelloWorldLine("PASS: 3-level super chain + dual virtual overrides");
+    } else {
+        HelloWorldLine("FAIL: 3-level id=", idv, " score=", sc);
+    };
+    return 0;
+} int;
+
+testPolySuperInVirtual = ({x} int) function {
+    HelloWorldLine("--- [poly-7] super inside virtual override ---");
+    {d} adr = rent(1, PolyMid);
+    d.init();
+    {v} int = d.id();
+    if (v == 110) {
+        HelloWorldLine("PASS: super.id() inside virtual PolyMid.id");
+    } else {
+        HelloWorldLine("FAIL: super in virtual id=", v);
+    };
+    return 0;
+} int;
+
+testPolyPartialVtable = ({x} int) function {
+    HelloWorldLine("--- [poly-8] partial vtable override ---");
+    {d} adr = rent(1, DualDerived);
+    d.init();
+    {a} int = d.slotA();
+    {b} int = d.slotB();
+    if (a == 25 and b == 77) {
+        HelloWorldLine("PASS: override slotA, inherit slotB");
+    } else {
+        HelloWorldLine("FAIL: slotA=", a, " slotB=", b);
+    };
+    return 0;
+} int;
+
+testPolyDualDispatch = ({x} int) function {
+    HelloWorldLine("--- [poly-9] dispatch Animal vs Dog through same helper ---");
+    {a} adr = rent(1, Animal);
+    a.init();
+    {d} adr = rent(1, Dog);
+    d.init();
+    {sa} int = speakThrough(a);
+    {sd} int = speakThrough(d);
+    if (sa == 1 and sd == 101) {
+        HelloWorldLine("PASS: same helper, different vtables");
+    } else {
+        HelloWorldLine("FAIL: speakThrough a=", sa, " d=", sd);
+    };
+    return 0;
+} int;
+
+testPolyIndependentVtables = ({x} int) function {
+    HelloWorldLine("--- [poly-10] independent heap vtables ---");
+    {d1} adr = rent(1, Dog);
+    {d2} adr = rent(1, Dog);
+    d1.init();
+    d2.init();
+    {v1} int = d1.speak();
+    {v2} int = d2.speak();
+    if (v1 == 101 and v2 == 101) {
+        HelloWorldLine("PASS: two Dog instances same vtable layout");
+    } else {
+        HelloWorldLine("FAIL: d1=", v1, " d2=", v2);
+    };
+    return 0;
+} int;
+
+testPolyInheritedFieldOnDerived = ({x} int) function {
+    HelloWorldLine("--- [poly-11] inherited field on derived handle ---");
+    {d} adr = rent(1, Dog);
+    d.init();
+    PokeInt(d, 8, 42);
+    {v} int = d.speak();
+    if (v == 142) {
+        HelloWorldLine("PASS: derived reads base field via virtual method");
+    } else {
+        HelloWorldLine("FAIL: inherited field speak=", v);
+    };
+    return 0;
+} int;
+
+testPolyThreeLevelLayout = ({x} int) function {
+    HelloWorldLine("--- [poly-12] three-level sizeof layout ---");
+    {sb} int = sizeof(PolyBase);
+    {sm} int = sizeof(PolyMid);
+    {sl} int = sizeof(PolyLeaf);
+    if (sb == 16 and sm == 24 and sl == 32) {
+        HelloWorldLine("PASS: sizeof grows with derived fields + vtable");
+    } else {
+        HelloWorldLine("FAIL: sizeof base=", sb, " mid=", sm, " leaf=", sl);
+    };
+    return 0;
+} int;
+
+testPolyStaticNonVirtual = ({x} int) function {
+    HelloWorldLine("--- [poly-13] static non-virtual on derived ---");
+    {d} adr = rent(1, Dog);
+    d.init();
+    {t} int = d.tag();
+    {v} int = d.speak();
+    if (t == 9 and v == 101) {
+        HelloWorldLine("PASS: static tag + virtual speak coexist");
+    } else {
+        HelloWorldLine("FAIL: tag=", t, " speak=", v);
+    };
+    return 0;
+} int;
+
+testPolyRepeatedVirtualCalls = ({x} int) function {
+    HelloWorldLine("--- [poly-14] repeated virtual calls stable ---");
+    {d} adr = rent(1, Dog);
+    d.init();
+    {sum} int = polySpeakTwice(d);
+    if (sum == 202) {
+        HelloWorldLine("PASS: repeated virtual dispatch consistent");
+    } else {
+        HelloWorldLine("FAIL: repeated speak sum=", sum);
+    };
+    return 0;
+} int;
+
+testPolyLeafMidDispatch = ({x} int) function {
+    HelloWorldLine("--- [poly-15] mid vs leaf through helper ---");
+    {m} adr = rent(1, PolyMid);
+    {l} adr = rent(1, PolyLeaf);
+    m.init();
+    l.init();
+    {hm} int = m.id();
+    {hl} int = l.id();
+    if (hm == 110 and hl == 10110) {
+        HelloWorldLine("PASS: PolyMid and PolyLeaf direct virtual id");
+    } else {
+        HelloWorldLine("FAIL: mid=", hm, " leaf=", hl);
+    };
+    return 0;
+} int;
+
+testPolyComplexOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     POLY COMPLEX TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testPolyThreeLevel(0);
+    {b} int = testPolySuperInVirtual(0);
+    {c} int = testPolyPartialVtable(0);
+    {d} int = testPolyDualDispatch(0);
+    {e} int = testPolyIndependentVtables(0);
+    {f} int = testPolyInheritedFieldOnDerived(0);
+    {g} int = testPolyThreeLevelLayout(0);
+    {h} int = testPolyStaticNonVirtual(0);
+    {i} int = testPolyRepeatedVirtualCalls(0);
+    {j} int = testPolyLeafMidDispatch(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     POLY COMPLEX TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;

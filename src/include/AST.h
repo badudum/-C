@@ -4,6 +4,7 @@
 #include "types.h"
 #include "list.h"
 #include "stackframe.h"
+#include "token.h"
 
 // struct for the abstract syntax tree
 typedef struct AST_S
@@ -55,9 +56,13 @@ typedef struct AST_S
     int multiplier;
 
     struct AST_S * (*fptr)(struct VISITOR_S * visitor, struct AST_S * node, dynamic_list_t * list);
-    stackframe_t * stackframe;  
+    stackframe_t * stackframe;
+
+    int source_line;
+    char *source_file;
 } AST_t;
 
 AST_t *  init_ast(int type);
+void ast_set_loc_from_token(AST_t *ast, token_t *token);
 
 #endif 

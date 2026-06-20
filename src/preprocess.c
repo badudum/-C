@@ -1,5 +1,6 @@
 #include "include/preprocess.h"
 #include "include/utils.h"
+#include "include/errors.h"
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -131,6 +132,23 @@ static char* ensure_minusc_suffix(const char* ref_path)
     return out;
 }
 
+static void append_line_directive(char **out, size_t *used, size_t *cap, int line, const char *file)
+{
+    char buf[512];
+    snprintf(buf, sizeof(buf), "#line %d \"%s\"\n", line, file ? file : "<unknown>");
+    size_t blen = strlen(buf);
+    while (*used + blen + 1 >= *cap) {
+        *cap *= 2;
+        char *n = realloc(*out, *cap);
+        if (!n)
+            return;
+        *out = n;
+    }
+    memcpy(*out + *used, buf, blen);
+    *used += blen;
+    (*out)[*used] = '\0';
+}
+
 char* preprocess_source(const char* source, const char* current_file_path, dynamic_list_t* included_paths)
 {
     char* base_dir = dir_of(current_file_path);
@@ -140,6 +158,9 @@ char* preprocess_source(const char* source, const char* current_file_path, dynam
     size_t used = 0;
     char* out = calloc(cap, 1);
     if (!out) { free(base_dir); return NULL; }
+
+    append_line_directive(&out, &used, &cap, 1, current_file_path);
+    int cur_line = 1;
 
     const char* p = source;
     while (*p) {
@@ -175,11 +196,8 @@ char* preprocess_source(const char* source, const char* current_file_path, dynam
                     free(ref_minusc);
                     if (full_path) {
                         if (path_already_included(included_paths, full_path)) {
-                            fprintf(stderr, "Preprocess: circular reference to '%s'\n", full_path);
-                            free(full_path);
-                            free(out);
-                            free(base_dir);
-                            return NULL;
+                            compile_error_at(current_file_path, cur_line,
+                                             "Circular reference to '%s'", full_path);
                         }
                         char* file_src = read_file(full_path);
                         list_enqueue(included_paths, full_path);
@@ -212,6 +230,8 @@ char* preprocess_source(const char* source, const char* current_file_path, dynam
                 }
             }
             /* Skip appending the reference line itself */
+            cur_line++;
+            append_line_directive(&out, &used, &cap, cur_line, current_file_path);
         } else {
             /* Append this line */
             size_t need = line_len + 2;
@@ -228,6 +248,7 @@ char* preprocess_source(const char* source, const char* current_file_path, dynam
                 used++;
             }
             out[used] = '\0';
+            cur_line++;
         }
         if (*p == '\0')
             break;

@@ -6,13 +6,16 @@
 #include "stackframe.h"
 #include "errors.h"
 #include "utils.h"
+#include "borrow.h"
 
 
 typedef struct VISITOR_S
 {
     AST_t* object;
-    dynamic_list_t * borrow;       /* current function: list of adr_state_t */
-    dynamic_list_t * borrow_stack;   /* saved borrow frames */
+    borrow_ctx_t *bctx;
+    int cust_access_type; /* cust type id for visibility, or -1 */
+    AST_t *current_func;  /* func AST while visiting its body (for self params) */
+    dynamic_list_t *heap_scope_stack; /* stack of per-scope heap binding lists */
 }visitor_t;
 
 AST_t* variable_lookup(dynamic_list_t* list, char* name);

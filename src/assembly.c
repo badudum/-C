@@ -28,6 +28,7 @@
 #include "include/assembly_target.h"
 
 char * assemble(AST_t * ast, dynamic_list_t * list);
+char * assemble_function(AST_t *ast, dynamic_list_t *list);
 
 static AST_t * unwrap_comp(AST_t *ast)
 {
@@ -86,14 +87,39 @@ static int cust_fp_offset(int base_stack_index, int field_byte_offset)
     return -(base_stack_index * 16) + field_byte_offset;
 }
 
-static void append_copy_cust_fields(char **s, int dst_si, int src_si, int cust_id, const char *comment)
+static AST_t *asm_unwrap_comp(AST_t *ast)
+{
+    if (ast && ast->type == COMP_AST && ast->children && ast->children->size == 1)
+        return (AST_t *)ast->children->items[0];
+    return ast;
+}
+
+static void asm_append_method_receiver_to_reg(char **s, AST_t *arg, int reg,
+                                              dynamic_list_t *list, const char *comment)
+{
+    arg = asm_unwrap_comp(arg);
+    if (arg && arg->type == FIELD_ACCESS_AST && IS_CUST_TYPE(arg->datatype)) {
+        if (arg->multiplier == CUST_ACCESS_HEAP)
+            asm_append_load_heap_cust_field_receiver_to_reg(s, arg->id, arg->int_value, reg, comment);
+        else
+            asm_append_load_cust_field_receiver_to_reg(s, arg->id, arg->int_value, reg, comment);
+        return;
+    }
+    if (arg && asm_arg_needs_cust_receiver(arg, list))
+        asm_append_load_cust_receiver_to_reg(s, arg, reg, comment);
+    else
+        asm_append_load_call_arg_to_reg(s, arg, reg, list, comment);
+}
+
+static void append_copy_cust_fields_at(char **s, int dst_si, int src_si, int cust_id,
+                                       int dst_byte_offset, const char *comment)
 {
     cust_type_t *type = cust_get(cust_id);
     if (!type)
         return;
     for (unsigned int i = 0; i < type->fields->size; i++) {
         cust_field_t *f = (cust_field_t *)type->fields->items[i];
-        int dst_off = cust_fp_offset(dst_si, f->offset);
+        int dst_off = cust_fp_offset(dst_si, dst_byte_offset + f->offset);
         int src_off = cust_fp_offset(src_si, f->offset);
         char cmt[96];
         snprintf(cmt, sizeof(cmt), "%s load %s", comment, f->name);
@@ -101,6 +127,11 @@ static void append_copy_cust_fields(char **s, int dst_si, int src_si, int cust_i
         snprintf(cmt, sizeof(cmt), "%s store %s", comment, f->name);
         asm_append_store_value_to_fp_offset(s, dst_off, f->datatype, cmt);
     }
+}
+
+static void append_copy_cust_fields(char **s, int dst_si, int src_si, int cust_id, const char *comment)
+{
+    append_copy_cust_fields_at(s, dst_si, src_si, cust_id, 0, comment);
 }
 
 static void append_init_cust_from_literal(char **s, AST_t *init, int dst_si, dynamic_list_t *list)
@@ -129,11 +160,24 @@ static void append_init_cust_from_literal(char **s, AST_t *init, int dst_si, dyn
                 asm_append_load_w_from_fp(s, rhs_off, "cust init field load");
             else
                 asm_append_load_from_fp(s, rhs_off, 0, "cust init field load");
+        } else if (rhs && rhs->type == ARRAY_LITERAL_AST && IS_ARRAY_TYPE(entry->datatype)) {
+            char imm[128];
+            if (assembly_target_get() == ASSEMBLY_TARGET_X86_64)
+                snprintf(imm, sizeof(imm), "\n# cust init array base_slot\nmov eax, %d\n", rhs->stack_index);
+            else
+                snprintf(imm, sizeof(imm), "\n# cust init array base_slot\nmov w0, #%d\n", rhs->stack_index);
+            *s = realloc(*s, strlen(*s) + strlen(imm) + 1);
+            strcat(*s, imm);
+            char cmt[64];
+            snprintf(cmt, sizeof(cmt), "cust init store array %s", entry->name ? entry->name : "");
+            asm_append_store_value_to_fp_offset(s, fp_off, entry->datatype, cmt);
+            continue;
         } else if (rhs && rhs->type == CUST_INIT_AST) {
             int nested_id = rhs->int_value;
             int temp_base = rhs->stack_index;
             append_init_cust_from_literal(s, rhs, temp_base, list);
-            append_copy_cust_fields(s, dst_si, temp_base, nested_id, "nested cust");
+            append_copy_cust_fields_at(s, dst_si, temp_base, nested_id, entry->int_value,
+                                       "nested cust");
             continue;
         }
         char cmt[64];
@@ -185,6 +229,27 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         }
         AST_t *fa = ast->left;
         AST_t *rhs = unwrap_comp(ast->parent);
+        if (fa->multiplier == CUST_ACCESS_HEAP) {
+            if (rhs && asm_operand_on_stack(rhs)) {
+                if (fa->datatype == TYPE_INT || fa->datatype == TYPE_BOOL ||
+                    IS_ARRAY_TYPE(fa->datatype))
+                    asm_append_pop_expr_word(&s, fa->datatype == TYPE_BOOL, "heap field assign pop");
+                else
+                    asm_append_pop_expr_ptr(&s, "heap field assign pop");
+            } else if (rhs) {
+                int rhs_off = rhs->stack_index * -16;
+                if (fa->datatype == TYPE_BOOL)
+                    asm_append_load_b_from_fp(&s, rhs_off, "heap field assign load");
+                else if (fa->datatype == TYPE_INT || IS_ARRAY_TYPE(fa->datatype))
+                    asm_append_load_w_from_fp(&s, rhs_off, "heap field assign load");
+                else
+                    asm_append_load_from_fp(&s, rhs_off, 0, "heap field assign load");
+            }
+            char cmt[64];
+            snprintf(cmt, sizeof(cmt), "heap field assign %s", fa->name ? fa->name : "");
+            asm_append_heap_field_store(&s, fa->id, fa->int_value, fa->datatype, cmt);
+            return s;
+        }
         int fp_off = cust_fp_offset(fa->id, fa->int_value);
         if (rhs && asm_operand_on_stack(rhs)) {
             if (fa->datatype == TYPE_INT || fa->datatype == TYPE_BOOL ||
@@ -246,6 +311,12 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         else
             asm_append_store_to_fp(&s, var_offset, 0, "assign call store (ptr)");
         asm_append_discard_stack_slot(&s);
+        if (ast->parent->type == CALL_AST &&
+            IS_HEAP_CUST_VAR(ast->datatype, ast->int_value)) {
+            cust_type_t *ht = cust_get(ast->int_value);
+            if (ht && ht->has_vtable)
+                asm_append_heap_vtable_init(&s, ast->stack_index, ht->name);
+        }
     }
 
     else if (IS_ARRAY_TYPE(ast->datatype))
@@ -325,7 +396,7 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         }
     }
 
-    else if (ast->datatype == TYPE_STR || ast->datatype == TYPE_ADR)
+    else if (ast->datatype == TYPE_STR || IS_ADR_LIKE(ast->datatype))
     {
         AST_t* rhs = ast->parent->type == COMP_AST && ast->parent->children->size == 1
             ? (AST_t*) ast->parent->children->items[0] : ast->parent;
@@ -366,8 +437,12 @@ char *assemble_field_access(AST_t *ast, dynamic_list_t *list)
 {
     (void)list;
     char *s = calloc(1, sizeof(char));
-    int fp_off = cust_fp_offset(ast->id, ast->int_value);
-    asm_append_load_value_from_fp_offset(&s, fp_off, ast->datatype, "field access load");
+    if (ast->multiplier == CUST_ACCESS_HEAP) {
+        asm_append_heap_field_load(&s, ast->id, ast->int_value, ast->datatype, "heap field load");
+    } else {
+        int fp_off = cust_fp_offset(ast->id, ast->int_value);
+        asm_append_load_value_from_fp_offset(&s, fp_off, ast->datatype, "field access load");
+    }
     int result_off = ast->stack_index * -16;
     if (ast->datatype == TYPE_INT || ast->datatype == TYPE_BOOL || IS_ARRAY_TYPE(ast->datatype)) {
         asm_append_push_expr_word(&s);
@@ -384,9 +459,23 @@ char *assemble_field_access(AST_t *ast, dynamic_list_t *list)
 
 char *assemble_cust_def(AST_t *ast, dynamic_list_t *list)
 {
-    (void)ast;
-    (void)list;
-    return calloc(1, sizeof(char));
+    char *s = calloc(1, sizeof(char));
+    if (!ast || !ast->children)
+        return s;
+    if (ast->int_value == -1 || ast->int_value == -2)
+        return s;
+    for (unsigned int i = 0; i < ast->children->size; i++) {
+        AST_t *child = (AST_t *)ast->children->items[i];
+        if (child->type != FUNC_AST)
+            continue;
+        char *next = assemble_function(child, list);
+        if (next && next[0]) {
+            s = realloc(s, strlen(s) + strlen(next) + 1);
+            strcat(s, next);
+        }
+        free(next);
+    }
+    return s;
 }
 
 char *assemble_cust_init(AST_t *ast, dynamic_list_t *list)
@@ -461,7 +550,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
                     need_itos = 1;
                 else if (arg->datatype == TYPE_BOOL)
                     need_btos = 1;
-                else if (arg->datatype == TYPE_ADR)
+                else if (IS_ADR_LIKE(arg->datatype))
                     need_adrlo = 1;
             }
             else if (arg->type == VAR_AST) {
@@ -473,7 +562,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
                             need_itos = 1;
                         else if (def->datatype == TYPE_BOOL)
                             need_btos = 1;
-                        else if (def->datatype == TYPE_ADR)
+                        else if (IS_ADR_LIKE(def->datatype))
                             need_adrlo = 1;
                         break;
                     }
@@ -565,15 +654,24 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
             char cmt[64];
             if (i < 8) {
                 snprintf(cmt, sizeof(cmt), "load arg %u into x%u", i, i);
-                asm_append_load_call_arg_to_reg(&s, arg, (int)i, list, cmt);
+                if (ast->id && i == 0 && arg)
+                    asm_append_method_receiver_to_reg(&s, arg, (int)i, list, cmt);
+                else
+                    asm_append_load_call_arg_to_reg(&s, arg, (int)i, list, cmt);
             } else {
                 snprintf(cmt, sizeof(cmt), "load arg %u for stack", i);
-                asm_append_load_call_arg_to_reg(&s, arg, 0, list, cmt);
+                if (ast->id && i == 0 && arg)
+                    asm_append_method_receiver_to_reg(&s, arg, 0, list, cmt);
+                else
+                    asm_append_load_call_arg_to_reg(&s, arg, 0, list, cmt);
                 asm_append_store_stack_arg(&s, (int)(i - 8) * 16);
             }
         }
 
-        asm_append_call_runtime(&s, ast->name, ast->name);
+        if (ast->multiplier == CUST_CALL_VIRTUAL)
+            asm_append_virtual_method_call(&s, ast->int_value);
+        else
+            asm_append_call_runtime(&s, ast->name, ast->name);
     }
 
     if(stack_args > 0)
@@ -629,16 +727,19 @@ char * assemble_string(AST_t * ast, dynamic_list_t * list)
         char label[32];
         char *escaped = asm_escape_asciz(ast->string_value);
         snprintf(label, sizeof(label), "_mc_str_%d", asm_str_literal_id++);
+        const char *rodata_sec = assembly_os_get() == ASSEMBLY_OS_MACOS
+            ? ".section __TEXT,__cstring,cstring_literals\n"
+            : ".section .rodata\n";
         char *strpush = calloc(strlen(comment_safe) + strlen(escaped) + 256, 1);
         snprintf(strpush, strlen(comment_safe) + strlen(escaped) + 256,
                  "\n# %s\n"
-                 ".section .rodata\n"
-                 ".align 1\n"
+                 "%s"
+                 ".p2align 1\n"
                  "%s:\n"
                  ".asciz %s\n"
                  ".text\n"
                  "lea rax, [rip + %s]\n",
-                 comment_safe, label, escaped, label);
+                 comment_safe, rodata_sec, label, escaped, label);
         free(comment_safe);
         free(escaped);
         asm_append_store_to_fp(&strpush, index, 0, "store string address");
@@ -732,6 +833,19 @@ char * assemble_root(AST_t* ast, dynamic_list_t * list)
     char* next = assemble(ast, list);
     value = (char *)realloc(value, (strlen(value) + strlen(next) + 1) * sizeof(char));
     strcat(value, next);
+    free(next);
+
+    char *vtables = cust_emit_vtables();
+    if (vtables && vtables[0]) {
+        const char *sec = assembly_os_get() == ASSEMBLY_OS_LINUX
+            ? "\n.section .data\n" : "\n.section __DATA,__data\n";
+        size_t need = strlen(value) + strlen(sec) + strlen(vtables) + 16;
+        value = realloc(value, need);
+        strcat(value, sec);
+        strcat(value, vtables);
+        strcat(value, "\n.text\n");
+    }
+    free(vtables);
 
     value = realloc(value, (strlen(value) + bootstrap_len + 1) * sizeof(char));
     strcat(value, bootstrap);
@@ -803,6 +917,34 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
     const char *result_str = (ast->datatype == TYPE_BOOL) ? "strb" : "str";
 
     char * op_asm = calloc(1024, sizeof(char));
+    int handled = 0;
+    switch(ast->op)
+    {
+        case PLUS_TOKEN:
+        case MINUS_TOKEN:
+            if (asm_operand_on_stack(ast->left) || asm_operand_on_stack(ast->right)) {
+                asm_append_load_binop_operand(&s, ast->left, list, 0, "binop left");
+                asm_append_load_binop_operand(&s, ast->right, list, 1, "binop right");
+                if (ast->op == PLUS_TOKEN)
+                    asm_append_add_word_regs(&s);
+                else
+                    asm_append_sub_word_regs(&s);
+                if (ast->datatype == TYPE_BOOL)
+                    asm_append_store_b_to_fp(&s, result_offset, "binop store");
+                else
+                    asm_append_store_w_to_fp(&s, result_offset, "binop store");
+                handled = 1;
+            }
+            break;
+        default:
+            break;
+    }
+    if (handled) {
+        free(op_asm);
+        free(left_str);
+        free(right_str);
+        return s;
+    }
     switch(ast->op)
     {
         case PLUS_TOKEN:
@@ -830,8 +972,11 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
                 sprintf(op_asm, asm_binop_mul_template(0), left_offset, right_offset, result_offset);
             break;
         case SLASH_TOKEN:{
-            char div_chk[256];
+            char err_label[32];
+            asm_append_runtime_err_site(&s, ast, "Division by zero", err_label, sizeof(err_label));
+            char div_chk[384];
             if (assembly_target_get() == ASSEMBLY_TARGET_X86_64) {
+                asm_append_load_rt_err_ptr(&s, err_label, 1);
                 if (right_abs > 255)
                     snprintf(div_chk, sizeof(div_chk),
                              "\n# div-by-zero check\nmov rcx, rbp\nsub rcx, %d\nmov edi, [rcx]\n"
@@ -840,14 +985,17 @@ char * assemble_binop(AST_t * ast, dynamic_list_t * list)
                     snprintf(div_chk, sizeof(div_chk),
                              "\n# div-by-zero check\nmov edi, [rbp+%d]\n"
                              "call rt_div_zero_check\n", right_offset);
-            } else if (right_abs > 255)
+            } else if (right_abs > 255) {
+                asm_append_load_rt_err_ptr(&s, err_label, 1);
                 snprintf(div_chk, sizeof(div_chk),
                          "\n# div-by-zero check\nsub x4, fp, #%d\nldr w0, [x4]\nbl rt_div_zero_check\n",
                          right_abs);
-            else
+            } else {
+                asm_append_load_rt_err_ptr(&s, err_label, 1);
                 snprintf(div_chk, sizeof(div_chk),
                          "\n# div-by-zero check\nldr w0, [fp, #%d]\nbl rt_div_zero_check\n",
                          right_offset);
+            }
             s = realloc(s, strlen(s) + strlen(div_chk) + 1);
             strcat(s, div_chk);
             if (use_large)
@@ -940,9 +1088,7 @@ char * assemble_dupe(AST_t * ast, dynamic_list_t * list)
                 asm_append_frag(&s, "\n# dupe arg pop\nldr x1, [sp], #16\n", NULL);
             }
         } else {
-            asm_append_load_w_from_fp(&s, arg->stack_index * -16, "dupe arg load");
-            if (assembly_target_get() == ASSEMBLY_TARGET_X86_64)
-                asm_append(&s, "movsxd rsi, eax\n");
+            asm_append_load_call_arg_to_reg(&s, arg, 1, list, "dupe arg load");
         }
     }
 
@@ -981,7 +1127,10 @@ char * assemble_slice(AST_t * ast, dynamic_list_t * list)
             }
         }
     }
+    char err_label[32];
+    asm_append_runtime_err_site(&s, ast, "Null string access", err_label, sizeof(err_label));
     asm_append_load_from_fp(&s, base_offset, 0, "load string for SmolString");
+    asm_append_load_rt_err_ptr(&s, err_label, 1);
     asm_append_frag(&s, "bl rt_null_str_check\n", "call rt_null_str_check\n");
     asm_append_push_expr_ptr(&s);
     int start_off = start_expr->stack_index * -16;
@@ -1007,6 +1156,14 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
 {
     /* Assemble the index expression first so its value is stored */
     char * s = calloc(1, sizeof(char));
+    if (ast->parent) {
+        char *base_asm = assemble(ast->parent, list);
+        if (base_asm) {
+            s = realloc(s, strlen(s) + strlen(base_asm) + 1);
+            strcat(s, base_asm);
+            free(base_asm);
+        }
+    }
     if (ast->left) {
         char* idx_asm = assemble(ast->left, list);
         if (idx_asm) {
@@ -1029,13 +1186,19 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
     /* Check if base is an array variable */
     int is_array = 0;
     int is_adr = 0;
+    if (ast->parent && ast->parent->type == FIELD_ACCESS_AST) {
+        if (IS_ARRAY_TYPE(ast->parent->datatype))
+            is_array = 1;
+        else if (ast->parent->datatype == TYPE_ADR)
+            is_adr = 1;
+    }
     for (unsigned int i = 0; i < list->size; i++) {
         AST_t* def = (AST_t*) list->items[i];
         if (def->type == ASSIGNEMENT_AST && def->name && ast->name &&
             strcmp(def->name, ast->name) == 0) {
             if (IS_ARRAY_TYPE(def->datatype))
                 is_array = 1;
-            else if (def->datatype == TYPE_ADR)
+            else if (IS_ADR_LIKE(def->datatype))
                 is_adr = 1;
             break;
         }
@@ -1043,7 +1206,10 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
 
     if (is_adr) {
         int idx_offset = ast->left->stack_index * -16;
+        char err_label[32];
+        asm_append_runtime_err_site(&s, ast, "Invalid heap address", err_label, sizeof(err_label));
         asm_append_load_from_fp(&s, base_offset, 0, "load adr for PeekByte");
+        asm_append_load_rt_err_ptr(&s, err_label, 1);
         asm_append_frag(&s, "bl rt_heap_adr_check\n", "call rt_heap_adr_check\n");
         asm_append_push_expr_ptr(&s);
         asm_append_load_w_from_fp(&s, idx_offset, "load offset for PeekByte");
@@ -1062,6 +1228,11 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
         int idx_offset = ast->left->stack_index * -16;
         /* Find array size for bounds check */
         int arr_size = 0;
+        if (ast->parent && ast->parent->type == FIELD_ACCESS_AST &&
+            ast->parent->int_value >= 0) {
+            /* Inline cust array field: size unknown at compile time; skip strict bounds */
+            arr_size = 0;
+        }
         for (unsigned int i = 0; i < list->size; i++) {
             AST_t* def = (AST_t*) list->items[i];
             if (def->type == ASSIGNEMENT_AST && def->name && ast->name &&
@@ -1073,18 +1244,24 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
         }
         /* Emit bounds check: w0=index, w1=size */
         asm_append_load_w_from_fp(&s, idx_offset, "load array index for bounds check");
+        if (arr_size > 0) {
+        char err_label[32];
+        asm_append_runtime_err_site(&s, ast, "Array index out of bounds", err_label, sizeof(err_label));
         if (assembly_target_get() == ASSEMBLY_TARGET_X86_64) {
             char bounds_chk[128];
+            asm_append_load_rt_err_ptr(&s, err_label, 2);
             snprintf(bounds_chk, sizeof(bounds_chk),
                      "\n# array bounds check (size=%d)\nmov edi, eax\nmov esi, %d\ncall rt_array_bounds_check\n",
                      arr_size, arr_size);
             asm_append(&s, bounds_chk);
         } else {
             char bounds_chk[128];
+            asm_append_load_rt_err_ptr(&s, err_label, 2);
             snprintf(bounds_chk, sizeof(bounds_chk),
                      "\n# array bounds check (size=%d)\nmov w1, #%d\nbl rt_array_bounds_check\n",
                      arr_size, arr_size);
             asm_append(&s, bounds_chk);
+        }
         }
 
         asm_append_load_w_from_fp(&s, base_offset, "load array base_slot");
@@ -1115,7 +1292,10 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
                 NULL);
         }
     } else {
+        char err_label[32];
+        asm_append_runtime_err_site(&s, ast, "Null string access", err_label, sizeof(err_label));
         asm_append_load_from_fp(&s, base_offset, 0, "load string for CharAt");
+        asm_append_load_rt_err_ptr(&s, err_label, 1);
         asm_append_frag(&s, "bl rt_null_str_check\n", "call rt_null_str_check\n");
         asm_append_push_expr_ptr(&s);
         int idx_offset = ast->left->stack_index * -16;
@@ -1149,12 +1329,12 @@ char * assemble_return(AST_t * ast, dynamic_list_t * list)
         asm_append_int_return(&s, expr->int_value);
         asm_append_return_epilogue(&s);
     }
-    else if (expr->type == VAR_AST || expr->type == BINOP_AST || expr->type == BOOL_AST || expr->type == UNARY_AST)
+    else if (expr->type == VAR_AST || expr->type == BOOL_AST || expr->type == UNARY_AST)
     {
         char * load = calloc(1, sizeof(char));
         if (expr->datatype == TYPE_BOOL)
             asm_append_load_b_from_fp(&load, expr->stack_index * -16, "return load (bool)");
-        else if (expr->datatype == TYPE_STR || expr->datatype == TYPE_ADR)
+        else if (expr->datatype == TYPE_STR || IS_ADR_LIKE(expr->datatype))
             asm_append_load_from_fp(&load, expr->stack_index * -16, 0, "return load (ptr/str)");
         else
             asm_append_load_w_from_fp(&load, expr->stack_index * -16, "return load");
@@ -1489,7 +1669,7 @@ char * assemble_loop_until(AST_t * ast, dynamic_list_t * list)
                 asm_append_load_w_from_fp(&s, cond_off, "do-while condition");
             char branch[64];
             snprintf(branch, sizeof(branch), "_loop_body_%d", id);
-            asm_append_jnz_word(&s, branch);
+            asm_append_jz_word(&s, branch);
         } else {
             char branch[64];
             AST_t* for_clause = ast->left;

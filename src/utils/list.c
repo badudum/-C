@@ -166,3 +166,11 @@ void list_free(dynamic_list_t * list)
     list_clear(list);
     free(list);
 }
+
+void list_free_shallow(dynamic_list_t * list)
+{
+    if (!list)
+        return;
+    free(list->items);
+    free(list);
+}

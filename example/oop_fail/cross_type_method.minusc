@@ -1,0 +1,18 @@
+Foo = cust {
+    public {n} int;
+
+    private secret = (self) function {
+        return self.n * 10;
+    } int;
+};
+
+Bar = cust {
+    public {n} int;
+};
+
+main = () function {
+    {f} Foo = {n=3};
+    {b} Bar = {n=3};
+    {bad} int = b.secret();
+    return bad;
+} int;

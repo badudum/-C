@@ -1,0 +1,6 @@
+main = () function {
+    {src} adr = rent(16);
+    {dst} adr = src;
+    {bad} int = PeekInt(src, 0);
+    return 0;
+} int;

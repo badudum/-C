@@ -4,6 +4,8 @@
 typedef struct STACKFRAME_S
 {
     dynamic_list_t * stack;
+    struct STACKFRAME_S *parent;
+    int scope_base;
 }stackframe_t;
 
 stackframe_t * init_stackframe();

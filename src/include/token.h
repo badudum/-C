@@ -31,6 +31,15 @@ typedef struct TOKEN_S
         UNTIL_TOKEN,
         DUPE_TOKEN,
         CUST_TOKEN,
+        CLASS_TOKEN,
+        SELF_TOKEN,
+        SUPER_TOKEN,
+        EXTENDS_TOKEN,
+        VIRTUAL_TOKEN,
+        INTERFACE_TOKEN,
+        IMPLEMENTS_TOKEN,
+        PUBLIC_TOKEN,
+        PRIVATE_TOKEN,
         FUNCTION_TOKEN,
 
         INT_TOKEN,
@@ -68,6 +77,9 @@ typedef struct TOKEN_S
     }type;
     char * value;
 
+    unsigned int line;
+    unsigned int column;
+    char *source_file;
 
 }token_t;
 

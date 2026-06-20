@@ -1,0 +1,18 @@
+OopPointExt = cust {
+    public {x} int;
+    private {y} int;
+
+    peekY = (self) function {
+        return self.y;
+    } int;
+};
+
+Stick = cust {
+    public {tail} OopPointExt;
+};
+
+main = () function {
+    {s} Stick = Stick{tail=OopPointExt{x=1, y=99}};
+    {bad} int = s.tail.y;
+    return bad;
+} int;

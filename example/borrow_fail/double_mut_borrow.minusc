@@ -1,0 +1,6 @@
+main = () function {
+    {buf} adr = rent(16);
+    {m1} &mut adr = buf;
+    {m2} &mut adr = buf;
+    return 0;
+} int;

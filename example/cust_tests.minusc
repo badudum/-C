@@ -72,6 +72,103 @@ testCustCopy = ({x} int) function {
     return 0;
 } int;
 
+Pair = cust {
+    {left} Blob;
+    {right} Blob;
+};
+
+testCustNestedPair = ({x} int) function {
+    HelloWorldLine("--- [cust-6] dual nested Blob fields in Pair ---");
+    {p} Pair = Pair{
+        left=Blob{data=rent(16), tag=10},
+        right=Blob{data=rent(16), tag=20}
+    };
+    PokeInt(p.left.data, 0, 100);
+    PokeInt(p.right.data, 0, 200);
+    {lv} int = PeekInt(p.left.data, 0);
+    {rv} int = PeekInt(p.right.data, 0);
+    {lt} int = p.left.tag;
+    {rt} int = p.right.tag;
+    {fl} int = moveOut(p.left.data);
+    {fr} int = moveOut(p.right.data);
+    if (lv == 100 and rv == 200 and lt == 10 and rt == 20 and fl == 0 and fr == 0) {
+        HelloWorldLine("PASS: nested Pair Blob inits");
+    } else {
+        HelloWorldLine("FAIL: nested Pair lv=", lv, " rv=", rv);
+    };
+    return 0;
+} int;
+
+Vec2 = class {
+    {x} int;
+    {y} int;
+};
+
+testCustClassKeyword = ({x} int) function {
+    HelloWorldLine("--- [cust-7] class keyword alias for cust ---");
+    {v} Vec2 = Vec2{x=7, y=8};
+    {sz} int = sizeof(Vec2);
+    if (v.x == 7 and v.y == 8 and sz == 8) {
+        HelloWorldLine("PASS: class keyword type");
+    } else {
+        HelloWorldLine("FAIL: class keyword");
+    };
+    return 0;
+} int;
+
+testCustStandaloneBlock = ({x} int) function {
+    HelloWorldLine("--- [cust-8] standalone braced block ---");
+    {outer} int = 1;
+    {captured} int = 0;
+    {
+        {inner} int = 99;
+        captured = inner;
+    };
+    if (captured == 99 and outer == 1) {
+        HelloWorldLine("PASS: standalone block scope");
+    } else {
+        HelloWorldLine("FAIL: block captured=", captured, " outer=", outer);
+    };
+    return 0;
+} int;
+
+testCustRentHeap = ({x} int) function {
+    HelloWorldLine("--- [cust-9] rent(1, Point) heap layout ---");
+    {sz} int = sizeof(Point);
+    {heap} adr = rent(1, Point);
+    PokeInt(heap, 0, 42);
+    PokeInt(heap, 4, 58);
+    {vx} int = PeekInt(heap, 0);
+    {vy} int = PeekInt(heap, 4);
+    {fd} int = moveOut(heap);
+    if (sz == 8 and vx == 42 and vy == 58 and fd == 0) {
+        HelloWorldLine("PASS: heap Point via rent(1, Point)");
+    } else {
+        HelloWorldLine("FAIL: rent heap sz=", sz, " vx=", vx, " vy=", vy);
+    };
+    return 0;
+} int;
+
+Scores = cust {
+    {id} int;
+    {base} Array<int>;
+};
+
+testCustArrayField = ({x} int) function {
+    HelloWorldLine("--- [cust-10] Array<int> field in cust ---");
+    {s} Scores = Scores{id=1, base=[5, 10, 15]};
+    {id} int = s.id;
+    {v0} int = s.base[0];
+    {v2} int = s.base[2];
+    {sz} int = sizeof(Scores);
+    if (id == 1 and v0 == 5 and v2 == 15 and sz == 8) {
+        HelloWorldLine("PASS: cust Array<int> field");
+    } else {
+        HelloWorldLine("FAIL: array field id=", id, " v0=", v0);
+    };
+    return 0;
+} int;
+
 testCustOps = ({x} int) function {
     HelloWorldLine("========================================");
     HelloWorldLine("     CUST TYPE TEST SUITE");
@@ -82,6 +179,11 @@ testCustOps = ({x} int) function {
     {c} int = testCustFieldAssign(0);
     {d} int = testCustNested(0);
     {e} int = testCustCopy(0);
+    {f} int = testCustNestedPair(0);
+    {g} int = testCustClassKeyword(0);
+    {h} int = testCustStandaloneBlock(0);
+    {i} int = testCustRentHeap(0);
+    {j} int = testCustArrayField(0);
 
     HelloWorldLine("========================================");
     HelloWorldLine("     CUST TESTS COMPLETE");

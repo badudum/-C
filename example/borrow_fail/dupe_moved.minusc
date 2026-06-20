@@ -1,0 +1,8 @@
+worker = ({p} adr) function { return 0; } int;
+
+main = () function {
+    {buf} adr = rent(16);
+    {fd} int = moveOut(buf);
+    {t} int = dupe(worker, buf);
+    return 0;
+} int;

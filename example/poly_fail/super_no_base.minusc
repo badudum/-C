@@ -1,0 +1,12 @@
+Flat = cust {
+    {x} int;
+
+    init = (self) function {
+        super.init();
+        return 0;
+    } int;
+};
+
+main = () function {
+    return 0;
+} int;

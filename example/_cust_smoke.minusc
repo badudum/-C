@@ -1,0 +1,9 @@
+Point = cust {
+    {x} int;
+    {y} int;
+};
+
+main = () function {
+    {sz} int = sizeof(Point);
+    return sz;
+} int;

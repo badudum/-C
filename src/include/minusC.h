@@ -7,7 +7,7 @@
 #include "AST.h"
 #include "visitor.h"
 
-void compile(char * src);
+void compile(char * src, const char *filename);
 
 void minusCompile_file(const char * filename);
 #endif 

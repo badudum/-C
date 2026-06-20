@@ -1,0 +1,4 @@
+main = () function {
+    super.init();
+    return 0;
+} int;

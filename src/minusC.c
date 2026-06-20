@@ -3,6 +3,8 @@
 #include "include/preprocess.h"
 #include "include/list.h"
 #include "include/cust.h"
+#include "include/generic.h"
+#include "include/interface.h"
 #include "include/assembly_target.h"
 #include "include/assembly_emit.h"
 #include <stdio.h>
@@ -24,18 +26,20 @@ static void link_object(assembly_target_t target)
         command("ld -macos_version_min 15.0.0 mc.o -o mc.out -lSystem -lpthread "
                   "-syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch x86_64");
     } else {
-        command("as mc.s -o mc.o");
+        command("as -arch arm64 mc.s -o mc.o");
         command("ld -macos_version_min 15.0.0 mc.o -o mc.out -lSystem -lpthread "
                   "-syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64");
     }
 }
 
-void compile(char * src)
+void compile(char * src, const char *filename)
 {
     assembly_target_t target = assembly_target_get();
     cust_registry_reset();
+    generic_registry_reset();
+    interface_registry_reset();
 
-    lexer_t* lexer = init_lexer(src);
+    lexer_t* lexer = init_lexer(src, filename ? filename : "<stdin>");
 
     parser_t* parser = init_parser(lexer);
     AST_t * root = parse(parser);
@@ -46,6 +50,7 @@ void compile(char * src)
     char * ass = assemble_root(optimized_root, init_list(sizeof(struct AST_S*)));
 
     assembly_patch_linux_output(ass);
+    assembly_patch_macos_x86_output(ass);
 
     write_file("mc.s", ass);
     write_file("mc.s.txt", ass);
@@ -75,7 +80,7 @@ void minusCompile_file(const char* filename)
         return;
     }
 
-    compile(expanded);
+    compile(expanded, filename);
     free(expanded);
 }
 

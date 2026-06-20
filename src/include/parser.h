@@ -8,9 +8,13 @@ typedef struct PARSER_S
 {
     lexer_t * lexer;
     token_t * token;
+    dynamic_list_t *generic_params; /* char* param names during generic cust body parse */
 }parser_t;
 
 parser_t * init_parser(lexer_t * lexer);
+
+AST_t *parser_make_ast(parser_t *parser, int type);
+void ast_set_loc_from_parser(AST_t *ast, parser_t *parser);
 
 // when we call this we tell the parser that we expect a certain token, if we get an unexpected token we just DIE
 token_t * parser_next(parser_t * parser, int token_type);

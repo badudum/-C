@@ -1,0 +1,6 @@
+main = () function {
+    {small} adr = rent(8);
+    {big} adr = RentGrow(small, 32);
+    {bad} int = PeekInt(small, 0);
+    return 0;
+} int;

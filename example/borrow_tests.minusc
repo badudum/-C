@@ -1,3 +1,14 @@
+takeAdr = ({p} adr) function {
+    {v} int = PeekInt(p, 0);
+    return v;
+} int;
+
+makeBuf = ({val} int) function {
+    {b} adr = rent(16);
+    PokeInt(b, 0, val);
+    return b;
+} adr;
+
 testBorrowBasic = ({x} int) function {
     HelloWorldLine("--- [borrow-1] rent then moveOut ---");
     {buf} adr = rent(32);
@@ -13,7 +24,7 @@ testBorrowBasic = ({x} int) function {
 } int;
 
 testBorrowMoveAssign = ({x} int) function {
-    HelloWorldLine("--- [borrow-2] adr assign moves ownership ---");
+    HelloWorldLine("--- [borrow-2] adr assign moves ownership (new dst) ---");
     {src} adr = rent(16);
     PokeInt(src, 0, 7);
     {dst} adr = src;
@@ -26,6 +37,368 @@ testBorrowMoveAssign = ({x} int) function {
     return 0;
 } int;
 
+testBorrowReassignMove = ({x} int) function {
+    HelloWorldLine("--- [borrow-3] dst = src reassign moves ownership ---");
+    {src} adr = rent(16);
+    {dst} adr = rent(16);
+    PokeInt(src, 0, 11);
+    dst = src;
+    {fd} int = moveOut(dst);
+    if (fd == 0) {
+        HelloWorldLine("PASS: reassign move dst = src");
+    } else {
+        HelloWorldLine("FAIL: reassign move");
+    };
+    return 0;
+} int;
+
+testBorrowRebindAfterMoveOut = ({x} int) function {
+    HelloWorldLine("--- [borrow-4] buf = rent() rebinds after moveOut ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 1);
+    {fd0} int = moveOut(buf);
+    buf = rent(16);
+    PokeInt(buf, 0, 2);
+    {v} int = PeekInt(buf, 0);
+    {fd1} int = moveOut(buf);
+    if (fd0 == 0 and fd1 == 0 and v == 2) {
+        HelloWorldLine("PASS: rebind after moveOut");
+    } else {
+        HelloWorldLine("FAIL: rebind after moveOut fd0=", fd0, " v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowRentGrow = ({x} int) function {
+    HelloWorldLine("--- [borrow-5] RentGrow invalidates old name ---");
+    {small} adr = rent(8);
+    PokeInt(small, 0, 42);
+    {big} adr = RentGrow(small, 32);
+    {v} int = PeekInt(big, 0);
+    {fd} int = moveOut(big);
+    if (v == 42 and fd == 0) {
+        HelloWorldLine("PASS: RentGrow + moveOut on new handle");
+    } else {
+        HelloWorldLine("FAIL: RentGrow borrow path v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowPassToCallee = ({x} int) function {
+    HelloWorldLine("--- [borrow-6] pass adr to callee (caller keeps ownership) ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 55);
+    {got} int = takeAdr(buf);
+    {still} int = PeekInt(buf, 0);
+    {fd} int = moveOut(buf);
+    if (got == 55 and still == 55 and fd == 0) {
+        HelloWorldLine("PASS: callee peek does not move caller adr");
+    } else {
+        HelloWorldLine("FAIL: pass to callee got=", got, " still=", still);
+    };
+    return 0;
+} int;
+
+testBorrowReturnAdr = ({x} int) function {
+    HelloWorldLine("--- [borrow-7] function may return adr ---");
+    {b} adr = makeBuf(88);
+    {v} int = PeekInt(b, 0);
+    {fd} int = moveOut(b);
+    if (v == 88 and fd == 0) {
+        HelloWorldLine("PASS: return adr from helper");
+    } else {
+        HelloWorldLine("FAIL: return adr v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowMemcpy = ({x} int) function {
+    HelloWorldLine("--- [borrow-8] Memcpy between live adrs ---");
+    {src} adr = rent(16);
+    {dst} adr = rent(16);
+    PokeInt(src, 0, 321);
+    {mc} int = Memcpy(dst, src, 4);
+    {d} int = PeekInt(dst, 0);
+    {fs} int = moveOut(src);
+    {fd} int = moveOut(dst);
+    if (mc == 0 and d == 321 and fs == 0 and fd == 0) {
+        HelloWorldLine("PASS: Memcpy with valid src/dst");
+    } else {
+        HelloWorldLine("FAIL: Memcpy mc=", mc, " d=", d);
+    };
+    return 0;
+} int;
+
+Blob = cust {
+    {data} adr;
+    {tag} int;
+};
+
+testBorrowShared = ({x} int) function {
+    HelloWorldLine("--- [borrow-9] shared &adr loan in block ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 9);
+    {via} int = 0;
+    if (Real) {
+        {r} &adr = buf;
+        via = PeekInt(r, 0);
+    };
+    {still} int = PeekInt(buf, 0);
+    {fd} int = moveOut(buf);
+    if (via == 9 and still == 9 and fd == 0) {
+        HelloWorldLine("PASS: shared borrow in block then owner moveOut");
+    } else {
+        HelloWorldLine("FAIL: shared borrow via=", via, " still=", still);
+    };
+    return 0;
+} int;
+
+testBorrowMut = ({x} int) function {
+    HelloWorldLine("--- [borrow-10] mutable &mut adr loan ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 0);
+    if (Real) {
+        {m} &mut adr = buf;
+        PokeInt(m, 0, 77);
+    };
+    {v} int = PeekInt(buf, 0);
+    {fd} int = moveOut(buf);
+    if (v == 77 and fd == 0) {
+        HelloWorldLine("PASS: mut borrow write then owner read");
+    } else {
+        HelloWorldLine("FAIL: mut borrow v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowCustField = ({x} int) function {
+    HelloWorldLine("--- [borrow-11] per-field adr in cust ---");
+    {b} Blob = Blob{data=rent(16), tag=42};
+    PokeInt(b.data, 0, 99);
+    {v} int = PeekInt(b.data, 0);
+    {t} int = b.tag;
+    {fd} int = moveOut(b.data);
+    if (v == 99 and t == 42 and fd == 0) {
+        HelloWorldLine("PASS: cust adr field moveOut");
+    } else {
+        HelloWorldLine("FAIL: cust field v=", v, " t=", t);
+    };
+    return 0;
+} int;
+
+testBorrowMultiShared = ({x} int) function {
+    HelloWorldLine("--- [borrow-12] multiple shared borrows same owner ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 31);
+    {a} int = 0;
+    {b} int = 0;
+    if (Real) {
+        {r1} &adr = buf;
+        {r2} &adr = buf;
+        a = PeekInt(r1, 0);
+        b = PeekInt(r2, 0);
+    };
+    {fd} int = moveOut(buf);
+    if (a == 31 and b == 31 and fd == 0) {
+        HelloWorldLine("PASS: dual shared borrows then moveOut");
+    } else {
+        HelloWorldLine("FAIL: multi shared a=", a, " b=", b);
+    };
+    return 0;
+} int;
+
+testBorrowIfPathMerge = ({x} int) function {
+    HelloWorldLine("--- [borrow-13] if branches both borrow, merge unmoved ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 44);
+    {v} int = 0;
+    if (Real) {
+        {r} &adr = buf;
+        v = PeekInt(r, 0);
+    } else {
+        {r} &adr = buf;
+        v = PeekInt(r, 0);
+    };
+    {fd} int = moveOut(buf);
+    if (v == 44 and fd == 0) {
+        HelloWorldLine("PASS: if path merge keeps owner alive");
+    } else {
+        HelloWorldLine("FAIL: if path merge v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowNestedIf = ({x} int) function {
+    HelloWorldLine("--- [borrow-14] nested if block borrows ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 12);
+    {v} int = 0;
+    if (Real) {
+        if (Real) {
+            {r} &adr = buf;
+            v = PeekInt(r, 0);
+        };
+    };
+    {fd} int = moveOut(buf);
+    if (v == 12 and fd == 0) {
+        HelloWorldLine("PASS: nested if shared borrow");
+    } else {
+        HelloWorldLine("FAIL: nested if v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowCustFieldLoan = ({x} int) function {
+    HelloWorldLine("--- [borrow-15] shared loan on cust adr field ---");
+    {b} Blob = Blob{data=rent(16), tag=7};
+    PokeInt(b.data, 0, 3);
+    {v} int = 0;
+    if (Real) {
+        {r} &adr = b.data;
+        v = PeekInt(r, 0);
+    };
+    {t} int = b.tag;
+    {fd} int = moveOut(b.data);
+    if (v == 3 and t == 7 and fd == 0) {
+        HelloWorldLine("PASS: cust field shared loan");
+    } else {
+        HelloWorldLine("FAIL: cust field loan v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowCustFieldMutLoan = ({x} int) function {
+    HelloWorldLine("--- [borrow-16] mut loan on cust adr field ---");
+    {b} Blob = Blob{data=rent(16), tag=8};
+    PokeInt(b.data, 0, 0);
+    if (Real) {
+        {m} &mut adr = b.data;
+        PokeInt(m, 0, 66);
+    };
+    {v} int = PeekInt(b.data, 0);
+    {fd} int = moveOut(b.data);
+    if (v == 66 and fd == 0) {
+        HelloWorldLine("PASS: cust field mut loan");
+    } else {
+        HelloWorldLine("FAIL: cust field mut v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowLoopScoped = ({x} int) function {
+    HelloWorldLine("--- [borrow-17] borrow inside terminating loop ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 5);
+    {i} int = 0;
+    {acc} int = 0;
+    loop until (i < 3) {
+        if (Real) {
+            {r} &adr = buf;
+            {tmp} int = PeekInt(r, 0);
+            acc += tmp;
+        };
+        i++;
+    };
+    {fd} int = moveOut(buf);
+    if (acc == 15 and fd == 0) {
+        HelloWorldLine("PASS: loop-scoped borrow accumulates");
+    } else {
+        HelloWorldLine("FAIL: loop borrow acc=", acc);
+    };
+    return 0;
+} int;
+
+testBorrowRebindAfterLoan = ({x} int) function {
+    HelloWorldLine("--- [borrow-18] rebind owner after loan scope ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 1);
+    if (Real) {
+        {r} &adr = buf;
+        {old} int = PeekInt(r, 0);
+    };
+    buf = rent(16);
+    PokeInt(buf, 0, 2);
+    {v} int = PeekInt(buf, 0);
+    {fd} int = moveOut(buf);
+    if (v == 2 and fd == 0) {
+        HelloWorldLine("PASS: rebind after loan block");
+    } else {
+        HelloWorldLine("FAIL: rebind after loan v=", v);
+    };
+    return 0;
+} int;
+
+testBorrowDualCustFields = ({x} int) function {
+    HelloWorldLine("--- [borrow-19] dual cust adr field borrows ---");
+    {a} Blob = Blob{data=rent(16), tag=10};
+    {b} Blob = Blob{data=rent(16), tag=20};
+    PokeInt(a.data, 0, 100);
+    PokeInt(b.data, 0, 200);
+    {lv} int = 0;
+    {rv} int = 0;
+    if (Real) {
+        {lr} &adr = a.data;
+        {rr} &adr = b.data;
+        lv = PeekInt(lr, 0);
+        rv = PeekInt(rr, 0);
+    };
+    {ta} int = a.tag;
+    {tb} int = b.tag;
+    {fda} int = moveOut(a.data);
+    {fdb} int = moveOut(b.data);
+    if (lv == 100 and rv == 200 and ta == 10 and tb == 20 and fda == 0 and fdb == 0) {
+        HelloWorldLine("PASS: dual cust field borrows");
+    } else {
+        HelloWorldLine("FAIL: dual cust lv=", lv, " rv=", rv);
+    };
+    return 0;
+} int;
+
+testBorrowTripleMemcpy = ({x} int) function {
+    HelloWorldLine("--- [borrow-20] Memcpy chain with scoped reads ---");
+    {a} adr = rent(16);
+    {b} adr = rent(16);
+    {c} adr = rent(16);
+    PokeInt(a, 0, 111);
+    {mid} int = 0;
+    if (Real) {
+        {ra} &adr = a;
+        mid = PeekInt(ra, 0);
+    };
+    Memcpy(b, a, 4);
+    Memcpy(c, b, 4);
+    {v} int = PeekInt(c, 0);
+    {fa} int = moveOut(a);
+    {fb} int = moveOut(b);
+    {fc} int = moveOut(c);
+    if (mid == 111 and v == 111 and fa == 0 and fb == 0 and fc == 0) {
+        HelloWorldLine("PASS: Memcpy chain with borrow read");
+    } else {
+        HelloWorldLine("FAIL: triple memcpy v=", v, " mid=", mid);
+    };
+    return 0;
+} int;
+
+testBorrowElseBranch = ({x} int) function {
+    HelloWorldLine("--- [borrow-21] shared borrow in else branch ---");
+    {buf} adr = rent(16);
+    PokeInt(buf, 0, 58);
+    {v} int = 0;
+    if (Fake) {
+        v = 0;
+    } else {
+        {r} &adr = buf;
+        v = PeekInt(r, 0);
+    };
+    {fd} int = moveOut(buf);
+    if (v == 58 and fd == 0) {
+        HelloWorldLine("PASS: else-branch shared borrow");
+    } else {
+        HelloWorldLine("FAIL: else branch v=", v);
+    };
+    return 0;
+} int;
+
 testBorrowOps = ({x} int) function {
     HelloWorldLine("========================================");
     HelloWorldLine("     BORROW CHECKER TEST SUITE");
@@ -33,6 +406,25 @@ testBorrowOps = ({x} int) function {
 
     {a} int = testBorrowBasic(0);
     {b} int = testBorrowMoveAssign(0);
+    {c} int = testBorrowReassignMove(0);
+    {d} int = testBorrowRebindAfterMoveOut(0);
+    {e} int = testBorrowRentGrow(0);
+    {f} int = testBorrowPassToCallee(0);
+    {g} int = testBorrowReturnAdr(0);
+    {h} int = testBorrowMemcpy(0);
+    {i} int = testBorrowShared(0);
+    {j} int = testBorrowMut(0);
+    {k} int = testBorrowCustField(0);
+    {l} int = testBorrowMultiShared(0);
+    {m} int = testBorrowIfPathMerge(0);
+    {n} int = testBorrowNestedIf(0);
+    {o} int = testBorrowCustFieldLoan(0);
+    {p} int = testBorrowCustFieldMutLoan(0);
+    {q} int = testBorrowLoopScoped(0);
+    {r} int = testBorrowRebindAfterLoan(0);
+    {s} int = testBorrowDualCustFields(0);
+    {t} int = testBorrowTripleMemcpy(0);
+    {u} int = testBorrowElseBranch(0);
 
     HelloWorldLine("========================================");
     HelloWorldLine("     BORROW TESTS COMPLETE");

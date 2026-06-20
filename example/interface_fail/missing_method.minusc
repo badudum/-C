@@ -1,0 +1,9 @@
+Drawable = interface {
+    draw = (self) function {
+        return 0;
+    } int;
+};
+
+BadShape = cust implements Drawable {
+    {size} int;
+};

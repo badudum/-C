@@ -145,5 +145,3 @@ main = ({x} int) function {
 
     return 0;
 } int;  
-
-

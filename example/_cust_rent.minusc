@@ -1,0 +1,19 @@
+Point = cust {
+    {x} int;
+    {y} int;
+};
+
+testCustRentHeap = ({x} int) function {
+    {sz} int = sizeof(Point);
+    {heap} adr = rent(1, Point);
+    PokeInt(heap, 0, 42);
+    PokeInt(heap, 4, 58);
+    {vx} int = PeekInt(heap, 0);
+    {vy} int = PeekInt(heap, 4);
+    {fd} int = moveOut(heap);
+    return fd;
+} int;
+
+main = () function {
+    return testCustRentHeap(0);
+} int;

@@ -1,0 +1,6 @@
+reference cust_tests
+
+main = () function {
+    testCustOps(0);
+    return 0;
+} int;

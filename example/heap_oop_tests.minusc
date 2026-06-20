@@ -1,0 +1,194 @@
+HeapPoint = cust {
+    public {x} int;
+    private {y} int;
+
+    init = (self) function {
+        self.x = 3;
+        self.y = 4;
+        return 0;
+    } int;
+
+    sumSq = (self) function {
+        return self.x * self.x + self.y * self.y;
+    } int;
+
+    bumpX = (self) function {
+        self.x = self.x + 1;
+        return self.x;
+    } int;
+
+    drop = (self) function {
+        self.x = 0;
+        self.y = 0;
+        return 0;
+    } int;
+};
+
+HeapBlob = cust {
+    {data} adr;
+    {tag} int;
+
+    init = (self) function {
+        self.tag = 42;
+        self.data = rent(8);
+        PokeInt(self.data, 0, 100);
+        return 0;
+    } int;
+
+    getTag = (self) function {
+        return self.tag;
+    } int;
+
+    peekData = (self) function {
+        return PeekInt(self.data, 0);
+    } int;
+
+    drop = (self) function {
+        moveOut(self.data);
+        self.tag = 0;
+        return 0;
+    } int;
+};
+
+testHeapRentInitMethod = ({x} int) function {
+    HelloWorldLine("--- [heap-1] rent(1,T) + init + method ---");
+    {p} adr = rent(1, HeapPoint);
+    {rc} int = p.init();
+    {sq} int = p.sumSq();
+    if (rc == 0 and sq == 25) {
+        HelloWorldLine("PASS: heap init + sumSq");
+    } else {
+        HelloWorldLine("FAIL: heap init sq=", sq, " rc=", rc);
+    };
+    return 0;
+} int;
+
+testHeapMutateMethod = ({x} int) function {
+    HelloWorldLine("--- [heap-2] mutating method on heap self ---");
+    {p} adr = rent(1, HeapPoint);
+    p.init();
+    {nx} int = p.bumpX();
+    {sq} int = p.sumSq();
+    if (nx == 4 and sq == 32) {
+        HelloWorldLine("PASS: heap bumpX mutates fields");
+    } else {
+        HelloWorldLine("FAIL: heap bump nx=", nx, " sq=", sq);
+    };
+    return 0;
+} int;
+
+testHeapDropMoveOut = ({x} int) function {
+    HelloWorldLine("--- [heap-3] drop + moveOut lifecycle ---");
+    {p} adr = rent(1, HeapPoint);
+    p.init();
+    {dr} int = p.drop();
+    {fd} int = moveOut(p);
+    if (dr == 0 and fd == 0) {
+        HelloWorldLine("PASS: manual drop then moveOut");
+    } else {
+        HelloWorldLine("FAIL: drop/moveOut dr=", dr, " fd=", fd);
+    };
+    return 0;
+} int;
+
+testHeapAdrField = ({x} int) function {
+    HelloWorldLine("--- [heap-4] cust adr field on heap object ---");
+    {b} adr = rent(1, HeapBlob);
+    {rc} int = b.init();
+    {tag} int = b.getTag();
+    {val} int = b.peekData();
+    {dr} int = b.drop();
+    {fd} int = moveOut(b);
+    if (rc == 0 and tag == 42 and val == 100 and dr == 0 and fd == 0) {
+        HelloWorldLine("PASS: heap Blob adr field init/drop");
+    } else {
+        HelloWorldLine("FAIL: heap blob tag=", tag, " val=", val);
+    };
+    return 0;
+} int;
+
+testHeapBorrowField = ({x} int) function {
+    HelloWorldLine("--- [heap-5] shared borrow on heap self.data ---");
+    {b} adr = rent(1, HeapBlob);
+    b.init();
+    {v} int = 0;
+    if (Real) {
+        {r} &adr = b.data;
+        v = PeekInt(r, 0);
+    };
+    {dr} int = b.drop();
+    {fd} int = moveOut(b);
+    if (v == 100 and dr == 0 and fd == 0) {
+        HelloWorldLine("PASS: borrow heap self.data field");
+    } else {
+        HelloWorldLine("FAIL: heap borrow v=", v);
+    };
+    return 0;
+} int;
+
+testHeapSizeof = ({x} int) function {
+    HelloWorldLine("--- [heap-6] sizeof matches rent(1,T) layout ---");
+    {sz} int = sizeof(HeapPoint);
+    {p} adr = rent(1, HeapPoint);
+    p.init();
+    {fd} int = moveOut(p);
+    if (sz == 8 and fd == 0) {
+        HelloWorldLine("PASS: sizeof(HeapPoint) for rent(1,T)");
+    } else {
+        HelloWorldLine("FAIL: sizeof sz=", sz);
+    };
+    return 0;
+} int;
+
+testHeapScopeAutoDrop = ({x} int) function {
+    HelloWorldLine("--- [heap-7] scope auto drop + moveOut ---");
+    {saved} int = 0;
+    {
+        {b} adr = rent(1, HeapBlob);
+        b.init();
+        saved = b.peekData();
+    };
+    if (saved == 100) {
+        HelloWorldLine("PASS: scope auto drop cleans Blob in block");
+    } else {
+        HelloWorldLine("FAIL: scope auto drop saved=", saved);
+    };
+    return 0;
+} int;
+
+testHeapScopeSkipManualDrop = ({x} int) function {
+    HelloWorldLine("--- [heap-8] scope skips manual drop ---");
+    {ok} int = 0;
+    {
+        {b} adr = rent(1, HeapBlob);
+        b.init();
+        {dr} int = b.drop();
+        ok = dr;
+    };
+    if (ok == 0) {
+        HelloWorldLine("PASS: manual drop then auto moveOut at scope end");
+    } else {
+        HelloWorldLine("FAIL: scope skip manual drop ok=", ok);
+    };
+    return 0;
+} int;
+
+testHeapOopOps = ({x} int) function {
+    HelloWorldLine("========================================");
+    HelloWorldLine("     HEAP OOP TEST SUITE");
+    HelloWorldLine("========================================");
+
+    {a} int = testHeapRentInitMethod(0);
+    {b} int = testHeapMutateMethod(0);
+    {c} int = testHeapDropMoveOut(0);
+    {d} int = testHeapAdrField(0);
+    {e} int = testHeapBorrowField(0);
+    {f} int = testHeapSizeof(0);
+    {g} int = testHeapScopeAutoDrop(0);
+    {h} int = testHeapScopeSkipManualDrop(0);
+
+    HelloWorldLine("========================================");
+    HelloWorldLine("     HEAP OOP TESTS COMPLETE");
+    HelloWorldLine("========================================");
+    return 0;
+} int;
