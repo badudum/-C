@@ -1,0 +1,85 @@
+testFileRoundtrip = ({x} int) function {
+    HelloWorldLine("--- [io-1] WriteFile / FileRead roundtrip ---");
+    {path} str = "example/_io_tmp.txt";
+    {payload} str = "hello minusC io";
+    {n} int = WriteFile(path, payload);
+    {fd} int = FileOpen(path, "r");
+    {got} str = FileRead(fd);
+    {closed} int = FileClose(fd);
+    HelloWorldLine("WriteFile bytes=", n, " expected=", 15);
+    HelloWorldLine("FileRead=", got, " expected=", payload);
+    if (n == 15) {
+        if (closed == 0) {
+            HelloWorldLine("PASS: file roundtrip");
+        } else {
+            HelloWorldLine("FAIL: FileClose");
+        };
+    } else {
+        HelloWorldLine("FAIL: WriteFile");
+    };
+    return 0;
+} int;
+
+testPathSecurity = ({x} int) function {
+    HelloWorldLine("--- [io-2] unsafe paths rejected ---");
+    {fail} int = 0 - 1;
+    {bad1} int = FileOpen("../etc/passwd", "r");
+    {bad2} int = FileOpen("/etc/passwd", "r");
+    {bad3} int = WriteFile("foo/bar/../baz", "x");
+    HelloWorldLine("traversal open=", bad1, " expected=", fail);
+    HelloWorldLine("absolute open=", bad2, " expected=", fail);
+    HelloWorldLine("nested traversal write=", bad3, " expected=", fail);
+    if (bad1 == fail) {
+        if (bad2 == fail) {
+            if (bad3 == fail) {
+                HelloWorldLine("PASS: unsafe paths blocked");
+            } else {
+                HelloWorldLine("FAIL: nested traversal");
+            };
+        } else {
+            HelloWorldLine("FAIL: absolute path");
+        };
+    } else {
+        HelloWorldLine("FAIL: traversal path");
+    };
+    return 0;
+} int;
+
+testStdinLine = ({x} int) function {
+    HelloWorldLine("--- [io-3] ReadLine from stdin ---");
+    {line} str = ReadLine();
+    HelloWorldLine("ReadLine=", line);
+    HelloWorldLine("PASS: ReadLine");
+    return 0;
+} int;
+
+testPollKey = ({x} int) function {
+    HelloWorldLine("--- [io-4] PollKey timeout (no input) ---");
+    {fail} int = 0 - 1;
+    {k} int = PollKey(50);
+    HelloWorldLine("PollKey=", k, " expected=", fail);
+    if (k == fail) {
+        HelloWorldLine("PASS: PollKey timeout");
+    } else {
+        HelloWorldLine("FAIL: PollKey unexpected key");
+    };
+    return 0;
+} int;
+
+testKeyAvailable = ({x} int) function {
+    HelloWorldLine("--- [io-5] KeyAvailable (empty stdin) ---");
+    {ready} int = KeyAvailable();
+    HelloWorldLine("KeyAvailable=", ready, " expected=", 0);
+    if (ready == 0) {
+        HelloWorldLine("PASS: KeyAvailable empty");
+    } else {
+        HelloWorldLine("FAIL: KeyAvailable unexpected");
+    };
+    return 0;
+} int;
+
+testIoOps = ({x} int) function {
+    testFileRoundtrip(0);
+    testPathSecurity(0);
+    return 0;
+} int;

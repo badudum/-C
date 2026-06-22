@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "borrow.h"
 
+#define INTERFACE_STACK_ARG_MARK 4000
 
 typedef struct VISITOR_S
 {
@@ -35,6 +36,7 @@ AST_t* visit_func(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackf
 AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
 
 AST_t* visit_int(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+AST_t* visit_float(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
 
 AST_t* visit_str(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
 
@@ -56,6 +58,14 @@ AST_t* visit_unary(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stack
 
 AST_t* visit_loop_until(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
 
+AST_t* visit_break(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
+AST_t* visit_continue(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
+AST_t* visit_switch(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
+AST_t* visit_case(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
+
 AST_t* visit_for_clause(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
 
 AST_t* visit_inc_dec(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackframe_t* stackframe);
@@ -67,5 +77,11 @@ AST_t* visit_cust_def(visitor_t *visitor, AST_t *node, dynamic_list_t *list, sta
 AST_t* visit_cust_init(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
 
 AST_t* visit_field_access(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
+
+AST_t* visit_try(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
+
+AST_t* visit_enum(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
+
+AST_t* visit_foreach(visitor_t *visitor, AST_t *node, dynamic_list_t *list, stackframe_t *stackframe);
 
 #endif

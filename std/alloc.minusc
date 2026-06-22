@@ -1,0 +1,7 @@
+newArena = ({bytes} int) function {
+    return ArenaCreate(bytes);
+} adr;
+
+newPool = ({blockSize} int, {count} int) function {
+    return PoolCreate(blockSize, count);
+} adr;

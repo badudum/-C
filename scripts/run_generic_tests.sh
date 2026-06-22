@@ -14,6 +14,8 @@ $CC example/generic_runner.minusc
 grep -q "PASS: Box<int> stores int" /tmp/generic_out.txt || fail "generic-1"
 grep -q "PASS: Box<Point> nested cust field" /tmp/generic_out.txt || fail "generic-2"
 grep -q "PASS: Box_int and Box_Point distinct instances" /tmp/generic_out.txt || fail "generic-3"
+grep -q "PASS: Box<int> generic method get()" /tmp/generic_out.txt || fail "generic-4"
+grep -q "PASS: TaggedBox<int> stack value via Showable" /tmp/generic_out.txt || fail "generic-5"
 echo "PASS: generic_tests runtime"
 
 echo ""

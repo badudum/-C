@@ -72,6 +72,11 @@ testCustCopy = ({x} int) function {
     return 0;
 } int;
 
+Blob = cust {
+    {data} adr;
+    {tag} int;
+};
+
 Pair = cust {
     {left} Blob;
     {right} Blob;

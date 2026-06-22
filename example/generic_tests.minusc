@@ -3,9 +3,31 @@ Point = cust {
     {y} int;
 };
 
+Showable = interface {
+    readTag = (self) function {
+        return 0;
+    } int;
+};
+
 Box<T> = cust {
     {value} T;
+
+    get = (self) function {
+        return self.value;
+    } T;
 };
+
+TaggedBox<T> = cust implements Showable {
+    {value} T;
+
+    virtual readTag = (self) function {
+        return 1;
+    } int;
+};
+
+readTagThrough = ({b} Showable) function {
+    return b.readTag();
+} int;
 
 testGenericIntBox = ({x} int) function {
     HelloWorldLine("--- [generic-1] Box<int> field access ---");
@@ -49,9 +71,34 @@ testGenericDistinct = ({x} int) function {
     return 0;
 } int;
 
+testGenericMethod = ({x} int) function {
+    HelloWorldLine("--- [generic-4] generic cust method ---");
+    {b} Box<int> = {value=42};
+    if (b.get() == 42) {
+        HelloWorldLine("PASS: Box<int> generic method get()");
+    } else {
+        HelloWorldLine("FAIL: Box<int> get()");
+    };
+    return 0;
+} int;
+
+testGenericImplements = ({x} int) function {
+    HelloWorldLine("--- [generic-5] generic template implements interface ---");
+    {b} TaggedBox<int> = {value=55};
+    {v} int = readTagThrough(b);
+    if (v == 1) {
+        HelloWorldLine("PASS: TaggedBox<int> stack value via Showable");
+    } else {
+        HelloWorldLine("FAIL: generic iface v=", v);
+    };
+    return 0;
+} int;
+
 testGenericOps = ({x} int) function {
     testGenericIntBox(0);
     testGenericCustBox(0);
     testGenericDistinct(0);
+    testGenericMethod(0);
+    testGenericImplements(0);
     return 0;
 } int;

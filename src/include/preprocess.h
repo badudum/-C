@@ -3,6 +3,8 @@
 #include "list.h"
 #include <stdlib.h>
 
+void preprocess_set_std_root(const char *path);
+
 /* Expand all "reference <path>" and reference "path" lines in source.
  * Paths are resolved only as .minusc files: if the path does not end with .minusc, that suffix is appended.
  * current_file_path: path to the file this source came from (used for relative resolution).

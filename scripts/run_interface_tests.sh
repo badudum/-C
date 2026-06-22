@@ -13,6 +13,7 @@ $CC example/interface_runner.minusc
 
 grep -q "PASS: Circle implements Drawable" /tmp/interface_out.txt || fail "iface-1"
 grep -q "PASS: Circle.draw virtual" /tmp/interface_out.txt || fail "iface-2"
+grep -q "PASS: dual interface virtual dispatch" /tmp/interface_out.txt || fail "iface-3"
 echo "PASS: interface_tests runtime"
 
 echo ""

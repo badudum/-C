@@ -10,6 +10,8 @@ typedef struct
     char *name;
     int return_type;
     int vtable_slot;
+    /* Unified cust vtable slot for dispatch; set when first type implements. */
+    int dispatch_slot;
 } interface_method_t;
 
 typedef struct

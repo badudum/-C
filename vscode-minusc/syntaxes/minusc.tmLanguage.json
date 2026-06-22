@@ -49,7 +49,7 @@
       "patterns": [
         {
           "name": "keyword.control.minusc",
-          "match": "\\b(if|else|return|loop|until|function)\\b"
+          "match": "\\b(if|else|return|loop|until|function|nah|goNext|menu|choose|anything)\\b"
         },
         {
           "name": "keyword.operator.logical.minusc",

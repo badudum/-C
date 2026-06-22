@@ -1,0 +1,19 @@
+ReadAllText = ({path} str) function {
+    {fd} int = FileOpen(path, 0);
+    if (fd < 0) {
+        return "";
+    };
+    {text} str = FileRead(fd);
+    {c} int = FileClose(fd);
+    return text;
+} str;
+
+WriteAllText = ({path} str, {content} str) function {
+    {fd} int = FileOpen(path, 1);
+    if (fd < 0) {
+        return 0;
+    };
+    {n} int = FileWrite(fd, content);
+    {c} int = FileClose(fd);
+    return n;
+} int;

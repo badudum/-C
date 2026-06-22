@@ -1,0 +1,6 @@
+reference io_tests
+
+main = () function {
+    testStdinLine(0);
+    return 0;
+} int;

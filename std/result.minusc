@@ -1,0 +1,15 @@
+ResultInt = cust {
+    {ok} bool;
+    {val} int;
+    {code} int;
+};
+
+OkInt = ({v} int) function {
+    {r} ResultInt = ResultInt{ok=Real, val=v, code=0};
+    return r;
+} ResultInt;
+
+ErrInt = ({ec} int) function {
+    {r} ResultInt = ResultInt{ok=Fake, code=ec, val=0};
+    return r;
+} ResultInt;

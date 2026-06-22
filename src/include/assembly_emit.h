@@ -62,6 +62,7 @@ const char *asm_binop_sub_template(int use_large);
 const char *asm_binop_mul_template(int use_large);
 void asm_append_frag(char **s, const char *aarch64, const char *x86_64);
 const char *asm_binop_div_template(int use_large);
+const char *asm_binop_mod_template(int use_large);
 void asm_append_store_param_to_fp(char **s, int var_offset, int param_index, const char *comment);
 void asm_append_function_frame_reserve(char **s, int bytes);
 void asm_emit_binop_comparison(char **s, int op, int use_large,
@@ -89,14 +90,30 @@ void asm_append_mov_word_reg1_from_reg0(char **s);
 void asm_append_add_word_regs(char **s);
 void asm_append_sub_word_regs(char **s);
 void asm_append_call_runtime(char **s, const char *name, const char *comment);
+int asm_resolve_arg_datatype(AST_t *arg, dynamic_list_t *list);
+void asm_append_hello_convert_loaded(char **s, int dt, int abs_off);
 void asm_append_virtual_method_call(char **s, int vtable_slot);
 void asm_append_heap_vtable_init(char **s, int stack_index, const char *type_name);
 void assembly_patch_linux_output(char *ass);
 void assembly_patch_macos_x86_output(char *ass);
+void assembly_patch_macos_runtime_symbols(char *ass);
 
 /* Emit a unique runtime error string label; returns label name in label_buf. */
 void asm_append_runtime_err_site(char **s, const AST_t *ast, const char *kind,
                                  char *label_buf, size_t label_cap);
 void asm_append_load_rt_err_ptr(char **s, const char *label, int reg_index);
+
+int asm_numeric_is_wide(int dt);
+void asm_append_store_x_to_fp(char **s, int offset, const char *comment);
+void asm_append_load_x_from_fp(char **s, int offset, const char *comment);
+void asm_append_store_numeric_fp(char **s, int src_off, int dst_off, int dst_dt, int src_dt,
+                                 const char *cmt);
+void asm_emit_numeric_binop(char **s, AST_t *ast, dynamic_list_t *list);
+void asm_emit_div_zero_check(char **s, int right_off, int right_abs, AST_t *site);
+void asm_emit_compound_numeric(char **s, AST_t *assign, AST_t *rhs, int binop_op);
+void asm_append_fp_load(char **s, const char *reg, int offset, const char *comment);
+void asm_append_fp_store(char **s, const char *reg, int offset, const char *comment);
+void asm_append_wide_int_compare(char **s, int op, int bits,
+    int left_off, int right_off, int result_off);
 
 #endif

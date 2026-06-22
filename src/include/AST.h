@@ -6,6 +6,10 @@
 #include "stackframe.h"
 #include "token.h"
 
+#define AST_IMMPORTAL_FLAG (1 << 20)
+#define AST_NESTED_FUNC_LITERAL 2
+#define CLOSURE_CAPTURE_MARK 10000
+
 // struct for the abstract syntax tree
 typedef struct AST_S
 {
@@ -20,6 +24,7 @@ typedef struct AST_S
         RETURN_AST,
         ACCESS_AST,
         INT_AST,
+        FLOAT_AST,
         STRING_AST,
         BINOP_AST,
         SLICE_AST,
@@ -29,12 +34,19 @@ typedef struct AST_S
         UNARY_AST,
         LOOP_UNTIL_AST,
         FOR_CLAUSE_AST,
+        BREAK_AST,
+        CONTINUE_AST,
+        SWITCH_AST,
+        CASE_AST,
+        FOREACH_AST,
+        ENUM_AST,
         INC_DEC_AST,
         DUPE_AST,
         TYPE_SIZE_AST,
         CUST_DEF_AST,
         CUST_INIT_AST,
         FIELD_ACCESS_AST,
+        TRY_STMT_AST,
         NOOP_AST,
     }type;
 

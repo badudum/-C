@@ -1,0 +1,216 @@
+testModInt = ({x} int) function {
+    HelloWorldLine("--- [feat-1] int modulus ---");
+    {a} int = 17 % 5;
+    {b} int = 100 % 7;
+    {c} int = 8 % 8;
+    HelloWorldLine("17%%5: result=", a, " expected=", 2);
+    HelloWorldLine("100%%7: result=", b, " expected=", 2);
+    HelloWorldLine("8%%8: result=", c, " expected=", 0);
+    if (a == 2) {
+        if (b == 2) {
+            if (c == 0) {
+                HelloWorldLine("PASS: int mod");
+            } else {
+                HelloWorldLine("FAIL: 8 mod 8");
+            };
+        } else {
+            HelloWorldLine("FAIL: 100 mod 7");
+        };
+    } else {
+        HelloWorldLine("FAIL: 17 mod 5");
+    };
+    return 0;
+} int;
+
+testModI64 = ({x} int) function {
+    HelloWorldLine("--- [feat-2] i64 modulus ---");
+    {a} double int = 10000000003;
+    {b} double int = 7;
+    {r} double int = a % b;
+    {e} double int = 0;
+    HelloWorldLine("i64 mod: result=", r, " expected=", e);
+    if (r == e) {
+        HelloWorldLine("PASS: i64 mod");
+    } else {
+        HelloWorldLine("FAIL: i64 mod");
+    };
+    return 0;
+} int;
+
+testWideMulMod = ({x} int) function {
+    HelloWorldLine("--- [feat-3] wide int mul/div/mod ---");
+    {a} double int = 1000;
+    {b} double int = 25;
+    {p} double int = a * b;
+    {q} double int = p / b;
+    {m} double int = p % b;
+    HelloWorldLine("1000*25: result=", p, " expected=", 25000);
+    HelloWorldLine("25000/25: result=", q, " expected=", 1000);
+    HelloWorldLine("25000%%25: result=", m, " expected=", 0);
+    if (p == 25000) {
+        if (q == 1000) {
+            if (m == 0) {
+                HelloWorldLine("PASS: wide mul/div/mod");
+            } else {
+                HelloWorldLine("FAIL: wide mod");
+            };
+        } else {
+            HelloWorldLine("FAIL: wide div");
+        };
+    } else {
+        HelloWorldLine("FAIL: wide mul");
+    };
+    return 0;
+} int;
+
+testCompound = ({x} int) function {
+    HelloWorldLine("--- [feat-4] compound assignment ---");
+    {x} int = 10;
+    x *= 3;
+    x += 4;
+    x -= 2;
+    x /= 4;
+    {r1} int = x;
+    HelloWorldLine("compound int: result=", r1, " expected=", 8);
+    {bits} int = 15;
+    bits &= 10;
+    bits |= 1;
+    {r2} int = bits;
+    HelloWorldLine("compound bitwise: result=", r2, " expected=", 11);
+    {n} int = 29;
+    n %= 5;
+    {r3} int = n;
+    HelloWorldLine("compound mod: result=", r3, " expected=", 4);
+    if (r1 == 8) {
+        if (r2 == 11) {
+            if (r3 == 4) {
+                HelloWorldLine("PASS: compound assign");
+            } else {
+                HelloWorldLine("FAIL: compound mod");
+            };
+        } else {
+            HelloWorldLine("FAIL: compound bitwise");
+        };
+    } else {
+        HelloWorldLine("FAIL: compound int");
+    };
+    return 0;
+} int;
+
+testBreakContinue = ({x} int) function {
+    HelloWorldLine("--- [feat-5] nah and goNext ---");
+    {sum} int = 0;
+    {hits} int = 0;
+    loop until ({i} int = 0; i < 10; i++) {
+        if (i == 3) {
+            goNext;
+        };
+        if (i == 7) {
+            nah;
+        };
+        sum += i;
+        hits++;
+    };
+    HelloWorldLine("nah/goNext sum=", sum, " expected=", 18);
+    HelloWorldLine("nah/goNext hits=", hits, " expected=", 6);
+    if (sum == 18) {
+        if (hits == 6) {
+            HelloWorldLine("PASS: nah/goNext");
+        } else {
+            HelloWorldLine("FAIL: nah count");
+        };
+    } else {
+        HelloWorldLine("FAIL: nah/goNext sum");
+    };
+    return 0;
+} int;
+
+testSwitchInt = ({x} int) function {
+    HelloWorldLine("--- [feat-6] menu on int ---");
+    {code} int = 2;
+    {label} int = 0;
+    menu (code) {
+        choose 1:
+            label = 10;
+            nah;
+        choose 2:
+            label = 20;
+            nah;
+        anything:
+            label = 99;
+            nah;
+    };
+    HelloWorldLine("menu int: result=", label, " expected=", 20);
+    if (label == 20) {
+        HelloWorldLine("PASS: menu int");
+    } else {
+        HelloWorldLine("FAIL: menu int");
+    };
+    return 0;
+} int;
+
+testSwitchBool = ({x} int) function {
+    HelloWorldLine("--- [feat-7] menu on bool ---");
+    {flag} bool = Real;
+    {v} int = 0;
+    menu (flag) {
+        choose Fake:
+            v = 1;
+            nah;
+        choose Real:
+            v = 2;
+            nah;
+    };
+    HelloWorldLine("menu bool: result=", v, " expected=", 2);
+    if (v == 2) {
+        HelloWorldLine("PASS: menu bool");
+    } else {
+        HelloWorldLine("FAIL: menu bool");
+    };
+    return 0;
+} int;
+
+testModEdge = ({x} int) function {
+    HelloWorldLine("--- [feat-8] mod edge cases ---");
+    {zero} int = 0 % 5;
+    {one} int = 1 % 1;
+    HelloWorldLine("0%%5: result=", zero, " expected=", 0);
+    HelloWorldLine("1%%1: result=", one, " expected=", 0);
+    if (zero == 0) {
+        if (one == 0) {
+            HelloWorldLine("PASS: mod edge");
+        } else {
+            HelloWorldLine("FAIL: 1 mod 1");
+        };
+    } else {
+        HelloWorldLine("FAIL: 0 mod 5");
+    };
+    return 0;
+} int;
+
+testI128MulMod = ({x} int) function {
+    HelloWorldLine("--- [feat-3b] i128 mul/div/mod (print) ---");
+    {a} double double int = 1000;
+    {b} double double int = 25;
+    {p} double double int = a * b;
+    {q} double double int = p / b;
+    {m} double double int = p % b;
+    HelloWorldLine("i128 1000*25=", p, " expected=", 25000);
+    HelloWorldLine("i128 25000/25=", q, " expected=", 1000);
+    HelloWorldLine("i128 25000%%25=", m, " expected=", 0);
+    HelloWorldLine("PASS: i128 mul/div/mod print");
+    return 0;
+} int;
+
+testFeatureOps = ({x} int) function {
+    testModInt(0);
+    testModI64(0);
+    testWideMulMod(0);
+    testCompound(0);
+    testBreakContinue(0);
+    testSwitchInt(0);
+    testSwitchBool(0);
+    testModEdge(0);
+    testI128MulMod(0);
+    return 0;
+} int;

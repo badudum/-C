@@ -35,6 +35,11 @@
           "minimum": 1,
           "maximum": 16,
           "description": "Spaces per indent level when formatting."
+        },
+        "minusc.compilerPath": {
+          "type": "string",
+          "default": "minusC.out",
+          "description": "Path to minusC compiler for --check diagnostics on save."
         }
       }
     },

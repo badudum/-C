@@ -384,13 +384,49 @@ char *borrow_owner_key_field(const char *var_name, const char *field_name)
     return key;
 }
 
+static int field_access_is_adr(AST_t *expr, dynamic_list_t *list)
+{
+    if (!expr || expr->type != FIELD_ACCESS_AST || !expr->name)
+        return 0;
+    if (expr->datatype == TYPE_ADR)
+        return 1;
+
+    AST_t *container = expr->left;
+    if (!container)
+        return 0;
+
+    if (container->type == VAR_AST && container->name) {
+        for (int j = (int)list->size - 1; j >= 0; j--) {
+            AST_t *def = (AST_t *)list->items[j];
+            if (def->type == ASSIGNEMENT_AST && def->name &&
+                strcmp(def->name, container->name) == 0) {
+                int cid = -1;
+                if (IS_CUST_TYPE(def->datatype))
+                    cid = CUST_TYPE_ID(def->datatype);
+                else if (IS_HEAP_CUST_VAR(def->datatype, def->int_value))
+                    cid = def->int_value;
+                if (cid >= 0) {
+                    cust_field_t *field = cust_field_lookup(cid, expr->name, NULL);
+                    return field && field->datatype == TYPE_ADR;
+                }
+            }
+        }
+    }
+    if (container->type == FIELD_ACCESS_AST &&
+        IS_CUST_TYPE(container->datatype)) {
+        cust_field_t *field = cust_field_lookup(CUST_TYPE_ID(container->datatype), expr->name, NULL);
+        return field && field->datatype == TYPE_ADR;
+    }
+    return 0;
+}
+
 char *borrow_owner_key_from_expr(AST_t *expr, dynamic_list_t *list)
 {
     if (!expr)
         return 0;
     if (expr->type == VAR_AST && expr->name && is_adr_owner_expr(expr, list))
         return borrow_owner_key_var(expr->name);
-    if (expr->type == FIELD_ACCESS_AST && expr->datatype == TYPE_ADR) {
+    if (expr->type == FIELD_ACCESS_AST && field_access_is_adr(expr, list)) {
         char buf[256];
         build_field_path(expr, buf, sizeof(buf));
         if (buf[0])

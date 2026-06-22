@@ -1,0 +1,5 @@
+reference qualified ../module_helper
+
+main = ({x} int) function {
+    return moduleAnswer(0);
+} int;

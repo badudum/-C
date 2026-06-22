@@ -2,6 +2,7 @@
 #include "../include/AST.h"
 #include "../include/errors.h"
 #include "../include/interface.h"
+#include "../include/numeric.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,8 @@ static int field_align(int dt)
         return 8;
     if (IS_ARRAY_TYPE(dt))
         return 4;
+    if (IS_NUMERIC_TYPE(dt))
+        return numeric_bit_width(dt) >= 64 ? 8 : 4;
     if (dt == TYPE_INT || dt == TYPE_BOOL)
         return 4;
     return 4;
@@ -290,16 +293,52 @@ static void copy_base_methods(cust_type_t *type, cust_type_t *base)
     }
 }
 
+int cust_register_forward(const char *name, const AST_t *loc)
+{
+    if (!name) {
+        compile_error_ast(loc, "invalid forward cust name");
+    }
+    if (cust_lookup_by_name(name) >= 0) {
+        return cust_lookup_by_name(name);
+    }
+    if (!cust_registry)
+        cust_registry = init_list(sizeof(cust_type_t *));
+    cust_type_t *type = calloc(1, sizeof(cust_type_t));
+    type->name = strdup(name);
+    type->id = (int)cust_registry->size;
+    type->base_type_id = -1;
+    type->fields = init_list(sizeof(cust_field_t *));
+    type->methods = init_list(sizeof(cust_method_t *));
+    type->is_forward = 1;
+    type->size = 0;
+    list_enqueue(cust_registry, type);
+    return type->id;
+}
+
 int cust_register_from_ast(const AST_t *def, int base_type_id, dynamic_list_t *implements_ifaces)
 {
     if (!def || !def->name || !def->children) {
         compile_error_ast(def, "invalid cust definition");
     }
-    if (cust_lookup_by_name(def->name) >= 0) {
-        compile_error_ast(def, "cust type '%s' already defined", def->name);
+    int existing_id = cust_lookup_by_name(def->name);
+    cust_type_t *type = 0;
+    int completing_forward = 0;
+    if (existing_id >= 0) {
+        type = cust_get(existing_id);
+        if (!type || !type->is_forward) {
+            compile_error_ast(def, "cust type '%s' already defined", def->name);
+        }
+        completing_forward = 1;
+        type->is_forward = 0;
+        type->base_type_id = base_type_id;
+        list_free_shallow(type->fields);
+        list_free_shallow(type->methods);
+        type->fields = init_list(sizeof(cust_field_t *));
+        type->methods = init_list(sizeof(cust_method_t *));
+    } else {
+        if (!cust_registry)
+            cust_registry = init_list(sizeof(cust_type_t *));
     }
-    if (!cust_registry)
-        cust_registry = init_list(sizeof(cust_type_t *));
 
     cust_type_t *base = 0;
     if (base_type_id >= 0) {
@@ -309,12 +348,14 @@ int cust_register_from_ast(const AST_t *def, int base_type_id, dynamic_list_t *i
         }
     }
 
-    cust_type_t *type = calloc(1, sizeof(cust_type_t));
-    type->name = strdup(def->name);
-    type->id = (int)cust_registry->size;
-    type->base_type_id = base_type_id;
-    type->fields = init_list(sizeof(cust_field_t *));
-    type->methods = init_list(sizeof(cust_method_t *));
+    if (!type) {
+        type = calloc(1, sizeof(cust_type_t));
+        type->name = strdup(def->name);
+        type->id = (int)cust_registry->size;
+        type->base_type_id = base_type_id;
+        type->fields = init_list(sizeof(cust_field_t *));
+        type->methods = init_list(sizeof(cust_method_t *));
+    }
     int offset = 0;
 
     if (base) {
@@ -332,10 +373,17 @@ int cust_register_from_ast(const AST_t *def, int base_type_id, dynamic_list_t *i
             if (!node->name) {
                 compile_error_ast(def, "method missing name in cust '%s'", def->name);
             }
-            char *short_name = strrchr(node->name, '_');
-            char *method_name = short_name && short_name[1]
-                ? strdup(short_name + 1)
-                : strdup(node->name);
+            char *short_name = NULL;
+            if (strstr(node->name, "_operator_")) {
+                char *p = strstr(node->name, "_operator_");
+                short_name = strdup(p + 1);
+            } else {
+                char *underscore = strrchr(node->name, '_');
+                short_name = underscore && underscore[1]
+                    ? strdup(underscore + 1)
+                    : strdup(node->name);
+            }
+            char *method_name = short_name;
             cust_method_t *existing = method_in_type_list(type, method_name);
             cust_method_t *base_m = base ? method_in_base_chain(base_type_id, method_name) : 0;
             if (existing) {
@@ -402,7 +450,7 @@ int cust_register_from_ast(const AST_t *def, int base_type_id, dynamic_list_t *i
         if (IS_TYPE_PARAM(node->datatype)) {
             compile_error_ast(node, "unbound type parameter in field '%s'", node->name);
         }
-        if (IS_ARRAY_TYPE(node->datatype) && node->datatype == TYPE_ARRAY) {
+        if (node->datatype == TYPE_ARRAY) {
             compile_error_ast(def, "Array fields need element type in cust '%s'", def->name);
         }
         if (cust_field_by_name(type->id, node->name)) {
@@ -420,6 +468,7 @@ int cust_register_from_ast(const AST_t *def, int base_type_id, dynamic_list_t *i
         field->datatype = node->datatype;
         field->offset = offset;
         field->visibility = node->multiplier;
+        field->immutable = (node->int_value & AST_IMMPORTAL_FLAG) != 0;
         field->declaring_type_id = type->id;
         offset += field_size_for_datatype(node->datatype);
         list_enqueue(type->fields, field);
@@ -428,7 +477,8 @@ int cust_register_from_ast(const AST_t *def, int base_type_id, dynamic_list_t *i
     offset = align_up(offset, 8);
     type->size = offset;
     cust_build_vtable(type);
-    list_enqueue(cust_registry, type);
+    if (!completing_forward)
+        list_enqueue(cust_registry, type);
 
     if (implements_ifaces) {
         for (unsigned int i = 0; i < implements_ifaces->size; i++) {
@@ -487,4 +537,52 @@ char *cust_emit_vtables(void)
         }
     }
     return buf;
+}
+
+int cust_register_sum_type(const char *name, dynamic_list_t *enum_members, const AST_t *loc)
+{
+    if (!name || !enum_members) {
+        compile_error_ast(loc, "invalid sum type definition");
+    }
+    if (cust_lookup_by_name(name) >= 0) {
+        compile_error_ast(loc, "sum type '%s' already defined", name);
+    }
+
+    int payload_dt = TYPE_INT;
+    int has_payload = 0;
+    for (unsigned int i = 0; i < enum_members->size; i++) {
+        AST_t *m = (AST_t *)enum_members->items[i];
+        if (m && m->multiplier) {
+            has_payload = 1;
+            if (m->datatype != TYPE_INT && m->datatype != TYPE_UNKNOWN)
+                compile_error_ast(loc, "sum type payloads currently support int only");
+            payload_dt = TYPE_INT;
+        }
+    }
+    if (!has_payload) {
+        compile_error_ast(loc, "sum type '%s' requires at least one tagged variant", name);
+    }
+
+    dynamic_list_t *members = init_list(sizeof(struct AST_S *));
+    AST_t *tag = calloc(1, sizeof(struct AST_S));
+    tag->type = VAR_AST;
+    tag->name = strdup("tag");
+    tag->datatype = TYPE_INT;
+    list_enqueue(members, tag);
+
+    AST_t *payload = calloc(1, sizeof(struct AST_S));
+    payload->type = VAR_AST;
+    payload->name = strdup("payload");
+    payload->datatype = payload_dt;
+    list_enqueue(members, payload);
+
+    AST_t *def = calloc(1, sizeof(struct AST_S));
+    def->type = CUST_DEF_AST;
+    def->name = strdup(name);
+    def->children = members;
+    if (loc) {
+        def->source_line = loc->source_line;
+        def->source_file = loc->source_file ? strdup(loc->source_file) : 0;
+    }
+    return cust_register_from_ast(def, -1, 0);
 }

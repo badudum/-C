@@ -151,6 +151,7 @@ void interface_register_from_ast(const char *name, dynamic_list_t *member_nodes,
         im->name = method_name;
         im->return_type = node->datatype;
         im->vtable_slot = slot++;
+        im->dispatch_slot = -1;
         list_enqueue(it->methods, im);
     }
     list_enqueue(interface_registry, it);
@@ -183,10 +184,18 @@ void interface_check_implements(int cust_id, int interface_id, const AST_t *loc)
                               "interface method '%s' on '%s' has mismatched return type",
                               im->name, cust->name);
         }
-        if (!cm->is_virtual || cm->vtable_slot != im->vtable_slot) {
+        if (!cm->is_virtual || cm->vtable_slot < 0) {
             compile_error_ast(loc,
-                              "interface method '%s' on '%s' must be virtual with vtable slot %d",
-                              im->name, cust->name, im->vtable_slot);
+                              "interface method '%s' on '%s' must be declared 'virtual'",
+                              im->name, cust->name);
+        }
+        if (im->dispatch_slot < 0)
+            im->dispatch_slot = cm->vtable_slot;
+        else if (im->dispatch_slot != cm->vtable_slot) {
+            compile_error_ast(loc,
+                              "'%s' implements '%s.%s' at vtable slot %d but requires slot %d",
+                              cust->name, iface->name, im->name,
+                              cm->vtable_slot, im->dispatch_slot);
         }
     }
     interface_cust_add(cust_id, interface_id);

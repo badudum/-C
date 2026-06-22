@@ -1,0 +1,6 @@
+reference new_feature_tests
+
+main = () function {
+    testNewFeatures(0);
+    return 0;
+} int;

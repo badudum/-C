@@ -232,7 +232,7 @@ token_t *lexer_collect_id(lexer_t *lexer)
 
     value[0] = '\0';
 
-    while (isalnum(lexer->c)) // while the current character is alphanumeric
+    while (isalnum((unsigned char)lexer->c) || lexer->c == '_')
     {
         char *s = lexer_get_current_char_as_string(lexer);
         value = realloc(value, (strlen(value) + strlen(s) + 1) * sizeof(char));
@@ -263,6 +263,28 @@ token_t *lexer_collect_id(lexer_t *lexer)
         token_type = LOOP_TOKEN;
     else if (strcmp(value, "until") == 0)
         token_type = UNTIL_TOKEN;
+    else if (strcmp(value, "nah") == 0)
+        token_type = BREAK_TOKEN;
+    else if (strcmp(value, "goNext") == 0)
+        token_type = CONTINUE_TOKEN;
+    else if (strcmp(value, "menu") == 0)
+        token_type = SWITCH_TOKEN;
+    else if (strcmp(value, "choose") == 0)
+        token_type = CASE_TOKEN;
+    else if (strcmp(value, "anything") == 0)
+        token_type = DEFAULT_TOKEN;
+    else if (strcmp(value, "foreach") == 0)
+        token_type = FOREACH_TOKEN;
+    else if (strcmp(value, "in") == 0)
+        token_type = IN_TOKEN;
+    else if (strcmp(value, "enum") == 0)
+        token_type = ENUM_TOKEN;
+    else if (strcmp(value, "try") == 0)
+        token_type = TRY_TOKEN;
+    else if (strcmp(value, "operator") == 0)
+        token_type = OPERATOR_TOKEN;
+    else if (strcmp(value, "immportal") == 0)
+        token_type = IMMPORTAL_TOKEN;
     else if (strcmp(value, "dupe") == 0)
         token_type = DUPE_TOKEN;
     else if (strcmp(value, "cust") == 0)
@@ -290,20 +312,69 @@ token_t *lexer_collect_id(lexer_t *lexer)
  */
 token_t *lexer_collect_number(lexer_t *lexer)
 {
-    char *value = calloc(1, sizeof(char));
+    char *value = calloc(1, 1);
+    int is_float = 0;
 
-    value[0] = '\0';
-
-    while (isdigit(lexer->c)) // while the current character is a number
-    {
+    if (lexer->c == '.') {
+        is_float = 1;
         char *s = lexer_get_current_char_as_string(lexer);
-        value = realloc(value, (strlen(value) + strlen(s) + 1) * sizeof(char));
+        value = realloc(value, strlen(value) + strlen(s) + 1);
         strcat(value, s);
         free(s);
         lexer_advance(lexer);
     }
 
-    return lexer_make_token(lexer, INT_TOKEN, value);
+    while (isdigit(lexer->c)) {
+        char *s = lexer_get_current_char_as_string(lexer);
+        value = realloc(value, strlen(value) + strlen(s) + 1);
+        strcat(value, s);
+        free(s);
+        lexer_advance(lexer);
+    }
+
+    if (!is_float && lexer->c == '.') {
+        char next = lexer_peek(lexer, 1);
+        if (isdigit((unsigned char)next)) {
+            is_float = 1;
+            char *s = lexer_get_current_char_as_string(lexer);
+            value = realloc(value, strlen(value) + strlen(s) + 1);
+            strcat(value, s);
+            free(s);
+            lexer_advance(lexer);
+            while (isdigit(lexer->c)) {
+                s = lexer_get_current_char_as_string(lexer);
+                value = realloc(value, strlen(value) + strlen(s) + 1);
+                strcat(value, s);
+                free(s);
+                lexer_advance(lexer);
+            }
+        }
+    }
+
+    if (lexer->c == 'e' || lexer->c == 'E') {
+        is_float = 1;
+        char *s = lexer_get_current_char_as_string(lexer);
+        value = realloc(value, strlen(value) + strlen(s) + 1);
+        strcat(value, s);
+        free(s);
+        lexer_advance(lexer);
+        if (lexer->c == '+' || lexer->c == '-') {
+            s = lexer_get_current_char_as_string(lexer);
+            value = realloc(value, strlen(value) + strlen(s) + 1);
+            strcat(value, s);
+            free(s);
+            lexer_advance(lexer);
+        }
+        while (isdigit(lexer->c)) {
+            s = lexer_get_current_char_as_string(lexer);
+            value = realloc(value, strlen(value) + strlen(s) + 1);
+            strcat(value, s);
+            free(s);
+            lexer_advance(lexer);
+        }
+    }
+
+    return lexer_make_token(lexer, is_float ? FLOAT_TOKEN : INT_TOKEN, value);
 }
 
 /*
@@ -360,6 +431,11 @@ token_t *lexer_get_next_token(lexer_t *lexer)
             return lexer_collect_number(lexer);
         }
 
+        if (lexer->c == '.' && isdigit((unsigned char)lexer_peek(lexer, 1)))
+        {
+            return lexer_collect_number(lexer);
+        }
+
         switch (lexer->c)
         {
         case '=':
@@ -403,8 +479,16 @@ token_t *lexer_get_next_token(lexer_t *lexer)
             }
             return lexer_get_next_with_type(lexer, LT_TOKEN);
         case '&':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_advance(lexer);
+                return lexer_get_next_with_type(lexer, BITAND_EQUALS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, BITAND_TOKEN);
         case '|':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_advance(lexer);
+                return lexer_get_next_with_type(lexer, BITOR_EQUALS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, BITOR_TOKEN);
         case '~':
             return lexer_get_next_with_type(lexer, BITNOT_TOKEN);
@@ -429,9 +513,29 @@ token_t *lexer_get_next_token(lexer_t *lexer)
             }
             return lexer_get_next_with_type(lexer, MINUS_TOKEN);
         case '*':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_advance(lexer);
+                return lexer_get_next_with_type(lexer, ASTERISK_EQUALS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, ASTERISK_TOKEN);
         case '/':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_advance(lexer);
+                return lexer_get_next_with_type(lexer, SLASH_EQUALS_TOKEN);
+            }
             return lexer_get_next_with_type(lexer, SLASH_TOKEN);
+        case '%':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_advance(lexer);
+                return lexer_get_next_with_type(lexer, MODULUS_EQUALS_TOKEN);
+            }
+            return lexer_get_next_with_type(lexer, MODULUS_TOKEN);
+        case '^':
+            if (lexer_peek(lexer, 1) == '=') {
+                lexer_advance(lexer);
+                return lexer_get_next_with_type(lexer, CARET_EQUALS_TOKEN);
+            }
+            return lexer_get_next_with_type(lexer, CARET_TOKEN);
         case '[':
             return lexer_get_next_with_type(lexer, LSQUAREBRKT_TOKEN);
         case ']':

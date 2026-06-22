@@ -47,8 +47,85 @@ testInterfaceDirect = ({x} int) function {
     return 0;
 } int;
 
+Serializable = interface {
+    serialize = (self) function {
+        return 0;
+    } int;
+};
+
+Widget = cust implements Drawable, Serializable {
+    {id} int;
+
+    virtual draw = (self) function {
+        return self.id + 100;
+    } int;
+
+    virtual serialize = (self) function {
+        return self.id + 200;
+    } int;
+
+    init = (self) function {
+        self.id = 5;
+        return 0;
+    } int;
+};
+
+serializeThrough = ({p} Serializable) function {
+    return p.serialize();
+} int;
+
+testDualInterface = ({x} int) function {
+    HelloWorldLine("--- [iface-3] implements A, B ---");
+    {w} adr = rent(1, Widget);
+    w.init();
+    {d} int = drawThrough(w);
+    {s} int = serializeThrough(w);
+    if (d == 105) {
+        if (s == 205) {
+            HelloWorldLine("PASS: dual interface virtual dispatch");
+        } else {
+            HelloWorldLine("FAIL: serializeThrough s=", s);
+        };
+    } else {
+        HelloWorldLine("FAIL: drawThrough d=", d);
+    };
+    return 0;
+} int;
+
+Scalable = interface {
+    scale = (self) function {
+        return 0;
+    } int;
+};
+
+Square = cust implements Scalable {
+    {side} int;
+
+    virtual scale = (self) function {
+        return self.side * 2;
+    } int;
+};
+
+scaleThrough = ({s} Scalable) function {
+    return s.scale();
+} int;
+
+testStackInterface = ({x} int) function {
+    HelloWorldLine("--- [iface-4] stack cust through interface param ---");
+    {sq} Square = {side=11};
+    {v} int = scaleThrough(sq);
+    if (v == 22) {
+        HelloWorldLine("PASS: stack Square via Scalable");
+    } else {
+        HelloWorldLine("FAIL: stack iface v=", v);
+    };
+    return 0;
+} int;
+
 testInterfaceOps = ({x} int) function {
     testInterfaceImplements(0);
     testInterfaceDirect(0);
+    testDualInterface(0);
+    testStackInterface(0);
     return 0;
 } int;

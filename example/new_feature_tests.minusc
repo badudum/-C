@@ -1,0 +1,194 @@
+enum Color { Red, Green, Blue };
+enum Step { Wait = 10, Go, Done };
+
+ImmBox = cust {
+    {tag} immportal int;
+    {val} int;
+};
+
+testEnumValues = ({x} int) function {
+    HelloWorldLine("--- [nf-1] enum constants ---");
+    HelloWorldLine("Red=", Red, " Green=", Green, " Blue=", Blue);
+    if (Red == 0) {
+        if (Green == 1) {
+            if (Blue == 2) {
+                HelloWorldLine("PASS: enum auto values");
+            } else {
+                HelloWorldLine("FAIL: Blue");
+            };
+        } else {
+            HelloWorldLine("FAIL: Green");
+        };
+    } else {
+        HelloWorldLine("FAIL: Red");
+    };
+    return 0;
+} int;
+
+testEnumExplicit = ({x} int) function {
+    HelloWorldLine("--- [nf-1b] enum explicit values ---");
+    HelloWorldLine("Wait=", Wait, " Go=", Go, " Done=", Done);
+    if (Wait == 10) {
+        if (Go == 11) {
+            if (Done == 12) {
+                HelloWorldLine("PASS: enum explicit values");
+            } else {
+                HelloWorldLine("FAIL: Done");
+            };
+        } else {
+            HelloWorldLine("FAIL: Go");
+        };
+    } else {
+        HelloWorldLine("FAIL: Wait");
+    };
+    return 0;
+} int;
+
+testArrayLenForeach = ({x} int) function {
+    HelloWorldLine("--- [nf-2] .len and foreach ---");
+    {nums} Array<int> = [10, 20, 30];
+    {n} int = nums.len;
+    {sum} int = 0;
+    foreach {i} int in nums {
+        sum = sum + nums[i];
+    };
+    HelloWorldLine("len=", n, " sum=", sum);
+    if (n == 3) {
+        if (sum == 60) {
+            HelloWorldLine("PASS: len + foreach");
+        } else {
+            HelloWorldLine("FAIL: foreach sum");
+        };
+    } else {
+        HelloWorldLine("FAIL: len");
+    };
+    return 0;
+} int;
+
+testArrayFloatStr = ({x} int) function {
+    HelloWorldLine("--- [nf-2b] Array<float> and Array<str> ---");
+    {fs} Array<float> = [1.0, 2.5, 4.5];
+    {words} Array<str> = ["alpha", "beta"];
+    {fsum} float = fs[0] + fs[1] + fs[2];
+    {wn} int = words.len;
+    HelloWorldLine("fsum=", fsum, " wn=", wn);
+    if (wn == 2) {
+        if (fsum == 8.0) {
+            HelloWorldLine("PASS: Array float/str");
+        } else {
+            HelloWorldLine("FAIL: float array sum");
+        };
+    } else {
+        HelloWorldLine("FAIL: str array len");
+    };
+    return 0;
+} int;
+
+testTypeInference = ({x} int) function {
+    HelloWorldLine("--- [nf-3] type inference ---");
+    {a} = 42;
+    {b} = [1, 2, 3];
+    {c} = "hi";
+    HelloWorldLine("a=", a, " b[1]=", b[1], " c=", c);
+    if (a == 42) {
+        if (b[1] == 2) {
+            HelloWorldLine("PASS: inferred int/array/str");
+        } else {
+            HelloWorldLine("FAIL: inferred array");
+        };
+    } else {
+        HelloWorldLine("FAIL: inferred int");
+    };
+    return 0;
+} int;
+
+testImmportal = ({x} int) function {
+    HelloWorldLine("--- [nf-4] immportal binding ---");
+    {limit} immportal int = 99;
+    {copy} int = limit;
+    HelloWorldLine("limit=", limit, " copy=", copy);
+    if (limit == 99) {
+        if (copy == 99) {
+            HelloWorldLine("PASS: immportal read");
+        } else {
+            HelloWorldLine("FAIL: immportal copy");
+        };
+    } else {
+        HelloWorldLine("FAIL: immportal value");
+    };
+    return 0;
+} int;
+
+testImmportalField = ({x} int) function {
+    HelloWorldLine("--- [nf-4b] immportal cust field ---");
+    {box} ImmBox = ImmBox{tag=42, val=7};
+    {tagCopy} int = box.tag;
+    {valCopy} int = box.val;
+    box.val = 99;
+    HelloWorldLine("tag=", tagCopy, " val=", valCopy, " after=", box.val);
+    if (tagCopy == 42) {
+        if (valCopy == 7) {
+            if (box.val == 99) {
+                HelloWorldLine("PASS: immportal field read + mutable sibling");
+            } else {
+                HelloWorldLine("FAIL: mutable field assign");
+            };
+        } else {
+            HelloWorldLine("FAIL: val copy");
+        };
+    } else {
+        HelloWorldLine("FAIL: tag copy");
+    };
+    return 0;
+} int;
+
+testPeekI64 = ({x} int) function {
+    HelloWorldLine("--- [nf-5] PeekI64 / PokeI64 ---");
+    {buf} adr = rent(16);
+    PokeI64(buf, 0, 123456789);
+    {v} int = PeekI64(buf, 0);
+    {fd} int = moveOut(buf);
+    HelloWorldLine("PeekI64=", v);
+    if (v == 123456789) {
+        if (fd == 0) {
+            HelloWorldLine("PASS: PeekI64/PokeI64");
+        } else {
+            HelloWorldLine("FAIL: moveOut");
+        };
+    } else {
+        HelloWorldLine("FAIL: PeekI64 value");
+    };
+    return 0;
+} int;
+
+testEnumMenu = ({x} int) function {
+    HelloWorldLine("--- [nf-6] enum with menu ---");
+    {c} int = Green;
+    {hit} int = 0;
+    menu (c) {
+        choose 0: { hit = 1; };
+        choose 1: { hit = 2; };
+        choose 2: { hit = 3; };
+        anything: { hit = 9; };
+    };
+    HelloWorldLine("menu hit=", hit);
+    if (hit == 2) {
+        HelloWorldLine("PASS: enum + menu");
+    } else {
+        HelloWorldLine("FAIL: enum menu hit=", hit);
+    };
+    return 0;
+} int;
+
+testNewFeatures = ({x} int) function {
+    testEnumValues(0);
+    testEnumExplicit(0);
+    testArrayLenForeach(0);
+    testArrayFloatStr(0);
+    testTypeInference(0);
+    testImmportal(0);
+    testImmportalField(0);
+    testPeekI64(0);
+    testEnumMenu(0);
+    return 0;
+} int;
