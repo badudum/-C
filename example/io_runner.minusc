@@ -1,0 +1,8 @@
+reference io_tests
+
+main = () function {
+    testIoOps(0);
+    testPollKey(0);
+    testKeyAvailable(0);
+    return 0;
+} int;

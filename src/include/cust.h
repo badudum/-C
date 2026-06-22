@@ -18,6 +18,7 @@ typedef struct
     int datatype;
     int offset;
     int visibility;
+    int immutable;
     int declaring_type_id;
 } cust_field_t;
 
@@ -41,6 +42,7 @@ typedef struct
     int base_type_id;
     int has_vtable;
     int vtable_slots;
+    int is_forward;
     dynamic_list_t *fields; /* cust_field_t* */
     dynamic_list_t *methods; /* cust_method_t* */
 } cust_type_t;
@@ -48,6 +50,7 @@ typedef struct
 void cust_registry_reset(void);
 int cust_type_count(void);
 int cust_lookup_by_name(const char *name);
+int cust_register_forward(const char *name, const AST_t *loc);
 cust_type_t *cust_get(int id);
 int cust_base_type_id(int type_id);
 int cust_is_subtype(int type_id, int base_type_id);
@@ -62,6 +65,7 @@ int cust_heap_header_size(int type_id);
 int cust_heap_object_size(int type_id);
 int cust_type_slots(int type_id);
 int cust_register_from_ast(const AST_t *def, int base_type_id, dynamic_list_t *implements_ifaces);
+int cust_register_sum_type(const char *name, dynamic_list_t *enum_members, const AST_t *loc);
 char *cust_emit_vtables(void);
 
 #endif

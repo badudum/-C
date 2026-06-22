@@ -2,6 +2,7 @@
 #include "../include/cust.h"
 #include "../include/interface.h"
 #include "../include/generic.h"
+#include "../include/numeric.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,25 +10,17 @@
 int type_to_type(const char* name)
 {
     if (strcmp(name, "int") == 0)
-    {
         return TYPE_INT;
-    }
-    else if (strcmp(name, "bool") == 0)
-    {
+    if (strcmp(name, "float") == 0)
+        return TYPE_F64;
+    if (strcmp(name, "bool") == 0)
         return TYPE_BOOL;
-    }
-    else if (strcmp(name, "str") == 0)
-    {
+    if (strcmp(name, "str") == 0)
         return TYPE_STR;
-    }
-    else if (strcmp(name, "adr") == 0)
-    {
+    if (strcmp(name, "adr") == 0)
         return TYPE_ADR;
-    }
-    else if (strcmp(name, "Array") == 0)
-    {
+    if (strcmp(name, "Array") == 0)
         return TYPE_ARRAY;
-    }
     return TYPE_UNKNOWN;
 }
 
@@ -54,6 +47,16 @@ const char *datatype_mangle_suffix(int dt)
 {
     if (dt == TYPE_INT)
         return "int";
+    if (IS_INT_TYPE(dt)) {
+        static char buf[32];
+        snprintf(buf, sizeof(buf), "i%d", numeric_bit_width(dt));
+        return buf;
+    }
+    if (IS_FLOAT_TYPE(dt)) {
+        static char buf[32];
+        snprintf(buf, sizeof(buf), "f%d", numeric_bit_width(dt));
+        return buf;
+    }
     if (dt == TYPE_BOOL)
         return "bool";
     if (dt == TYPE_STR)
@@ -76,8 +79,8 @@ const char *datatype_mangle_suffix(int dt)
 
 int datatype_heap_size(int dt)
 {
-    if (dt == TYPE_INT)
-        return 4;
+    if (IS_NUMERIC_TYPE(dt))
+        return numeric_byte_size(dt);
     if (dt == TYPE_BOOL)
         return 1;
     if (dt == TYPE_STR)
@@ -89,4 +92,13 @@ int datatype_heap_size(int dt)
     if (IS_CUST_TYPE(dt))
         return cust_type_size(CUST_TYPE_ID(dt));
     return 0;
+}
+
+int type_stack_slots(int dt)
+{
+    if (IS_CUST_TYPE(dt))
+        return cust_type_slots(CUST_TYPE_ID(dt));
+    if (IS_NUMERIC_TYPE(dt))
+        return numeric_stack_slots(dt);
+    return 1;
 }

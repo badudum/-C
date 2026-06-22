@@ -1,0 +1,10 @@
+ImmBox = cust {
+    {tag} immportal int;
+    {val} int;
+};
+
+main = () function {
+    {box} ImmBox = ImmBox{tag=1, val=2};
+    box.tag = 99;
+    return 0;
+} int;

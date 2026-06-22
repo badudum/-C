@@ -9,6 +9,7 @@ typedef struct PARSER_S
     lexer_t * lexer;
     token_t * token;
     dynamic_list_t *generic_params; /* char* param names during generic cust body parse */
+    int scope_depth;
 }parser_t;
 
 parser_t * init_parser(lexer_t * lexer);
@@ -38,6 +39,12 @@ AST_t * parse_compound(parser_t * parser);
 AST_t * parse_if(parser_t * parser);
 
 AST_t * parse_loop_until(parser_t * parser);
+
+AST_t * parse_switch(parser_t * parser);
+
+AST_t * parse_break(parser_t * parser);
+
+AST_t * parse_continue(parser_t * parser);
 
 AST_t * parse_type_literal(parser_t * parser);
 

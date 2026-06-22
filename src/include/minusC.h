@@ -8,6 +8,8 @@
 #include "visitor.h"
 
 void compile(char * src, const char *filename);
+void compile_set_check_only(int enabled);
 
 void minusCompile_file(const char * filename);
+void minusCheck_file(const char *filename);
 #endif 

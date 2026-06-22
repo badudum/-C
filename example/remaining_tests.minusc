@@ -1,0 +1,130 @@
+Animal = cust {
+    {legs} int;
+};
+
+Box<T> = cust extends Animal {
+    {value} T;
+};
+
+Vec2 = cust {
+    {x} int;
+    {y} int;
+
+    operator + = (self, other) function {
+        return self.x + other.x;
+    } int;
+};
+
+enum Option { None, Some(int) };
+
+testGenericExtends = ({x} int) function {
+    HelloWorldLine("--- [rem-1] generic template extends ---");
+    {b} Box<int> = Box<int>{legs=4, value=99};
+    if (b.legs == 4) {
+        if (b.value == 99) {
+            HelloWorldLine("PASS: Box<int> extends Animal");
+        } else {
+            HelloWorldLine("FAIL: Box value");
+        };
+    } else {
+        HelloWorldLine("FAIL: Box legs");
+    };
+    return 0;
+} int;
+
+testOperatorAdd = ({x} int) function {
+    HelloWorldLine("--- [rem-2] operator + on cust ---");
+    {a} Vec2 = Vec2{x=1, y=2};
+    {b} Vec2 = Vec2{x=10, y=20};
+    {nx} int = a + b;
+    if (nx == 11) {
+        HelloWorldLine("PASS: Vec2 operator +");
+    } else {
+        HelloWorldLine("FAIL: Vec2 x", nx);
+    };
+    return 0;
+} int;
+
+testSumType = ({x} int) function {
+    HelloWorldLine("--- [rem-3] tagged union / sum type ---");
+    {none} Option = Option{tag=None, payload=0};
+    {some} Option = Option{tag=Some, payload=42};
+    if (none.tag == None) {
+        if (some.tag == Some) {
+            if (some.payload == 42) {
+                HelloWorldLine("PASS: Option sum type");
+            } else {
+                HelloWorldLine("FAIL: payload");
+            };
+        } else {
+            HelloWorldLine("FAIL: Some tag");
+        };
+    } else {
+        HelloWorldLine("FAIL: None tag");
+    };
+    return 0;
+} int;
+
+testNestedFunc = ({x} int) function {
+    HelloWorldLine("--- [rem-4] nested function ---");
+    inner = ({y} int) function {
+        return y + 1;
+    } int;
+    {v} int = inner(41);
+    if (v == 42) {
+        HelloWorldLine("PASS: nested function call");
+    } else {
+        HelloWorldLine("FAIL: nested v=", v);
+    };
+    return 0;
+} int;
+
+testClosureCapture = ({x} int) function {
+    HelloWorldLine("--- [rem-5] closure capture ---");
+    {base} int = 10;
+    addN = ({n} int) function {
+        return base + n;
+    } int;
+    {sum} int = addN(5);
+    if (sum == 15) {
+        HelloWorldLine("PASS: closure capture by value");
+    } else {
+        HelloWorldLine("FAIL: closure sum=", sum);
+    };
+    return 0;
+} int;
+
+testClosureCallSite = ({x} int) function {
+    HelloWorldLine("--- [rem-6] closure call-site capture ---");
+    {count} int = 1;
+    bump = ({d} int) function {
+        return count + d;
+    } int;
+    {v1} int = bump(4);
+    count = 20;
+    {v2} int = bump(4);
+    if (v1 == 5) {
+        if (v2 == 24) {
+            HelloWorldLine("PASS: closure call-site rebind");
+        } else {
+            HelloWorldLine("FAIL: closure v2=", v2);
+        };
+    } else {
+        HelloWorldLine("FAIL: closure v1=", v1);
+    };
+    return 0;
+} int;
+
+runRemainingTests = ({x} int) function {
+    {t2} int = testNestedFunc(0);
+    {t2b} int = testClosureCapture(0);
+    {t2c} int = testClosureCallSite(0);
+    {t3} int = testGenericExtends(0);
+    {t4} int = testOperatorAdd(0);
+    {t5} int = testSumType(0);
+    return 0;
+} int;
+
+main = ({x} int) function {
+    return runRemainingTests(0);
+} int;

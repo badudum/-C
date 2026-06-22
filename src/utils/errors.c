@@ -1,17 +1,34 @@
 #include "../include/errors.h"
 #include "../include/parser.h"
+#include "../include/types.h"
+#include "../include/numeric.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
+static int g_json_diagnostics = 0;
+
+void errors_set_json_diagnostics(int enabled)
+{
+    g_json_diagnostics = enabled ? 1 : 0;
+}
+
 static void vcompile_error_at(const char *file, int line, const char *fmt, va_list ap)
 {
-    if (file && line > 0)
+    if (g_json_diagnostics) {
+        fprintf(stderr, "{\"file\":\"%s\",\"line\":%d,\"message\":\"",
+                file && file[0] ? file : "", line > 0 ? line : 0);
+        vfprintf(stderr, fmt, ap);
+        fprintf(stderr, "\"}\n");
+    } else if (file && line > 0) {
         fprintf(stderr, "Error at %s:%d: ", file, line);
-    else
+        vfprintf(stderr, fmt, ap);
+        fprintf(stderr, "\n");
+    } else {
         fprintf(stderr, "Error: ");
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
+        vfprintf(stderr, fmt, ap);
+        fprintf(stderr, "\n");
+    }
     exit(1);
 }
 
@@ -45,9 +62,44 @@ void compile_error_parser(parser_t *parser, const char *fmt, ...)
     va_end(ap);
 }
 
+static const char *datatype_name_for_error(int dt)
+{
+    if (IS_NUMERIC_TYPE(dt))
+        return numeric_type_name(dt);
+    if (IS_ARRAY_TYPE(dt))
+        return "Array";
+    if (IS_CUST_TYPE(dt))
+        return "cust";
+    switch (dt) {
+        case TYPE_INT: return "int";
+        case TYPE_BOOL: return "bool";
+        case TYPE_STR: return "str";
+        case TYPE_ADR: return "adr";
+        default: return "unknown";
+    }
+}
+
+void compile_error_type_mismatch(const AST_t *node, int left_dt, int right_dt, int op_token)
+{
+    const char *lhs = datatype_name_for_error(left_dt);
+    const char *rhs = datatype_name_for_error(right_dt);
+    const char *hint = "";
+    if (IS_INT_TYPE(left_dt) && IS_FLOAT_TYPE(right_dt))
+        hint = " (hint: int promotes to float in mixed arithmetic)";
+    else if (IS_FLOAT_TYPE(left_dt) && IS_INT_TYPE(right_dt))
+        hint = " (hint: int promotes to float in mixed arithmetic)";
+    else if (left_dt == TYPE_STR || right_dt == TYPE_STR)
+        hint = " (hint: use + only for str concatenation)";
+    (void)op_token;
+    compile_error_ast(node, "invalid operands for operator on %s and %s%s", lhs, rhs, hint);
+}
+
 void check_arguments(AST_t* caller, AST_t* func)
 {
-    int expected_args_num = func->children->size;
+    dynamic_list_t *params = (func && func->left && func->left->children)
+        ? func->left->children
+        : (func ? func->children : 0);
+    int expected_args_num = params ? (int)params->size : 0;
     int actual_args_num = 0;
     if (caller->parent && caller->parent->children)
         actual_args_num = (int)caller->parent->children->size;

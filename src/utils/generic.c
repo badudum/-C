@@ -1,4 +1,5 @@
 #include "../include/generic.h"
+#include "../include/numeric.h"
 #include "../include/cust.h"
 #include "../include/errors.h"
 #include "../include/types.h"
@@ -12,9 +13,12 @@ typedef struct
     char *name;
     dynamic_list_t *param_names; /* char* */
     dynamic_list_t *members;     /* AST_t* shallow copy of member nodes */
+    dynamic_list_t *iface_ids;   /* int as void* */
+    int base_type_id;
 } generic_template_t;
 
 static dynamic_list_t *generic_templates;
+static dynamic_list_t *instantiated_defs;
 
 static AST_t *clone_ast_shallow(AST_t *node)
 {
@@ -40,6 +44,8 @@ static AST_t *clone_ast_shallow(AST_t *node)
         copy->left = clone_ast_shallow(node->left);
     if (node->right)
         copy->right = clone_ast_shallow(node->right);
+    if (node->parent)
+        copy->parent = clone_ast_shallow(node->parent);
     return copy;
 }
 
@@ -58,17 +64,25 @@ static void free_template(generic_template_t *t)
             ; /* members owned by template; freed with registry reset */
         list_free(t->members);
     }
+    if (t->iface_ids)
+        list_free_shallow(t->iface_ids);
     free(t);
 }
 
 void generic_registry_reset(void)
 {
-    if (!generic_templates)
+    if (!generic_templates && !instantiated_defs)
         return;
-    for (unsigned int i = 0; i < generic_templates->size; i++)
-        free_template((generic_template_t *)generic_templates->items[i]);
-    list_free(generic_templates);
-    generic_templates = 0;
+    if (generic_templates) {
+        for (unsigned int i = 0; i < generic_templates->size; i++)
+            free_template((generic_template_t *)generic_templates->items[i]);
+        list_free(generic_templates);
+        generic_templates = 0;
+    }
+    if (instantiated_defs) {
+        list_free(instantiated_defs);
+        instantiated_defs = 0;
+    }
 }
 
 int generic_template_count(void)
@@ -89,7 +103,9 @@ int generic_lookup_template(const char *name)
 }
 
 void generic_register_template(const char *name, dynamic_list_t *param_names,
-                               dynamic_list_t *member_nodes, const AST_t *loc)
+                               dynamic_list_t *member_nodes,
+                               dynamic_list_t *iface_ids, int base_type_id,
+                               const AST_t *loc)
 {
     if (!name || !param_names || param_names->size == 0 || !member_nodes) {
         compile_error_ast(loc, "invalid generic type definition");
@@ -114,6 +130,12 @@ void generic_register_template(const char *name, dynamic_list_t *param_names,
         AST_t *m = (AST_t *)member_nodes->items[i];
         list_enqueue(t->members, clone_ast_shallow(m));
     }
+    if (iface_ids && iface_ids->size > 0) {
+        t->iface_ids = init_list(sizeof(void *));
+        for (unsigned int i = 0; i < iface_ids->size; i++)
+            list_enqueue(t->iface_ids, iface_ids->items[i]);
+    }
+    t->base_type_id = base_type_id;
     list_enqueue(generic_templates, t);
 }
 
@@ -133,10 +155,32 @@ static void substitute_member_types(dynamic_list_t *members, dynamic_list_t *par
         AST_t *m = (AST_t *)members->items[i];
         if (!m)
             continue;
-        if (m->type == VAR_AST || m->type == ASSIGNEMENT_AST)
+        if (m->datatype && m->datatype != TYPE_UNKNOWN)
             m->datatype = substitute_datatype(m->datatype, param_dts);
-        if (m->type == FUNC_AST)
-            m->datatype = substitute_datatype(m->datatype, param_dts);
+        if (m->type == FUNC_AST && m->parent)
+            substitute_member_types(m->parent->children, param_dts);
+    }
+}
+
+static void remangle_cust_methods(dynamic_list_t *members, const char *type_name)
+{
+    for (unsigned int i = 0; i < members->size; i++) {
+        AST_t *m = (AST_t *)members->items[i];
+        if (!m || m->type != FUNC_AST || !m->name)
+            continue;
+        char *short_name = NULL;
+        if (strstr(m->name, "_operator_")) {
+            char *p = strstr(m->name, "_operator_");
+            short_name = strdup(p + 1);
+        } else {
+            char *underscore = strrchr(m->name, '_');
+            if (!underscore || !underscore[1])
+                continue;
+            short_name = strdup(underscore + 1);
+        }
+        free(m->name);
+        m->name = cust_mangle_method(type_name, short_name);
+        free(short_name);
     }
 }
 
@@ -145,7 +189,13 @@ static void append_dt_suffix(char *out, size_t cap, int dt)
     const char *suf = "unknown";
     if (dt == TYPE_INT)
         suf = "int";
-    else if (dt == TYPE_BOOL)
+    else if (IS_INT_TYPE(dt)) {
+        snprintf(out, cap, "i%d", numeric_bit_width(dt));
+        return;
+    } else if (IS_FLOAT_TYPE(dt)) {
+        snprintf(out, cap, "f%d", numeric_bit_width(dt));
+        return;
+    } else if (dt == TYPE_BOOL)
         suf = "bool";
     else if (dt == TYPE_STR)
         suf = "str";
@@ -205,18 +255,63 @@ int generic_instantiate(const char *name, dynamic_list_t *arg_dts, const AST_t *
         list_enqueue(members, m);
     }
     substitute_member_types(members, arg_dts);
+    remangle_cust_methods(members, mangled);
 
-    AST_t def;
-    memset(&def, 0, sizeof(def));
-    def.type = CUST_DEF_AST;
-    def.name = mangled;
-    def.children = members;
+    AST_t *def = calloc(1, sizeof(struct AST_S));
+    def->type = CUST_DEF_AST;
+    def->name = mangled;
+    def->children = members;
     if (loc) {
-        def.source_line = loc->source_line;
-        def.source_file = loc->source_file;
+        def->source_line = loc->source_line;
+        def->source_file = loc->source_file ? strdup(loc->source_file) : 0;
     }
 
-    int id = cust_register_from_ast(&def, -1, 0);
-    free(mangled);
+    dynamic_list_t *ifaces = 0;
+    if (tmpl->iface_ids && tmpl->iface_ids->size > 0) {
+        ifaces = init_list(sizeof(void *));
+        for (unsigned int i = 0; i < tmpl->iface_ids->size; i++)
+            list_enqueue(ifaces, tmpl->iface_ids->items[i]);
+    }
+    int id = cust_register_from_ast(def, tmpl->base_type_id, ifaces);
+    if (ifaces)
+        list_free_shallow(ifaces);
+    def->int_value = id;
+    def->datatype = MAKE_CUST_TYPE(id);
+
+    if (!instantiated_defs)
+        instantiated_defs = init_list(sizeof(struct AST_S *));
+    list_enqueue(instantiated_defs, def);
+
     return id;
+}
+
+void generic_append_instantiated_to_root(AST_t *root)
+{
+    if (!root || !root->children || !instantiated_defs || instantiated_defs->size == 0)
+        return;
+
+    size_t insert_after = 0;
+    for (unsigned int i = 0; i < root->children->size; i++) {
+        AST_t *child = (AST_t *)root->children->items[i];
+        if (child && child->type == CUST_DEF_AST)
+            insert_after = i + 1;
+    }
+
+    dynamic_list_t *merged = init_list(sizeof(struct AST_S *));
+    for (unsigned int i = 0; i < root->children->size; i++) {
+        if (i == insert_after) {
+            for (unsigned int j = 0; j < instantiated_defs->size; j++)
+                list_enqueue(merged, instantiated_defs->items[j]);
+        }
+        list_enqueue(merged, root->children->items[i]);
+    }
+    if (insert_after >= root->children->size) {
+        for (unsigned int j = 0; j < instantiated_defs->size; j++)
+            list_enqueue(merged, instantiated_defs->items[j]);
+    }
+
+    list_free_shallow(root->children);
+    root->children = merged;
+    list_free_shallow(instantiated_defs);
+    instantiated_defs = 0;
 }

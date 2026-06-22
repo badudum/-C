@@ -1,0 +1,18 @@
+reference qualified module_helper
+
+main = ({x} int) function {
+    HelloWorldLine("--- [mod-1] qualified module call ---");
+    {v} int = module_helper.moduleAnswer(0);
+    if (v == 42) {
+        HelloWorldLine("PASS: module_helper.moduleAnswer");
+    } else {
+        HelloWorldLine("FAIL: module_answer v=", v);
+    };
+    {s} int = module_helper.moduleAdd(10, 5);
+    if (s == 15) {
+        HelloWorldLine("PASS: module_helper.moduleAdd");
+    } else {
+        HelloWorldLine("FAIL: module_add s=", s);
+    };
+    return 0;
+} int;

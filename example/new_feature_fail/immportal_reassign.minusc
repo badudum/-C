@@ -1,0 +1,7 @@
+reference new_feature_tests
+
+main = () function {
+    {limit} immportal int = 1;
+    limit = 2;
+    return 0;
+} int;

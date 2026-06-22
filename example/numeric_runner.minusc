@@ -1,0 +1,6 @@
+reference numeric_tests
+
+main = () function {
+    testNumericOps(0);
+    return 0;
+} int;

@@ -6,23 +6,40 @@
 #include "include/types.h"
 #include "include/generic.h"
 #include "include/interface.h"
+#include "include/module.h"
+#include "include/numeric.h"
 #include "include/errors.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
-AST_t *parse_compound(parser_t *parser);
+AST_t * parse_try(parser_t *parser);
+AST_t * parse_compound(parser_t *parser);
+static void parse_block_statement(parser_t *p, AST_t *n);
+AST_t *parse_enum(parser_t *parser);
+AST_t *parse_foreach(parser_t *parser);
 
 static int parser_read_datatype(parser_t *parser);
 
 
 AST_t * parse_int(parser_t * parser)
 {
-    int value = atoi(parser->token->value);
     AST_t * ast = parser_make_ast(parser, INT_AST);
-    ast->int_value = value;
+    ast->string_value = mkstr(parser->token->value);
+    ast->int_value = atoi(parser->token->value);
+    ast->datatype = TYPE_INT;
     parser_next(parser, INT_TOKEN);
 
+    return ast;
+}
+
+AST_t * parse_float(parser_t * parser)
+{
+    AST_t * ast = parser_make_ast(parser, FLOAT_AST);
+    ast->string_value = mkstr(parser->token->value);
+    ast->datatype = TYPE_F64;
+    parser_next(parser, FLOAT_TOKEN);
     return ast;
 }
 
@@ -56,7 +73,20 @@ token_t * parser_next(parser_t * parser, int token_type)
 
 AST_t * parse(parser_t* parser)
 {
+    parser->scope_depth = 0;
     return parse_compound(parser);
+}
+
+static char *parser_mangle_global_name(parser_t *parser, char *name)
+{
+    if (!parser || parser->scope_depth != 0 || !name)
+        return name;
+    const char *mod = module_name_for_source(parser->token->source_file);
+    if (!mod)
+        return name;
+    char *mangled = module_mangle_symbol(mod, name);
+    free(name);
+    return mangled ? mangled : name;
 }
 
 
@@ -87,7 +117,44 @@ static int parser_brace_starts_var_decl(parser_t *parser)
 
 static int parser_token_starts_datatype(parser_t *parser)
 {
-    return parser->token->type == ID_TOKEN || parser->token->type == BITAND_TOKEN;
+    if (parser->token->type == BITAND_TOKEN)
+        return 1;
+    if (parser->token->type == ID_TOKEN &&
+        strcmp(parser->token->value, "double") == 0)
+        return 1;
+    return parser->token->type == ID_TOKEN;
+}
+
+static int parser_consume_double_prefix(parser_t *parser)
+{
+    int count = 0;
+    while (parser->token->type == ID_TOKEN &&
+           strcmp(parser->token->value, "double") == 0) {
+        parser_next(parser, ID_TOKEN);
+        count++;
+        if (count > NUMERIC_MAX_DOUBLE_PREFIX) {
+            compile_error_parser(parser,
+                "too many 'double' prefixes (max %d)", NUMERIC_MAX_DOUBLE_PREFIX);
+        }
+    }
+    return count;
+}
+
+static int parser_read_numeric_base(parser_t *parser, int doubles)
+{
+    if (parser->token->type != ID_TOKEN) {
+        compile_error_parser(parser, "expected 'int' or 'float' after type prefix");
+    }
+    if (strcmp(parser->token->value, "int") == 0) {
+        parser_next(parser, ID_TOKEN);
+        return wint_from_double_count(doubles);
+    }
+    if (strcmp(parser->token->value, "float") == 0) {
+        parser_next(parser, ID_TOKEN);
+        return wfloat_from_double_count(doubles);
+    }
+    compile_error_parser(parser, "expected 'int' or 'float' after 'double' prefix");
+    return TYPE_UNKNOWN;
 }
 
 static int parser_type_param_index(parser_t *parser, const char *name)
@@ -144,9 +211,17 @@ static int parser_read_datatype(parser_t *parser)
         parser_next(parser, ID_TOKEN);
         return TYPE_ADR_SHREF;
     }
+
+    int doubles = parser_consume_double_prefix(parser);
+
     if (parser->token->type != ID_TOKEN) {
-        compile_error_parser(parser, "expected type name");
+        compile_error_parser(parser, "expected type name (got token %d)", parser->token->type);
     }
+
+    if (doubles > 0) {
+        return parser_read_numeric_base(parser, doubles);
+    }
+
     char *type_name = mkstr(parser->token->value);
     parser_next(parser, ID_TOKEN);
 
@@ -157,7 +232,12 @@ static int parser_read_datatype(parser_t *parser)
             return MAKE_CUST_TYPE(cid);
         }
         if (strcmp(type_name, "Array") == 0) {
-            int elem = parser_read_datatype(parser);
+            dynamic_list_t *args = parser_parse_type_args(parser);
+            if (args->size != 1) {
+                compile_error_parser(parser, "Array requires exactly one element type");
+            }
+            int elem = (int)(intptr_t)args->items[0];
+            list_free_shallow(args);
             if (elem == TYPE_UNKNOWN || elem == TYPE_ARRAY || IS_TYPE_PARAM(elem)) {
                 compile_error_parser(parser, "invalid Array element type");
             }
@@ -220,6 +300,8 @@ static AST_t *parse_cust_init_fields(parser_t *parser, int cust_id, const char *
 
 static int parser_id_starts_method(parser_t *parser)
 {
+    if (parser->token->type == OPERATOR_TOKEN)
+        return 1;
     if (parser->token->type != ID_TOKEN)
         return 0;
     lexer_t *lex = parser->lexer;
@@ -265,6 +347,18 @@ static int parser_peek_generic_cust_def(parser_t *parser)
     return strcmp(kw, "cust") == 0 || strcmp(kw, "class") == 0;
 }
 
+static const char *parser_operator_method_name(int op_token)
+{
+    switch (op_token) {
+        case PLUS_TOKEN: return "operator_add";
+        case MINUS_TOKEN: return "operator_sub";
+        case ASTERISK_TOKEN: return "operator_mul";
+        case SLASH_TOKEN: return "operator_div";
+        case MODULUS_TOKEN: return "operator_mod";
+        default: return NULL;
+    }
+}
+
 static AST_t *parse_cust_method(parser_t *parser, const char *type_name, int visibility)
 {
     int is_virtual = 0;
@@ -273,8 +367,18 @@ static AST_t *parse_cust_method(parser_t *parser, const char *type_name, int vis
         is_virtual = 1;
     }
 
-    char *method_name = mkstr(parser->token->value);
-    parser_next(parser, ID_TOKEN);
+    char *method_name = NULL;
+    if (parser->token->type == OPERATOR_TOKEN) {
+        parser_next(parser, OPERATOR_TOKEN);
+        const char *opname = parser_operator_method_name(parser->token->type);
+        if (!opname)
+            compile_error_parser(parser, "unsupported operator overload token");
+        method_name = mkstr(opname);
+        parser_next(parser, parser->token->type);
+    } else {
+        method_name = mkstr(parser->token->value);
+        parser_next(parser, ID_TOKEN);
+    }
     parser_next(parser, EQUALS_TOKEN);
     parser_next(parser, LPAREN_TOKEN);
 
@@ -284,12 +388,23 @@ static AST_t *parse_cust_method(parser_t *parser, const char *type_name, int vis
     if (parser->token->type == SELF_TOKEN ||
         (parser->token->type == ID_TOKEN && strcmp(parser->token->value, "self") == 0)) {
         parser_next(parser, parser->token->type);
-        parser_next(parser, RPAREN_TOKEN);
         AST_t *self_param = parser_make_ast(parser, ASSIGNEMENT_AST);
         self_param->name = mkstr("self");
         self_param->datatype = TYPE_UNKNOWN;
         list_enqueue(func->children, self_param);
         func->id = 1;
+        if (strncmp(method_name, "operator_", 9) == 0 &&
+            parser->token->type == COMMA_TOKEN) {
+            parser_next(parser, COMMA_TOKEN);
+            if (parser->token->type != ID_TOKEN)
+                compile_error_parser(parser, "operator overload expects (self, other) parameters");
+            AST_t *other_param = parser_make_ast(parser, ASSIGNEMENT_AST);
+            other_param->name = mkstr(parser->token->value);
+            other_param->datatype = TYPE_UNKNOWN;
+            list_enqueue(func->children, other_param);
+            parser_next(parser, ID_TOKEN);
+        }
+        parser_next(parser, RPAREN_TOKEN);
     } else {
         compile_error_parser(parser, "methods in '%s' must declare (self) receiver", type_name);
     }
@@ -334,6 +449,7 @@ static dynamic_list_t *parser_parse_type_param_names(parser_t *parser)
 
 static AST_t *parse_cust_body(parser_t *parser, char *type_name, int is_template)
 {
+    type_name = parser_mangle_global_name(parser, type_name);
     if (!parser_is_cust_or_class_token(parser)) {
         compile_error_parser(parser, "expected 'cust' or 'class' after type name");
     }
@@ -343,12 +459,12 @@ static AST_t *parse_cust_body(parser_t *parser, char *type_name, int is_template
     dynamic_list_t *iface_ids = init_list(sizeof(void *));
 
     if (parser->token->type == EXTENDS_TOKEN) {
-        if (is_template) {
-            compile_error_parser(parser, "generic types cannot use 'extends' in template definition");
-        }
         parser_next(parser, EXTENDS_TOKEN);
         if (parser->token->type != ID_TOKEN) {
             compile_error_parser(parser, "expected base type name after 'extends'");
+        }
+        if (is_template && generic_lookup_template(parser->token->value) >= 0) {
+            compile_error_parser(parser, "generic template cannot extend another generic template");
         }
         base_type_id = cust_lookup_by_name(parser->token->value);
         if (base_type_id < 0) {
@@ -358,9 +474,6 @@ static AST_t *parse_cust_body(parser_t *parser, char *type_name, int is_template
     }
 
     if (parser->token->type == IMPLEMENTS_TOKEN) {
-        if (is_template) {
-            compile_error_parser(parser, "generic templates cannot implement interfaces directly");
-        }
         parser_next(parser, IMPLEMENTS_TOKEN);
         do {
             if (parser->token->type != ID_TOKEN) {
@@ -379,6 +492,9 @@ static AST_t *parse_cust_body(parser_t *parser, char *type_name, int is_template
     AST_t *def = parser_make_ast(parser, CUST_DEF_AST);
     def->name = type_name;
 
+    if (!is_template)
+        cust_register_forward(type_name, def);
+
     while (parser->token->type != RBRACE_TOKEN && parser->token->type != EOF_TOKEN) {
         int visibility = CUST_VIS_PUBLIC;
         if (parser->token->type == PUBLIC_TOKEN) {
@@ -390,7 +506,8 @@ static AST_t *parse_cust_body(parser_t *parser, char *type_name, int is_template
         }
 
         AST_t *member;
-        if (parser->token->type == VIRTUAL_TOKEN || parser_id_starts_method(parser))
+        if (parser->token->type == VIRTUAL_TOKEN || parser->token->type == OPERATOR_TOKEN ||
+            parser_id_starts_method(parser))
             member = parse_cust_method(parser, type_name, visibility);
         else {
             member = parse_factor(parser);
@@ -403,7 +520,8 @@ static AST_t *parse_cust_body(parser_t *parser, char *type_name, int is_template
     parser_next(parser, RBRACE_TOKEN);
 
     if (is_template) {
-        generic_register_template(type_name, parser->generic_params, def->children, def);
+        generic_register_template(type_name, parser->generic_params, def->children,
+                                  iface_ids, base_type_id, def);
         parser->generic_params = NULL;
         def->int_value = -1;
         list_free_shallow(iface_ids);
@@ -431,6 +549,7 @@ static AST_t *parse_cust_def(parser_t *parser, char *type_name)
 
 static AST_t *parse_interface_def(parser_t *parser, char *type_name)
 {
+    type_name = parser_mangle_global_name(parser, type_name);
     parser_next(parser, INTERFACE_TOKEN);
     parser_next(parser, LBRACE_TOKEN);
     AST_t *def = parser_make_ast(parser, CUST_DEF_AST);
@@ -522,9 +641,25 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
     if(parser->token->type == RBRACE_TOKEN)
     {
         parser_next(parser, RBRACE_TOKEN);
+        int immportal = 0;
+        if (parser->token->type == IMMPORTAL_TOKEN) {
+            immportal = 1;
+            parser_next(parser, IMMPORTAL_TOKEN);
+        }
         if (parser_token_starts_datatype(parser)) {
             ast->datatype = parser_read_datatype(parser);
             ast->int_value = 1;
+            if (immportal) {
+                ast->multiplier = 1;
+                ast->int_value |= AST_IMMPORTAL_FLAG;
+            }
+        } else {
+            ast->int_value = 1;
+            ast->datatype = TYPE_UNKNOWN;
+            if (immportal) {
+                ast->multiplier = 1;
+                ast->int_value |= AST_IMMPORTAL_FLAG;
+            }
         }
     }
 
@@ -619,7 +754,13 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
 
     if (parser->token->type == EQUALS_TOKEN ||
         parser->token->type == PLUS_EQUALS_TOKEN ||
-        parser->token->type == MINUS_EQUALS_TOKEN)
+        parser->token->type == MINUS_EQUALS_TOKEN ||
+        parser->token->type == ASTERISK_EQUALS_TOKEN ||
+        parser->token->type == SLASH_EQUALS_TOKEN ||
+        parser->token->type == MODULUS_EQUALS_TOKEN ||
+        parser->token->type == CARET_EQUALS_TOKEN ||
+        parser->token->type == BITAND_EQUALS_TOKEN ||
+        parser->token->type == BITOR_EQUALS_TOKEN)
     {
         int op = parser->token->type;
         parser_next(parser, op);
@@ -646,6 +787,8 @@ AST_t * parse_id(parser_t * parser) // this part mainly handles vairable declara
         ast->op = op;
         ast->type = ASSIGNEMENT_AST;
         ast->name = value;
+        if (parser->scope_depth == 0)
+            ast->name = parser_mangle_global_name(parser, ast->name);
 
         ast->parent = parse_expression(parser);
 
@@ -682,6 +825,8 @@ AST_t * parse_factor(parser_t * parser)
     {
         case INT_TOKEN:
             return parse_int(parser);
+        case FLOAT_TOKEN:
+            return parse_float(parser);
         case ID_TOKEN:
             if (strcmp(parser->token->value, "sizeof") == 0)
                 return parse_sizeof(parser);
@@ -792,18 +937,35 @@ AST_t * parse_unary(parser_t * parser)
     return parse_postfix(parser);
 }
 
+// exponentiation (right-associative, binds tighter than * /)
+AST_t * parse_pow(parser_t *parser)
+{
+    AST_t *left = parse_unary(parser);
+    if (parser->token->type == CARET_TOKEN) {
+        AST_t *binop = parser_make_ast(parser, BINOP_AST);
+        binop->left = left;
+        binop->op = CARET_TOKEN;
+        parser_next(parser, CARET_TOKEN);
+        binop->right = parse_pow(parser);
+        return binop;
+    }
+    return left;
+}
+
 // multiplication, division
 AST_t * parse_term(parser_t *parser)
 {
-    AST_t * left = parse_unary(parser);
+    AST_t * left = parse_pow(parser);
 
-    while (parser->token->type == ASTERISK_TOKEN || parser->token->type == SLASH_TOKEN)
+    while (parser->token->type == ASTERISK_TOKEN ||
+           parser->token->type == SLASH_TOKEN ||
+           parser->token->type == MODULUS_TOKEN)
     {
         AST_t * binop = parser_make_ast(parser, BINOP_AST);
         binop->left = left;
         binop->op = parser->token->type;
         parser_next(parser, parser->token->type);
-        binop->right = parse_unary(parser);
+        binop->right = parse_pow(parser);
         left = binop;
     }
 
@@ -966,18 +1128,7 @@ AST_t * parse_if(parser_t * parser)
     parser_next(parser, LBRACE_TOKEN);
     while (parser->token->type != RBRACE_TOKEN && parser->token->type != EOF_TOKEN)
     {
-        if (parser->token->type == RETURN_TOKEN)
-            list_enqueue(node->children, parse_statement(parser));
-        else if (parser->token->type == IF_TOKEN)
-            list_enqueue(node->children, parse_if(parser));
-        else if (parser->token->type == DUPE_TOKEN)
-            list_enqueue(node->children, parse_dupe(parser));
-        else if (parser->token->type == LBRACE_TOKEN && !parser_brace_starts_var_decl(parser))
-            list_enqueue(node->children, parse_compound(parser));
-        else
-            list_enqueue(node->children, parse_expression(parser));
-        if (parser->token->type == SEMI_TOKEN)
-            parser_next(parser, SEMI_TOKEN);
+        parse_block_statement(parser, node);
     }
     parser_next(parser, RBRACE_TOKEN);
 
@@ -1016,24 +1167,212 @@ AST_t * parse_if(parser_t * parser)
     return node;
 }
 
+static void parse_block_statement(parser_t *p, AST_t *n)
+{
+    if (p->token->type == RETURN_TOKEN)
+        list_enqueue(n->children, parse_statement(p));
+    else if (p->token->type == IF_TOKEN)
+        list_enqueue(n->children, parse_if(p));
+    else if (p->token->type == LOOP_TOKEN)
+        list_enqueue(n->children, parse_loop_until(p));
+    else if (p->token->type == SWITCH_TOKEN)
+        list_enqueue(n->children, parse_switch(p));
+    else if (p->token->type == BREAK_TOKEN)
+        list_enqueue(n->children, parse_break(p));
+    else if (p->token->type == CONTINUE_TOKEN)
+        list_enqueue(n->children, parse_continue(p));
+    else if (p->token->type == TRY_TOKEN)
+        list_enqueue(n->children, parse_try(p));
+    else if (p->token->type == FOREACH_TOKEN)
+        list_enqueue(n->children, parse_foreach(p));
+    else if (p->token->type == DUPE_TOKEN)
+        list_enqueue(n->children, parse_dupe(p));
+    else if (p->token->type == LBRACE_TOKEN && !parser_brace_starts_var_decl(p))
+        list_enqueue(n->children, parse_compound(p));
+    else
+        list_enqueue(n->children, parse_expression(p));
+    if (p->token->type == SEMI_TOKEN)
+        parser_next(p, SEMI_TOKEN);
+}
+
+AST_t * parse_break(parser_t *parser)
+{
+    parser_next(parser, BREAK_TOKEN);
+    return parser_make_ast(parser, BREAK_AST);
+}
+
+AST_t * parse_continue(parser_t *parser)
+{
+    parser_next(parser, CONTINUE_TOKEN);
+    return parser_make_ast(parser, CONTINUE_AST);
+}
+
+AST_t * parse_try(parser_t *parser)
+{
+    parser_next(parser, TRY_TOKEN);
+    parser_next(parser, LBRACE_TOKEN);
+    if (parser->token->type != ID_TOKEN)
+        compile_error_parser(parser, "expected variable name after try {");
+    char *name = mkstr(parser->token->value);
+    parser_next(parser, ID_TOKEN);
+    parser_next(parser, RBRACE_TOKEN);
+    if (!parser_token_starts_datatype(parser))
+        compile_error_parser(parser, "expected type after try {var}");
+    int dt = parser_read_datatype(parser);
+    parser_next(parser, EQUALS_TOKEN);
+    AST_t *assign = parser_make_ast(parser, ASSIGNEMENT_AST);
+    assign->name = name;
+    assign->datatype = dt;
+    assign->int_value = 1;
+    assign->op = EQUALS_TOKEN;
+    assign->parent = parse_expression(parser);
+    parser_next(parser, ELSE_TOKEN);
+    AST_t *handler = parse_compound(parser);
+    AST_t *try = parser_make_ast(parser, TRY_STMT_AST);
+    try->left = assign;
+    try->right = handler;
+    return try;
+}
+
+AST_t * parse_enum(parser_t *parser)
+{
+    parser_next(parser, ENUM_TOKEN);
+    char *ename = NULL;
+    if (parser->token->type == ID_TOKEN) {
+        ename = mkstr(parser->token->value);
+        parser_next(parser, ID_TOKEN);
+        ename = parser_mangle_global_name(parser, ename);
+    }
+    parser_next(parser, LBRACE_TOKEN);
+    AST_t *en = parser_make_ast(parser, ENUM_AST);
+    if (ename)
+        en->name = ename;
+    int val = 0;
+    int has_tagged = 0;
+    while (parser->token->type != RBRACE_TOKEN && parser->token->type != EOF_TOKEN) {
+        if (parser->token->type != ID_TOKEN)
+            compile_error_parser(parser, "expected enum member name");
+        char *mname = mkstr(parser->token->value);
+        parser_next(parser, ID_TOKEN);
+        int payload_dt = TYPE_INT;
+        int tagged = 0;
+        if (parser->token->type == LPAREN_TOKEN) {
+            parser_next(parser, LPAREN_TOKEN);
+            payload_dt = parser_read_datatype(parser);
+            parser_next(parser, RPAREN_TOKEN);
+            tagged = 1;
+            has_tagged = 1;
+        }
+        if (parser->token->type == EQUALS_TOKEN) {
+            parser_next(parser, EQUALS_TOKEN);
+            if (parser->token->type != INT_TOKEN)
+                compile_error_parser(parser, "expected integer after '=' in enum");
+            val = (int)strtol(parser->token->value, NULL, 10);
+            parser_next(parser, INT_TOKEN);
+        }
+        AST_t *member = parser_make_ast(parser, ASSIGNEMENT_AST);
+        member->name = mname;
+        member->datatype = payload_dt;
+        member->multiplier = tagged;
+        member->int_value = 1;
+        member->op = EQUALS_TOKEN;
+        AST_t *lit = parser_make_ast(parser, INT_AST);
+        lit->int_value = val;
+        lit->string_value = mkstr("0");
+        member->parent = lit;
+        list_enqueue(en->children, member);
+        val++;
+        if (parser->token->type == COMMA_TOKEN)
+            parser_next(parser, COMMA_TOKEN);
+    }
+    parser_next(parser, RBRACE_TOKEN);
+    if (ename && has_tagged) {
+        int sid = cust_register_sum_type(ename, en->children, en);
+        en->int_value = sid;
+        en->datatype = MAKE_CUST_TYPE(sid);
+    }
+    return en;
+}
+
+AST_t * parse_foreach(parser_t *parser)
+{
+    parser_next(parser, FOREACH_TOKEN);
+    parser_next(parser, LBRACE_TOKEN);
+    if (parser->token->type != ID_TOKEN)
+        compile_error_parser(parser, "expected index variable in foreach");
+    char *iname = mkstr(parser->token->value);
+    parser_next(parser, ID_TOKEN);
+    parser_next(parser, RBRACE_TOKEN);
+    if (parser->token->type != ID_TOKEN && parser->token->type != BITAND_TOKEN) {
+        compile_error_parser(parser, "expected type after foreach index '}%s', got token %d",
+                             iname, parser->token->type);
+    }
+    int idt = parser_read_datatype(parser);
+    if (parser->token->type != IN_TOKEN)
+        compile_error_parser(parser, "expected 'in' after foreach index type");
+    parser_next(parser, IN_TOKEN);
+    AST_t *arr = parse_expression(parser);
+    AST_t *fe = parser_make_ast(parser, FOREACH_AST);
+    fe->name = iname;
+    fe->datatype = idt;
+    fe->left = arr;
+    list_enqueue(fe->children, parse_compound(parser));
+    return fe;
+}
+
+static void parse_switch_cases(parser_t *p, AST_t *sw)
+{
+    while (p->token->type != RBRACE_TOKEN && p->token->type != EOF_TOKEN) {
+        AST_t *c = parser_make_ast(p, CASE_AST);
+        if (p->token->type == CASE_TOKEN) {
+            parser_next(p, CASE_TOKEN);
+            if (p->token->type == INT_TOKEN) {
+                c->int_value = (int)strtol(p->token->value, NULL, 10);
+                parser_next(p, INT_TOKEN);
+            } else if (p->token->type == REAL_TOKEN) {
+                c->int_value = 1;
+                parser_next(p, REAL_TOKEN);
+            } else if (p->token->type == FAKE_TOKEN) {
+                c->int_value = 0;
+                parser_next(p, FAKE_TOKEN);
+            } else {
+                compile_error_parser(p, "expected integer or bool literal after 'choose'");
+            }
+            c->op = CASE_TOKEN;
+        } else if (p->token->type == DEFAULT_TOKEN) {
+            parser_next(p, DEFAULT_TOKEN);
+            c->int_value = -1;
+            c->op = DEFAULT_TOKEN;
+        } else {
+            compile_error_parser(p, "expected 'choose' or 'anything' in menu body");
+        }
+        parser_next(p, COLON_TOKEN);
+        while (p->token->type != CASE_TOKEN && p->token->type != DEFAULT_TOKEN &&
+               p->token->type != RBRACE_TOKEN && p->token->type != EOF_TOKEN) {
+            parse_block_statement(p, c);
+        }
+        list_enqueue(sw->children, c);
+    }
+}
+
+AST_t * parse_switch(parser_t *parser)
+{
+    parser_next(parser, SWITCH_TOKEN);
+    parser_next(parser, LPAREN_TOKEN);
+    AST_t *sw = parser_make_ast(parser, SWITCH_AST);
+    sw->left = parse_expression(parser);
+    parser_next(parser, RPAREN_TOKEN);
+    parser_next(parser, LBRACE_TOKEN);
+    parse_switch_cases(parser, sw);
+    parser_next(parser, RBRACE_TOKEN);
+    return sw;
+}
+
 /* Parse loop body (statements until RBRACE). Consumes RBRACE. */
 static void parse_loop_body(parser_t *p, AST_t *n)
 {
     while (p->token->type != RBRACE_TOKEN && p->token->type != EOF_TOKEN) {
-        if (p->token->type == RETURN_TOKEN)
-            list_enqueue(n->children, parse_statement(p));
-        else if (p->token->type == IF_TOKEN)
-            list_enqueue(n->children, parse_if(p));
-        else if (p->token->type == LOOP_TOKEN)
-            list_enqueue(n->children, parse_loop_until(p));
-        else if (p->token->type == DUPE_TOKEN)
-            list_enqueue(n->children, parse_dupe(p));
-        else if (p->token->type == LBRACE_TOKEN && !parser_brace_starts_var_decl(p))
-            list_enqueue(n->children, parse_compound(p));
-        else
-            list_enqueue(n->children, parse_expression(p));
-        if (p->token->type == SEMI_TOKEN)
-            parser_next(p, SEMI_TOKEN);
+        parse_block_statement(p, n);
     }
     parser_next(p, RBRACE_TOKEN);
 }
@@ -1182,6 +1521,7 @@ AST_t * parse_compound(parser_t * parser)
     {
         is_braced = true;
         parser_next(parser, LBRACE_TOKEN);
+        parser->scope_depth++;
     }
 
     AST_t * compound = parser_make_ast(parser, COMP_AST);
@@ -1199,6 +1539,30 @@ AST_t * parse_compound(parser_t * parser)
         else if (parser->token->type == LOOP_TOKEN)
         {
             list_enqueue(compound->children, parse_loop_until(parser));
+        }
+        else if (parser->token->type == SWITCH_TOKEN)
+        {
+            list_enqueue(compound->children, parse_switch(parser));
+        }
+        else if (parser->token->type == BREAK_TOKEN)
+        {
+            list_enqueue(compound->children, parse_break(parser));
+        }
+        else if (parser->token->type == CONTINUE_TOKEN)
+        {
+            list_enqueue(compound->children, parse_continue(parser));
+        }
+        else if (parser->token->type == TRY_TOKEN)
+        {
+            list_enqueue(compound->children, parse_try(parser));
+        }
+        else if (parser->token->type == ENUM_TOKEN)
+        {
+            list_enqueue(compound->children, parse_enum(parser));
+        }
+        else if (parser->token->type == FOREACH_TOKEN)
+        {
+            list_enqueue(compound->children, parse_foreach(parser));
         }
         else if (parser->token->type == DUPE_TOKEN)
         {
@@ -1222,6 +1586,7 @@ AST_t * parse_compound(parser_t * parser)
     {
         parser_next(parser, RBRACE_TOKEN);
         compound->int_value = 1;
+        parser->scope_depth--;
     }
 
     return compound;

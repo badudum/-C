@@ -1,0 +1,319 @@
+testI64 = ({x} int) function {
+    HelloWorldLine("--- [num-1] double int (64-bit) ---");
+    {a} double int = 10000000000;
+    {b} double int = 3;
+    {c} double int = a + b;
+    {d} double int = 10000000003;
+    HelloWorldLine("i64 add: result=", c, " expected=", d);
+    if (c == d) {
+        HelloWorldLine("PASS: i64 add");
+    } else {
+        HelloWorldLine("FAIL: i64 add");
+    };
+    return 0;
+} int;
+
+testFloat = ({x} int) function {
+    HelloWorldLine("--- [num-2] float (64-bit) ---");
+    {a} float = 3.5;
+    {b} float = 2.0;
+    {c} float = a * b;
+    {d} float = 7.0;
+    HelloWorldLine("float mul: result=", c, " expected=", d);
+    if (c == d) {
+        HelloWorldLine("PASS: float mul");
+    } else {
+        HelloWorldLine("FAIL: float mul");
+    };
+    return 0;
+} int;
+
+testMixed = ({x} int) function {
+    HelloWorldLine("--- [num-3] int + float promotion ---");
+    {i} int = 10;
+    {f} float = 2.5;
+    {r} float = i + f;
+    {e} float = 12.5;
+    HelloWorldLine("mixed add: result=", r, " expected=", e);
+    if (r == e) {
+        HelloWorldLine("PASS: int promoted to float");
+    } else {
+        HelloWorldLine("FAIL: mixed promotion");
+    };
+    return 0;
+} int;
+
+testSizeof = ({x} int) function {
+    HelloWorldLine("--- [num-4] sizeof extended types ---");
+    {si} int = sizeof(int);
+    {s64} int = sizeof(double int);
+    {sf} int = sizeof(float);
+    {sf2} int = sizeof(double float);
+    {s128} int = sizeof(double double int);
+    HelloWorldLine("sizeof int=", si, " double int=", s64, " float=", sf);
+    HelloWorldLine("sizeof double float=", sf2, " double double int=", s128);
+    if (si == 4) {
+        if (s64 == 8) {
+            if (sf == 8) {
+                if (sf2 == 16) {
+                    if (s128 == 16) {
+                        HelloWorldLine("PASS: sizeof int/float widths");
+                    } else {
+                        HelloWorldLine("FAIL: sizeof i128");
+                    };
+                } else {
+                    HelloWorldLine("FAIL: sizeof double float");
+                };
+            } else {
+                HelloWorldLine("FAIL: sizeof float");
+            };
+        } else {
+            HelloWorldLine("FAIL: sizeof double int");
+        };
+    } else {
+        HelloWorldLine("FAIL: sizeof int");
+    };
+    return 0;
+} int;
+
+testMassiveI64 = ({x} int) function {
+    HelloWorldLine("--- [num-5] massive i64 ---");
+    {a} double int = 10000000000000000000;
+    {b} double int = 1;
+    {c} double int = a + b;
+    {d} double int = 10000000000000000001;
+    HelloWorldLine("10^19+1: result=", c, " expected=", d);
+    if (c == d) {
+        HelloWorldLine("PASS: massive i64 add (10^19+1)");
+    } else {
+        HelloWorldLine("FAIL: massive i64 add (10^19+1)");
+    };
+    {e} double int = 4000000000000000000;
+    {f} double int = 4000000000000000000;
+    {g} double int = e + f;
+    {h} double int = 8000000000000000000;
+    HelloWorldLine("4e18+4e18: result=", g, " expected=", h);
+    if (g == h) {
+        HelloWorldLine("PASS: massive i64 add (4e18+4e18)");
+    } else {
+        HelloWorldLine("FAIL: massive i64 add 4e18");
+    };
+    {m} double int = 3000000000000000000;
+    {n} double int = m * 2;
+    {p} double int = 6000000000000000000;
+    HelloWorldLine("3e18*2: result=", n, " expected=", p);
+    if (n == p) {
+        HelloWorldLine("PASS: massive i64 mul");
+    } else {
+        HelloWorldLine("FAIL: massive i64 mul");
+    };
+    return 0;
+} int;
+
+testMassiveI128 = ({x} int) function {
+    HelloWorldLine("--- [num-6] massive i128 ---");
+    {a} double double int = 6000000000000000000;
+    {b} double double int = 6000000000000000000;
+    {c} double double int = a + b;
+    {d} double double int = 12000000000000000000;
+    HelloWorldLine("6e18+6e18: result=", c, " expected=", d);
+    if (c == d) {
+        HelloWorldLine("PASS: i128 add (6e18+6e18)");
+    } else {
+        HelloWorldLine("FAIL: i128 add low limb");
+    };
+    {x} double double int = 10000000000000000000;
+    {y} double double int = 10000000000000000000;
+    {z} double double int = x + y;
+    {ref} double double int = x + x;
+    HelloWorldLine("2*10^19: result=", z, " expected=", ref);
+    if (z == ref) {
+        HelloWorldLine("PASS: i128 add with carry (2*10^19)");
+    } else {
+        HelloWorldLine("FAIL: i128 add carry");
+    };
+    return 0;
+} int;
+
+testMassiveFloat = ({x} int) function {
+    HelloWorldLine("--- [num-7] massive float ---");
+    {a} float = 1000000000000000.0;
+    {b} float = 1000000000000000.0;
+    {c} float = a + b;
+    {d} float = 2000000000000000.0;
+    HelloWorldLine("2e15+2e15: result=", c, " expected=", d);
+    if (c == d) {
+        HelloWorldLine("PASS: massive float add (2e15)");
+    } else {
+        HelloWorldLine("FAIL: massive float add");
+    };
+    {e} float = 1e18;
+    {f} float = 2.0;
+    {g} float = e * f;
+    {h} float = 2e18;
+    HelloWorldLine("1e18*2: result=", g, " expected=", h);
+    if (g == h) {
+        HelloWorldLine("PASS: massive float mul (1e18*2)");
+    } else {
+        HelloWorldLine("FAIL: massive float mul");
+    };
+    return 0;
+} int;
+
+testPow = ({x} int) function {
+    HelloWorldLine("--- [num-8] exponentiation (^) ---");
+    {a} int = 2;
+    {b} int = 10;
+    {c} int = a ^ b;
+    {d} int = 1024;
+    HelloWorldLine("2^10: result=", c, " expected=", d);
+    if (c == d) {
+        HelloWorldLine("PASS: int pow 2^10");
+    } else {
+        HelloWorldLine("FAIL: int pow 2^10");
+    };
+    {e} int = 3;
+    {f} int = 4;
+    {g} int = e ^ f;
+    {h} int = 81;
+    HelloWorldLine("3^4: result=", g, " expected=", h);
+    if (g == h) {
+        HelloWorldLine("PASS: int pow 3^4");
+    } else {
+        HelloWorldLine("FAIL: int pow 3^4");
+    };
+    {i} int = 2;
+    {j} int = 3;
+    {k} int = 2;
+    {r} int = i ^ j ^ k;
+    {s} int = 512;
+    HelloWorldLine("2^3^2: result=", r, " expected=", s);
+    if (r == s) {
+        HelloWorldLine("PASS: right-assoc 2^3^2");
+    } else {
+        HelloWorldLine("FAIL: right-assoc 2^3^2");
+    };
+    {x} float = 2.0;
+    {y} float = 10.0;
+    {z} float = x ^ y;
+    {w} float = 1024.0;
+    HelloWorldLine("float 2^10: result=", z, " expected=", w);
+    if (z == w) {
+        HelloWorldLine("PASS: float pow 2^10");
+    } else {
+        HelloWorldLine("FAIL: float pow");
+    };
+    {m} int = 2;
+    {n} float = 3.0;
+    {p} float = m ^ n;
+    {q} float = 8.0;
+    HelloWorldLine("2^3.0: result=", p, " expected=", q);
+    if (p == q) {
+        HelloWorldLine("PASS: int^float promotion");
+    } else {
+        HelloWorldLine("FAIL: int^float");
+    };
+    {big} double int = 1000;
+    {exp} int = 3;
+    {bigr} double int = big ^ exp;
+    {bige} double int = 1000000000;
+    HelloWorldLine("1000^3: result=", bigr, " expected=", bige);
+    if (bigr == bige) {
+        HelloWorldLine("PASS: i64 pow 1000^3");
+    } else {
+        HelloWorldLine("FAIL: i64 pow");
+    };
+    {base} double double int = 10;
+    {pow10} double double int = base ^ 10;
+    {ten10} double double int = 10000000000;
+    HelloWorldLine("10^10: result=", pow10, " expected=", ten10);
+    if (pow10 == ten10) {
+        HelloWorldLine("PASS: i128 pow 10^10");
+    } else {
+        HelloWorldLine("FAIL: i128 pow 10^10");
+    };
+    {pow20} double double int = base ^ 20;
+    {pow20b} double double int = base ^ 20;
+    HelloWorldLine("10^20: result=", pow20, " expected=", pow20b);
+    if (pow20 == pow20b) {
+        HelloWorldLine("PASS: i128 pow 10^20");
+    } else {
+        HelloWorldLine("FAIL: i128 pow 10^20");
+    };
+    {twoWide} double double double double int = 2;
+    {p500} double double double double int = twoWide ^ 500;
+    {p500e} double double double double int = twoWide ^ 500;
+    HelloWorldLine("2^500: result=", p500, " expected=", p500e);
+    if (p500 == p500e) {
+        HelloWorldLine("PASS: i512 pow 2^500");
+    } else {
+        HelloWorldLine("FAIL: i512 pow 2^500");
+    };
+    return 0;
+} int;
+
+testF1024 = ({x} int) function {
+    HelloWorldLine("--- [num-9] 1024-bit float ---");
+    {sf} int = sizeof(double double double double float);
+    {sz} int = 128;
+    HelloWorldLine("sizeof f1024=", sf, " expected=", sz);
+    if (sf == sz) {
+        HelloWorldLine("PASS: f1024 sizeof");
+    } else {
+        HelloWorldLine("FAIL: f1024 sizeof");
+    };
+    {smallA} double double double double float = 1e-12;
+    {smallB} double double double double float = 1e-12;
+    {smallSum} double double double double float = smallA + smallB;
+    {smallExp} double double double double float = 2e-12;
+    HelloWorldLine("small add 1e-12+1e-12: result=", smallSum, " expected=", smallExp);
+    if (smallSum == smallExp) {
+        HelloWorldLine("PASS: f1024 small add");
+    } else {
+        HelloWorldLine("FAIL: f1024 small add");
+    };
+    {tiny} double double double double float = 0.000001;
+    {tiny2} double double double double float = 2.0;
+    {tinyMul} double double double double float = tiny * tiny2;
+    {tinyExp} double double double double float = 0.000002;
+    HelloWorldLine("small mul 1e-6*2: result=", tinyMul, " expected=", tinyExp);
+    if (tinyMul == tinyExp) {
+        HelloWorldLine("PASS: f1024 small mul");
+    } else {
+        HelloWorldLine("FAIL: f1024 small mul");
+    };
+    {largeA} double double double double float = 1e18;
+    {largeB} double double double double float = 1e18;
+    {largeSum} double double double double float = largeA + largeB;
+    {largeExp} double double double double float = 2e18;
+    HelloWorldLine("large add 1e18+1e18: result=", largeSum, " expected=", largeExp);
+    if (largeSum == largeExp) {
+        HelloWorldLine("PASS: f1024 large add");
+    } else {
+        HelloWorldLine("FAIL: f1024 large add");
+    };
+    {bigA} double double double double float = 1e9;
+    {bigB} double double double double float = 1e9;
+    {bigMul} double double double double float = bigA * bigB;
+    {bigExp} double double double double float = 1e18;
+    HelloWorldLine("large mul 1e9*1e9: result=", bigMul, " expected=", bigExp);
+    if (bigMul == bigExp) {
+        HelloWorldLine("PASS: f1024 large mul");
+    } else {
+        HelloWorldLine("FAIL: f1024 large mul");
+    };
+    return 0;
+} int;
+
+testNumericOps = ({x} int) function {
+    testI64(0);
+    testFloat(0);
+    testMixed(0);
+    testSizeof(0);
+    testMassiveI64(0);
+    testMassiveI128(0);
+    testMassiveFloat(0);
+    testPow(0);
+    testF1024(0);
+    return 0;
+} int;

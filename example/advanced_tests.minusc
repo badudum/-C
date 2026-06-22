@@ -1,0 +1,102 @@
+reference std.result
+reference std.math
+reference std.alloc
+
+testConstexpr = ({x} int) function {
+    HelloWorldLine("--- [adv-1] compile-time eval ---");
+    {a} int = 4 * 2 + 1;
+    if (a == 9) {
+        HelloWorldLine("PASS: constexpr binop fold");
+    } else {
+        HelloWorldLine("FAIL: constexpr fold");
+    };
+    return 0;
+} int;
+
+testTryErr = ({x} int) function {
+    HelloWorldLine("--- [adv-2] try/else on error ---");
+    try {r} ResultInt = ResultInt{ok=Fake, code=42, val=0} else {
+        if (r.code == 42) {
+            HelloWorldLine("PASS: try else branch");
+        } else {
+            HelloWorldLine("FAIL: try code", r.code);
+        };
+        return 0;
+    };
+    HelloWorldLine("FAIL: expected else branch");
+    return 1;
+} int;
+
+testTryOk = ({x} int) function {
+    HelloWorldLine("--- [adv-3] try/else on success ---");
+    try {r} ResultInt = ResultInt{ok=Real, val=5, code=0} else {
+        HelloWorldLine("FAIL: unexpected else branch");
+        return 1;
+    };
+    if (r.val == 5) {
+        HelloWorldLine("PASS: try ok path val=", r.val);
+    } else {
+        HelloWorldLine("FAIL: try val", r.val);
+    };
+    return 0;
+} int;
+
+testArena = ({x} int) function {
+    HelloWorldLine("--- [adv-4] arena allocator ---");
+    {arena} adr = ArenaCreate(256);
+    {buf} adr = arenaRent(arena, 16);
+    {w} int = PokeInt(buf, 0, 99);
+    {v} int = PeekInt(buf, 0);
+    {mo} int = moveOut(buf);
+    {z} int = ArenaReset(arena);
+    {d} int = ArenaDestroy(arena);
+    if (v == 99) {
+        HelloWorldLine("PASS: arena rent + peek/poke");
+    } else {
+        HelloWorldLine("FAIL: arena value", v);
+    };
+    return 0;
+} int;
+
+testPool = ({x} int) function {
+    HelloWorldLine("--- [adv-5] pool allocator ---");
+    {pool} adr = PoolCreate(32, 4);
+    {a} adr = poolRent(pool);
+    {b} adr = poolRent(pool);
+    {w} int = PokeInt(a, 0, 7);
+    {v} int = PeekInt(a, 0);
+    {mo} int = moveOut(a);
+    {z} int = PoolReset(pool);
+    {d} int = PoolDestroy(pool);
+    if (v == 7) {
+        HelloWorldLine("PASS: pool rent + peek/poke");
+    } else {
+        HelloWorldLine("FAIL: pool value", v);
+    };
+    return 0;
+} int;
+
+testStdMath = ({x} int) function {
+    HelloWorldLine("--- [adv-6] std.math ---");
+    {a} int = AbsInt(0 - 15);
+    if (a == 15) {
+        HelloWorldLine("PASS: std.math AbsInt");
+    } else {
+        HelloWorldLine("FAIL: AbsInt", a);
+    };
+    return 0;
+} int;
+
+runAdvancedTests = ({x} int) function {
+    {t1} int = testConstexpr(0);
+    {t2} int = testTryErr(0);
+    {t3} int = testTryOk(0);
+    {t4} int = testArena(0);
+    {t5} int = testPool(0);
+    {t6} int = testStdMath(0);
+    return 0;
+} int;
+
+main = ({x} int) function {
+    return runAdvancedTests(0);
+} int;

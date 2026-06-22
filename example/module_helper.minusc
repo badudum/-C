@@ -1,0 +1,7 @@
+moduleAdd = ({a} int, {b} int) function {
+    return a + b;
+} int;
+
+moduleAnswer = ({x} int) function {
+    return moduleAdd(40, 2);
+} int;

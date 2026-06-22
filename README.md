@@ -1,14 +1,24 @@
 # -C
 
-A compiler for the **minusC** language targeting **ARM64 assembly on macOS**.
+A compiler for the **minusC** language targeting **native macOS binaries** (ARM64 and x86_64).
 
-The compiler preprocesses source files, builds an AST, runs type and borrow checks, emits ARM64 assembly with an embedded runtime, and links a native binary. See `docs/ASSEMBLY_CONTROL_FLOW.md` for how control flow and the stack frame are lowered to assembly.
+The compiler preprocesses source files, builds an AST, runs type and borrow checks, emits assembly with an embedded runtime, and links a native binary. See `docs/ASSEMBLY_CONTROL_FLOW.md` for how control flow and the stack frame are lowered to assembly.
 
 ## Build
 
 ```bash
 make
 ```
+
+This produces a universal `minusC.out` (ARM64 + x86_64). Pass a codegen target when compiling programs:
+
+```bash
+./minusC.out --arm64 example/main.minusc    # default on Apple Silicon
+./minusC.out --x86_64 example/main.minusc   # Intel macOS
+./minusC.out --target arm64 example/main.minusc
+```
+
+Supported targets today: **macOS ARM64** and **macOS x86_64** (Linux x86_64 codegen exists but is not fully documented/tested in CI).
 
 ## Run
 
@@ -43,14 +53,57 @@ ld -e _start -macos_version_min 11.0.0 -L/Library/Developer/CommandLineTools/SDK
 
 | Type | Description |
 |------|-------------|
-| `int` | 32-bit integers |
-| `str` | String literals and variables; single-character access returns `str` |
+| `int` | 32-bit integers (default integer type) |
+| `float` | 64-bit floating point (default float type; not C’s 32-bit `float`) |
+| `double int` | 64-bit integer — prefix `double` doubles width (see below) |
+| `double float` | 128-bit floating point |
+| `str` | String literals and variables; single-character access returns a one-character `str` (there is no separate `char` type — use `str` for character data) |
 | `bool` | Boolean — `Real` (true) or `Fake` (false) |
 | `Array<int>` | Integer arrays on the stack |
 | `adr` | Heap pointer — owns a `rent` allocation until `moveOut` |
 | Custom (`cust`) | User-defined struct types (see below) |
 | Generic `cust` | Parameterized types monomorphized at use sites, e.g. `Box<int>` |
 | Interface | Named method contract; types declare `implements` (see below) |
+
+### Extended numeric types
+
+Prefix a numeric type with `double` to double its bit width. Each additional `double` doubles again:
+
+| Declaration | Width |
+|-------------|-------|
+| `int` | 32 bits |
+| `double int` | 64 bits |
+| `double double int` | 128 bits |
+| `double double double int` | 256 bits |
+| `double double double double int` | 512 bits |
+| `float` | 64 bits |
+| `double float` | 128 bits |
+| … | up to 1024 bits (`double` × 4 on `float`) |
+
+Literals: integer literals (`42`, `10000000000`) and float literals (`3.5`, `.5`, `1e10`).
+
+Binary operations use Java-like promotion: if either operand is floating point, the result is floating point (at least 64-bit); otherwise the wider integer type wins. Mixed `int` + `float` promotes the integer to float.
+
+```minusC
+{a} double int = 10000000000;
+{b} double int = 3;
+{c} double int = a + b;
+
+{f} float = 3.5;
+{g} float = 2.0;
+{h} float = f * g;
+
+{i} int = 10;
+{j} float = 2.5;
+{k} float = i + j;   // int promoted to float → 12.5
+
+{w} int = sizeof(int);          // 4
+{w64} int = sizeof(double int); // 8
+{wf} int = sizeof(float);       // 8
+{wf128} int = sizeof(double float); // 16
+```
+
+Run `make test-numeric` for the runtime suite (`example/numeric_tests.minusc`), including massive values (10^19 integers, 128-bit carry, 10^18 floats).
 
 ### Variables
 
@@ -67,10 +120,60 @@ Variables are declared with the `{name} type = value;` syntax.
 
 Include other source files with `reference`. Paths are resolved relative to the current file; a `.minusc` suffix is added if missing. Duplicate includes are skipped.
 
+Use **`reference qualified <path>`** when you want included top-level symbols namespaced under the module name (the basename of the file, without `.minusc`). Call exported functions as `module_name.symbol(...)`. Unqualified calls to module-local symbols are rejected at compile time.
+
 ```minusC
 reference array_tests
 reference "example/lib/helper.minusc"
+reference qualified module_helper
+
+main = () function {
+    {v} int = module_helper.moduleAnswer(0);
+    return 0;
+} int;
 ```
+
+### Standard library (`std.*`)
+
+Include bundled library modules with `reference std.<name>` (resolved from the compiler’s `std/` directory, or `MINUSC_STD` if set):
+
+| Module | Contents |
+|--------|----------|
+| `std.result` | `ResultInt` cust type, `OkInt` / `ErrInt` helpers |
+| `std.math` | `AbsInt`, `MaxInt`, `MinInt` |
+| `std.io` | `ReadAllText`, `WriteAllText` wrappers |
+| `std.alloc` | `newArena`, `newPool` helpers |
+
+```minusC
+reference std.result
+
+try {r} ResultInt = ResultInt{ok=Fake, code=42, val=0} else {
+    HelloWorldLine("error code", r.code);
+    return 1;
+};
+HelloWorldLine("ok value", r.val);
+```
+
+### Alternative allocators
+
+In addition to heap `rent` / `moveOut`, the runtime provides bump **arenas** and fixed-size **pools** (compatible with `PeekInt` / `PokeInt`; arena/pool blocks skip `_free` on `moveOut`):
+
+| Builtin | Role |
+|---------|------|
+| `ArenaCreate(bytes)` | Create arena; returns `adr` handle |
+| `arenaRent(arena, nbytes)` | Bump-allocate within arena |
+| `ArenaReset(arena)` | Reset bump pointer |
+| `ArenaDestroy(arena)` | Free entire arena |
+| `PoolCreate(blockSize, count)` | Create fixed-block pool |
+| `poolRent(pool)` | Rent one block |
+| `PoolReset(pool)` | Return all blocks to free list |
+| `PoolDestroy(pool)` | Free pool memory |
+
+### Structured errors (`try` / `else`)
+
+Use a `ResultInt`-style cust (see `std.result`) with a bool `ok` field, then **`try {var} Type = expr else { ... }`**. If `var.ok == Fake`, the `else` block runs; otherwise execution continues after the `try` statement.
+
+Compile-time helpers: `sizeof(T)` and integer expressions with enum constants are folded where possible (const array indices, etc.).
 
 ### Booleans
 
@@ -84,10 +187,13 @@ HelloWorldLine("value: ", t);   // prints "value: Real"
 
 ### Arithmetic
 
-- Operators: `+`, `-`, `*`, `/`
+- Operators: `+`, `-`, `*`, `/`, `^` (exponentiation)
+- `^` binds tighter than `*`/`/` and is **right-associative** (`2^3^2` = `2^(3^2)` = 512)
+- Integer `^` uses integer exponentiation (non-negative exponent; negative exponent yields 0)
+- If either operand is floating point, `^` uses floating-point power (`pow`) with Java-like promotion
 - Operator precedence: `*` and `/` bind tighter than `+` and `-`
 - Parentheses for grouping: `(2 + 3) * 4`
-- `%` (modulus) is not yet implemented
+- `%` (modulus) works on `int`, `double int`, and wider integer types
 
 ```minusC
 {mixed} int = 2 + 3 * 4;       // 14
@@ -265,12 +371,14 @@ Prefix and postfix are supported: `++i`, `i++`, `--i`, `i--`. Postfix returns th
 
 ### Arrays
 
-Arrays are declared with the `Array<int>` type. Elements are accessed by index with `arr[i]`.
+Arrays use `Array<T>` where `T` is `int`, `float`, `str`, or a stack `cust` type. Elements are accessed by index with `arr[i]`. Repeat-fill syntax `[value; count]` is supported for integer literals only.
 
 **Explicit literals:**
 
 ```minusC
 {arr} Array<int> = [10, 20, 30];
+{fs} Array<float> = [1.0, 2.5, 3.5];
+{words} Array<str> = ["a", "b"];
 {val} int = arr[0];    // 10
 ```
 
@@ -286,6 +394,49 @@ Arrays are declared with the `Array<int>` type. Elements are accessed by index w
 ```minusC
 {range} Array<int> = [0; 3, 1; 2, 99; 1];
 // produces [0, 0, 0, 1, 1, 99]
+```
+
+**Length** — `arr.len` is a compile-time constant when the array size is known from its initializer:
+
+```minusC
+{nums} Array<int> = [1, 2, 3];
+{n} int = nums.len;   // 3
+```
+
+**Foreach** — iterate index `0 .. len-1`:
+
+```minusC
+foreach {i} int in nums {
+    HelloWorldLine(nums[i]);
+};
+```
+
+### Enums, inference, and immportal
+
+**Enums** — named integer constants (auto-numbered from 0, or explicit values):
+
+```minusC
+enum Color { Red, Green, Blue };
+enum Step { Wait = 10, Go, Done };
+```
+
+**Type inference** — omit the type on first binding when the RHS is unambiguous:
+
+```minusC
+{x} = 42;
+{words} = "hello";
+{bits} = [1, 2, 3];
+```
+
+**immportal** — bindings or cust fields that cannot be reassigned:
+
+```minusC
+{limit} immportal int = 100;
+
+Config = cust {
+    {version} immportal int;
+    {name} str;
+};
 ```
 
 ### Custom types (`cust`)
@@ -400,14 +551,23 @@ Rules and limits (v1):
 |-------|----------|
 | Type arguments | Any non-generic field type: `int`, `bool`, `str`, `adr`, nested `cust`, `Array<T>`, other monomorphized generics |
 | Monomorphization | First use of `Box<int>` registers `Box_int`; later uses share the same layout |
-| `extends` / `implements` | Not allowed on the template itself; instantiate first if you need inheritance on a concrete type |
-| Generic methods | Not supported — only generic data fields |
+| `extends` / `implements` | `implements` allowed on generic templates (checked after monomorphization); `extends` on templates still rejected |
+| Generic methods | Supported on generic `cust` types |
 | `sizeof` | Works on instantiated types: `sizeof(Box<int>)` |
 
 ```minusC
 {si} int = sizeof(Box<int>);
 {sp} int = sizeof(Box<Point>);
 ```
+
+```minusC
+TaggedBox<T> = cust implements Showable {
+    {value} T;
+    virtual readTag = (self) function { return 1; } int;
+};
+```
+
+Each instantiation (`TaggedBox<int>`, etc.) is checked against the interface when first used.
 
 See `example/generic_tests.minusc` and `make test-generic`.
 
@@ -437,7 +597,7 @@ Circle = cust implements Drawable {
 };
 ```
 
-**Interface-typed parameters** accept heap handles (`adr`) whose runtime type implements the interface. The parameter erases to `adr` at codegen; calls to interface methods use virtual dispatch.
+**Interface-typed parameters** accept heap handles (`adr`) or **stack `cust` values** whose type implements the interface. Stack values are copied into a temporary vtable-prefixed buffer at the call site; heap handles are passed as-is. The parameter erases to `adr` at codegen; calls to interface methods use virtual dispatch.
 
 ```minusC
 drawIt = ({shape} Drawable) function {
@@ -446,15 +606,18 @@ drawIt = ({shape} Drawable) function {
 
 {c} adr = rent(1, Circle);
 c.init();
-{v} int = drawIt(c);   // compile-time check: Circle implements Drawable
+{v} int = drawIt(c);   // heap handle
+
+{sq} Square = {side=11};
+{v} int = scaleIt(sq); // stack cust — also OK when Square implements Scalable
 ```
 
 Requirements:
 
-- Implementors are checked at type definition time (`implements Drawable`).
-- Call sites are checked when passing a heap handle to an interface-typed parameter.
+- Implementors are checked at type definition time (`implements Drawable`), including monomorphized generic types.
+- Call sites are checked when passing a heap handle or stack `cust` to an interface-typed parameter.
 - Virtual methods on the implementor must match the interface’s vtable slot index.
-- Heap allocation (`rent(1, T)`) is required for interface dispatch through a parameter — stack values do not carry a vtable.
+- Stack `cust` types with `virtual` methods use heap-style field offsets inside methods; prefer heap `rent` for types that mix stack use and virtual methods on the same receiver layout.
 
 See `example/interface_tests.minusc` and `make test-interface`.
 
@@ -489,6 +652,19 @@ makeBlock = ({val} int) function {
 |----------|-------------|
 | `HelloWorld(arg1, arg2, ...)` | Prints each argument to stdout. Accepts strings and integers. |
 | `HelloWorldLine(arg1, arg2, ...)` | Same as `HelloWorld` but appends a newline. |
+| `ReadLine()` | Read one line from stdin (max 8 KiB; strips control chars). Returns `str`. |
+| `ReadChar()` | Read one byte from stdin. Returns `-1` on EOF. |
+| `KeyAvailable()` | Non-blocking check: `1` if stdin has input, else `0`. |
+| `PollKey(timeout_ms)` | Wait up to `timeout_ms` (capped at 60s) for a key; returns byte or `-1`. |
+
+Stdin is typically **line-buffered** in cooked terminal mode: keys may not appear until Enter unless the terminal is in raw mode. `PollKey`/`KeyAvailable` poll the underlying fd; they do not install signal handlers.
+| `FileOpen(path, mode)` | Open a file. Mode is exactly `"r"`, `"w"`, or `"a"`. Returns fd or `-1`. |
+| `FileRead(fd)` | Read entire file from current offset (max 8 MiB). Returns `str`. Does not close fd. |
+| `FileWrite(fd, data)` | Write string to open fd (max 8 MiB). Returns bytes written or `-1`. |
+| `FileClose(fd)` | Close fd. Returns `0` or `-1`. |
+| `WriteFile(path, data)` | Create/truncate and write file in one call. Returns bytes or `-1`. |
+
+**I/O security:** File paths must be relative (no leading `/` unless `MC_IO_ALLOW_ABSOLUTE=1`), must not contain `..` or `~`, and are limited to 1024 characters. Sensitive system paths (`/etc`, `/proc`, `/dev`, etc.) are always rejected. Files open with `O_NOFOLLOW` where supported; new files are created mode `0600`. Reads and writes are capped at 8 MiB. This is **not a sandbox** — compiled programs run with your user privileges; treat untrusted minusC code like any native binary.
 
 ### Heap memory (`adr`)
 
@@ -501,6 +677,8 @@ Heap blocks are allocated with `rent` and freed with `moveOut`. Each `adr` varia
 | `moveOut(adr)` | Free the heap block; returns `0` on success |
 | `PeekInt(adr, offset)` | Read a 32-bit int at byte offset |
 | `PokeInt(adr, offset, val)` | Write a 32-bit int at byte offset |
+| `PeekI64(adr, offset)` | Read a 64-bit integer at byte offset |
+| `PokeI64(adr, offset, val)` | Write a 64-bit integer at byte offset |
 | `PeekByte(adr, offset)` | Read one byte at offset |
 | `PokeByte(adr, offset, val)` | Write one byte at offset |
 | `AddInt(adr, offset, delta)` | Atomically add `delta` to int at offset (thread-safe) |
@@ -612,6 +790,9 @@ Focused test suites (after `make`):
 | `make test-poly` | Inheritance + virtual dispatch |
 | `make test-generic` | Generic type monomorphization |
 | `make test-interface` | Interfaces + `implements` |
+| `make test-module` | Qualified module namespacing |
+| `make test-numeric` | Extended int/float types, promotion, `sizeof` |
+| `make test-all` | All of the above |
 
 ## Examples
 
