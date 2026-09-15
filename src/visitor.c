@@ -1353,7 +1353,10 @@ AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
              strcmp(node->name, "GuiText") == 0 || strcmp(node->name, "GuiPresent") == 0 ||
              strcmp(node->name, "GuiPoll") == 0 || strcmp(node->name, "GuiEventX") == 0 ||
              strcmp(node->name, "GuiEventY") == 0 || strcmp(node->name, "GuiEventKey") == 0 ||
-             strcmp(node->name, "GuiSleep") == 0 || strcmp(node->name, "GuiSave") == 0)
+             strcmp(node->name, "GuiSleep") == 0 || strcmp(node->name, "GuiSave") == 0 ||
+             strcmp(node->name, "GuiMask") == 0 || strcmp(node->name, "GuiCam") == 0 ||
+             strcmp(node->name, "GuiLight") == 0 || strcmp(node->name, "GuiId") == 0 ||
+             strcmp(node->name, "GuiBox") == 0 || strcmp(node->name, "GuiHit") == 0)
         node->datatype = TYPE_INT;
 
     if (node->parent && node->parent->children->size > 0) {

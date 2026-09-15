@@ -36,14 +36,18 @@ static void link_object(assembly_target_t target)
             command("gcc -nostdlib -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm -e _start");
         }
     } else if (target == ASSEMBLY_TARGET_X86_64) {
+        command("clang -c src/runtime/gui_metal.m -o gui_metal.o -fobjc-arc -O2 -arch x86_64 -I src");
         command("as -arch x86_64 mc.s -o mc.o");
-        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lSystem -lpthread -lm "
-                  "-lobjc -framework Cocoa -framework QuartzCore -framework CoreGraphics "
+        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o gui_metal.o -o mc.out "
+                  "-lSystem -lpthread -lm -lobjc "
+                  "-framework Cocoa -framework QuartzCore -framework CoreGraphics -framework Metal "
                   "-syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch x86_64");
     } else {
+        command("clang -c src/runtime/gui_metal.m -o gui_metal.o -fobjc-arc -O2 -arch arm64 -I src");
         command("as -arch arm64 mc.s -o mc.o");
-        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lSystem -lpthread -lm "
-                  "-lobjc -framework Cocoa -framework QuartzCore -framework CoreGraphics "
+        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o gui_metal.o -o mc.out "
+                  "-lSystem -lpthread -lm -lobjc "
+                  "-framework Cocoa -framework QuartzCore -framework CoreGraphics -framework Metal "
                   "-syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64");
     }
 }
