@@ -57,6 +57,12 @@ int main(void)
                 lit3++;
     check("glyph scale 3", lit3 == 28 * 9);
 
+    GuiClear(0);
+    GuiMask(0, 0, "##..##", 2, 0x00FF00, 1);
+    check("mask hash pixels", px(0, 0) == 0x00FF00 && px(1, 0) == 0x00FF00);
+    check("mask skip pixels", px(0, 1) == 0 && px(1, 1) == 0);
+    check("mask wrap row", px(0, 2) == 0x00FF00 && px(1, 2) == 0x00FF00);
+
     check("present", GuiPresent() == 0);
 
     check("save bmp", GuiSave("/tmp/gui_rt_test.bmp") == 0);

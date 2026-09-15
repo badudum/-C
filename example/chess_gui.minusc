@@ -15,31 +15,103 @@ signInt = ({v} int) function {
     return 0;
 } int;
 
-pieceChar = ({p} int) function {
-    {k} int = p;
-    if (k > 6) {
-        k = k - 6;
+sqX = ({f} int) function {
+    {v} int = f * 100;
+    v = v - 350;
+    return v;
+} int;
+
+sqZ = ({r} int) function {
+    {v} int = r * 100;
+    v = 350 - v;
+    return v;
+} int;
+
+drawPawn = ({x} int, {z} int, {c} int) function {
+    {a} int = GuiBox(x, 28, z, 42, 16, 42, c);
+    {b} int = GuiBox(x, 48, z, 18, 32, 18, c);
+    {d} int = GuiBox(x, 70, z, 28, 20, 28, c);
+    return 0;
+} int;
+
+drawRook = ({x} int, {z} int, {c} int) function {
+    {a} int = GuiBox(x, 28, z, 46, 16, 46, c);
+    {b} int = GuiBox(x, 58, z, 32, 52, 32, c);
+    {d} int = GuiBox(x, 90, z, 46, 12, 46, c);
+    {e} int = GuiBox(x - 16, 102, z - 16, 12, 16, 12, c);
+    {f} int = GuiBox(x + 16, 102, z - 16, 12, 16, 12, c);
+    {g} int = GuiBox(x - 16, 102, z + 16, 12, 16, 12, c);
+    {h} int = GuiBox(x + 16, 102, z + 16, 12, 16, 12, c);
+    return 0;
+} int;
+
+drawKnight = ({x} int, {z} int, {c} int) function {
+    {a} int = GuiBox(x, 26, z, 44, 16, 40, c);
+    {b} int = GuiBox(x, 54, z + 4, 24, 44, 28, c);
+    {d} int = GuiBox(x, 78, z - 10, 22, 28, 36, c);
+    {e} int = GuiBox(x + 8, 92, z - 22, 14, 16, 16, c);
+    return 0;
+} int;
+
+drawBishop = ({x} int, {z} int, {c} int) function {
+    {a} int = GuiBox(x, 26, z, 42, 14, 42, c);
+    {b} int = GuiBox(x, 52, z, 22, 40, 22, c);
+    {d} int = GuiBox(x, 82, z, 16, 28, 16, c);
+    {e} int = GuiBox(x, 102, z, 10, 16, 10, c);
+    {f} int = GuiBox(x, 114, z, 6, 10, 6, c);
+    return 0;
+} int;
+
+drawQueen = ({x} int, {z} int, {c} int) function {
+    {a} int = GuiBox(x, 26, z, 46, 14, 46, c);
+    {b} int = GuiBox(x, 54, z, 24, 44, 24, c);
+    {d} int = GuiBox(x, 84, z, 36, 16, 36, c);
+    {e} int = GuiBox(x, 102, z, 8, 22, 8, c);
+    {f} int = GuiBox(x - 14, 98, z, 8, 16, 8, c);
+    {g} int = GuiBox(x + 14, 98, z, 8, 16, 8, c);
+    {h} int = GuiBox(x, 98, z - 14, 8, 16, 8, c);
+    {i} int = GuiBox(x, 98, z + 14, 8, 16, 8, c);
+    return 0;
+} int;
+
+drawKing = ({x} int, {z} int, {c} int) function {
+    {a} int = GuiBox(x, 26, z, 46, 14, 46, c);
+    {b} int = GuiBox(x, 56, z, 26, 48, 26, c);
+    {d} int = GuiBox(x, 88, z, 34, 14, 34, c);
+    {e} int = GuiBox(x, 108, z, 8, 28, 8, c);
+    {f} int = GuiBox(x, 112, z, 24, 8, 8, c);
+    return 0;
+} int;
+
+drawPiece = ({x} int, {z} int, {piece} int) function {
+    {kind} int = piece;
+    if (piece > 6) {
+        kind = piece - 6;
     };
-    if (k == 1) {
-        return "P";
+    {c} int = 1776411;
+    if (piece <= 6) {
+        c = 15724527;
     };
-    if (k == 2) {
-        return "N";
+    if (kind == 1) {
+        {p} int = drawPawn(x, z, c);
     };
-    if (k == 3) {
-        return "B";
+    if (kind == 2) {
+        {n} int = drawKnight(x, z, c);
     };
-    if (k == 4) {
-        return "R";
+    if (kind == 3) {
+        {b} int = drawBishop(x, z, c);
     };
-    if (k == 5) {
-        return "Q";
+    if (kind == 4) {
+        {k} int = drawRook(x, z, c);
     };
-    if (k == 6) {
-        return "K";
+    if (kind == 5) {
+        {q} int = drawQueen(x, z, c);
     };
-    return "";
-} str;
+    if (kind == 6) {
+        {g} int = drawKing(x, z, c);
+    };
+    return 0;
+} int;
 
 setupBoard = ({board} adr) function {
     Memset(board, 0, 64);
@@ -184,11 +256,15 @@ legalMove = ({board} adr, {from} int, {to} int, {turn} int) function {
 } int;
 
 drawBoard = ({board} adr, {sel} int) function {
+    {bg} int = GuiClear(1710618);
+    {cam} int = GuiCam(0, 620, 980, 0, 0, 40);
+    {lit} int = GuiLight(40, 90, 55);
+    {tbl} int = GuiBox(0, 0 - 6, 0, 880, 12, 880, 4852250);
     loop until ({r} int = 0; r < 8; r++) {
         loop until ({f} int = 0; f < 8; f++) {
             {sq} int = r * 8 + f;
-            {sx} int = f * 80;
-            {sy} int = (7 - r) * 80;
+            {cx} int = sqX(f);
+            {cz} int = sqZ(r);
             {shade} int = (r + f) % 2;
             {color} int = 11897955;
             if (shade == 1) {
@@ -197,22 +273,20 @@ drawBoard = ({board} adr, {sel} int) function {
             if (sq == sel) {
                 color = 7249990;
             };
-            GuiRect(sx, sy, 80, 80, color);
+            {id} int = GuiId(sq);
+            {cell} int = GuiBox(cx, 10, cz, 100, 20, 100, color);
             {piece} int = PeekByte(board, sq);
             if (piece != 0) {
-                {pc} int = 1776411;
-                if (piece <= 6) {
-                    pc = 16777215;
-                };
-                GuiText(sx + 8, sy + 8, pieceChar(piece), pc, 8);
+                {dp} int = drawPiece(cx, cz, piece);
             };
         };
     };
+    {clr} int = GuiId(0 - 1);
     return 0;
 } int;
 
 drawStatus = ({state} int) function {
-    GuiRect(0, 640, 640, 40, 2631720);
+    GuiRect(0, 640, 800, 40, 2631720);
     if (state == 0) {
         GuiText(20, 652, "WHITE TO MOVE", 15263976, 2);
     };
@@ -228,12 +302,12 @@ drawStatus = ({state} int) function {
     if (state == 4) {
         GuiText(20, 652, "ILLEGAL MOVE", 16733525, 2);
     };
-    GuiText(408, 652, "Q QUIT R RESET", 9013641, 2);
+    GuiText(520, 652, "MMB ORBIT  Q/R", 9013641, 2);
     return 0;
 } int;
 
 main = ({x} int) function {
-    {r} int = GuiOpen(640, 680, "minusC chess");
+    {r} int = GuiOpen(800, 680, "minusC chess");
     if (r < 0) {
         HelloWorldLine("GUI not available on this platform");
         return 1;
@@ -264,58 +338,60 @@ main = ({x} int) function {
                 {sv} int = GuiSave("chess_shot.bmp");
             };
         };
-        if (ev == 3 and state < 2) {
+        if (ev == 3 and (state < 2 or state == 4)) {
+            if (state == 4) {
+                state = turn;
+            };
             {mx} int = GuiEventX();
             {my} int = GuiEventY();
             if (my < 640) {
-                {file} int = mx / 80;
-                {rankTop} int = my / 80;
-                {rank} int = 7 - rankTop;
-                {sq} int = rank * 8 + file;
-                if (sel < 0) {
-                    {piece} int = PeekByte(board, sq);
-                    if (piece != 0) {
-                        {isW} int = 0;
-                        if (piece <= 6) {
-                            isW = 1;
+                {sq} int = GuiHit(mx, my);
+                if (sq >= 0) {
+                    if (sel < 0) {
+                        {piece} int = PeekByte(board, sq);
+                        if (piece != 0) {
+                            {isW} int = 0;
+                            if (piece <= 6) {
+                                isW = 1;
+                            };
+                            if (turn == 0 and isW == 1) {
+                                sel = sq;
+                                state = turn;
+                            };
+                            if (turn == 1 and isW == 0) {
+                                sel = sq;
+                                state = turn;
+                            };
                         };
-                        if (turn == 0 and isW == 1) {
-                            sel = sq;
-                            state = turn;
-                        };
-                        if (turn == 1 and isW == 0) {
-                            sel = sq;
-                            state = turn;
-                        };
-                    };
-                } else if (sq == sel) {
-                    sel = 0 - 1;
-                    state = turn;
-                } else {
-                    {ok} int = legalMove(board, sel, sq, turn);
-                    if (ok == 1) {
-                        {captured} int = PeekByte(board, sq);
-                        {piece2} int = PeekByte(board, sel);
-                        PokeByte(board, sq, piece2);
-                        PokeByte(board, sel, 0);
-                        if (piece2 == 1 and sq / 8 == 7) {
-                            PokeByte(board, sq, 5);
-                        };
-                        if (piece2 == 7 and sq / 8 == 0) {
-                            PokeByte(board, sq, 11);
-                        };
+                    } else if (sq == sel) {
                         sel = 0 - 1;
-                        if (captured == 12) {
-                            state = 2;
-                        } else if (captured == 6) {
-                            state = 3;
-                        } else {
-                            turn = 1 - turn;
-                            state = turn;
-                        };
+                        state = turn;
                     } else {
-                        sel = 0 - 1;
-                        state = 4;
+                        {ok} int = legalMove(board, sel, sq, turn);
+                        if (ok == 1) {
+                            {captured} int = PeekByte(board, sq);
+                            {piece2} int = PeekByte(board, sel);
+                            PokeByte(board, sq, piece2);
+                            PokeByte(board, sel, 0);
+                            if (piece2 == 1 and sq / 8 == 7) {
+                                PokeByte(board, sq, 5);
+                            };
+                            if (piece2 == 7 and sq / 8 == 0) {
+                                PokeByte(board, sq, 11);
+                            };
+                            sel = 0 - 1;
+                            if (captured == 12) {
+                                state = 2;
+                            } else if (captured == 6) {
+                                state = 3;
+                            } else {
+                                turn = 1 - turn;
+                                state = turn;
+                            };
+                        } else {
+                            sel = 0 - 1;
+                            state = 4;
+                        };
                     };
                 };
             };

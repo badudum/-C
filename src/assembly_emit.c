@@ -562,7 +562,7 @@ void asm_append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
             snprintf(instr, sizeof(instr), "\n# %s\nldrsw x%d, [fp, #%d]\n",
                      comment, reg, off);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldrsw x%d, [x4]\n",
+            snprintf(instr, sizeof(instr), "\n# %s\nsub x9, fp, #%d\nldrsw x%d, [x9]\n",
                      comment, abs_off, reg);
         asm_append(s, instr);
     } else {
@@ -1442,7 +1442,8 @@ void assembly_patch_linux_output(char *ass)
         static const char *gui_syms[] = {
             "GuiOpen", "GuiClose", "GuiClear", "GuiRect", "GuiText",
             "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
-            "GuiEventKey", "GuiSleep", "GuiSave", 0
+            "GuiEventKey", "GuiSleep", "GuiSave", "GuiMask",
+            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiHit", 0
         };
         char from[64], to[64];
         for (int gi = 0; gui_syms[gi]; gi++) {
@@ -1533,7 +1534,8 @@ void assembly_patch_macos_runtime_symbols(char *ass)
         static const char *gui_syms[] = {
             "GuiOpen", "GuiClose", "GuiClear", "GuiRect", "GuiText",
             "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
-            "GuiEventKey", "GuiSleep", "GuiSave", 0
+            "GuiEventKey", "GuiSleep", "GuiSave", "GuiMask",
+            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiHit", 0
         };
         char from[64], to[64];
         for (int gi = 0; gui_syms[gi]; gi++) {
