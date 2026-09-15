@@ -2,11 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 
 #define MC_MAX_LIMBS 16
 #define MC_PRINT_BUF 2048
 
 static char mc_print_buf[MC_PRINT_BUF];
+static char mc_sf_print_buf[MC_PRINT_BUF];
+
+static void sf_ieee_binop(int op, int bits, uint64_t *dst,
+                          const uint64_t *a, const uint64_t *b);
+static const char *sf_print_decimal(int bits, const uint64_t *src,
+                                    char *buf, size_t bufsz);
 
 static int limb_count(int bits)
 {
@@ -142,12 +149,7 @@ const char *mc_wide_float_print_bits(int bits, const uint64_t *src)
     int n = limb_count(bits);
     if (n <= 0 || n > MC_MAX_LIMBS)
         return "0";
-    if (float_upper_limbs_zero(src, n)) {
-        double v;
-        memcpy(&v, src, sizeof(double));
-        return mc_ftos(v);
-    }
-    return mc_wide_print_bits(bits, src);
+    return sf_print_decimal(bits, src, mc_sf_print_buf, MC_PRINT_BUF);
 }
 
 void mc_wide_float_binop_bits(int op, int bits, uint64_t *dst,
@@ -176,30 +178,7 @@ void mc_wide_float_binop_bits(int op, int bits, uint64_t *dst,
         return;
     }
 
-    if (op == 0) {
-        limbs_add_into(dst, a, b, n);
-        return;
-    }
-    if (op == 1) {
-        limbs_copy(dst, a, n);
-        limbs_sub_inplace(dst, b, n);
-        return;
-    }
-    if (op == 2) {
-        limbs_mul(dst, a, b, n);
-        return;
-    }
-    if (op == 3) {
-        if (limbs_is_zero(b, n)) {
-            limbs_zero(dst, n);
-            return;
-        }
-        uint64_t q[MC_MAX_LIMBS];
-        uint64_t r[MC_MAX_LIMBS];
-        limbs_udivmod(q, r, a, b, n);
-        limbs_copy(dst, q, n);
-        return;
-    }
+    sf_ieee_binop(op, bits, dst, a, b);
 }
 
 static int limbs_cmp_u(const uint64_t *a, const uint64_t *b, int n)
@@ -324,3 +303,5 @@ void mc_wide_int_binop_bits(int op, int bits, uint64_t *dst,
             break;
     }
 }
+
+#include "softfloat_ieee.inc"

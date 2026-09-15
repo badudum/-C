@@ -1,0 +1,320 @@
+absInt = ({v} int) function {
+    if (v < 0) {
+        return 0 - v;
+    };
+    return v;
+} int;
+
+signInt = ({v} int) function {
+    if (v > 0) {
+        return 1;
+    };
+    if (v < 0) {
+        return 0 - 1;
+    };
+    return 0;
+} int;
+
+pieceChar = ({p} int) function {
+    if (p == 0) {
+        return ".";
+    };
+    if (p == 1) {
+        return "P";
+    };
+    if (p == 2) {
+        return "N";
+    };
+    if (p == 3) {
+        return "B";
+    };
+    if (p == 4) {
+        return "R";
+    };
+    if (p == 5) {
+        return "Q";
+    };
+    if (p == 6) {
+        return "K";
+    };
+    if (p == 7) {
+        return "p";
+    };
+    if (p == 8) {
+        return "n";
+    };
+    if (p == 9) {
+        return "b";
+    };
+    if (p == 10) {
+        return "r";
+    };
+    if (p == 11) {
+        return "q";
+    };
+    if (p == 12) {
+        return "k";
+    };
+    return "?";
+} str;
+
+setupBoard = ({board} adr) function {
+    PokeByte(board, 0, 4);
+    PokeByte(board, 1, 2);
+    PokeByte(board, 2, 3);
+    PokeByte(board, 3, 5);
+    PokeByte(board, 4, 6);
+    PokeByte(board, 5, 3);
+    PokeByte(board, 6, 2);
+    PokeByte(board, 7, 4);
+    PokeByte(board, 56, 10);
+    PokeByte(board, 57, 8);
+    PokeByte(board, 58, 9);
+    PokeByte(board, 59, 11);
+    PokeByte(board, 60, 12);
+    PokeByte(board, 61, 9);
+    PokeByte(board, 62, 8);
+    PokeByte(board, 63, 10);
+    loop until ({f} int = 0; f < 8; f++) {
+        PokeByte(board, 8 + f, 1);
+        PokeByte(board, 48 + f, 7);
+    };
+    return 0;
+} int;
+
+printBoard = ({board} adr) function {
+    HelloWorldLine("");
+    HelloWorldLine("    a b c d e f g h");
+    loop until ({r} int = 7; r >= 0; r--) {
+        {row} str = "";
+        loop until ({f} int = 0; f < 8; f++) {
+            {ch} str = pieceChar(PeekByte(board, r * 8 + f));
+            row = row + ch;
+            row = row + " ";
+        };
+        HelloWorldLine(r + 1, "   ", row);
+    };
+    HelloWorldLine("");
+    return 0;
+} int;
+
+clearPath = ({board} adr, {from} int, {to} int) function {
+    {fr} int = from / 8;
+    {ff} int = from % 8;
+    {tr} int = to / 8;
+    {tf} int = to % 8;
+    {sr} int = signInt(tr - fr);
+    {sf} int = signInt(tf - ff);
+    {r} int = fr + sr;
+    {f} int = ff + sf;
+    loop until (r != tr or f != tf) {
+        if (PeekByte(board, r * 8 + f) != 0) {
+            return 0;
+        };
+        r += sr;
+        f += sf;
+    };
+    return 1;
+} int;
+
+legalMove = ({board} adr, {from} int, {to} int, {turn} int) function {
+    if (from == to) {
+        return 0;
+    };
+    {piece} int = PeekByte(board, from);
+    if (piece == 0) {
+        return 0;
+    };
+    {isW} int = 0;
+    if (piece <= 6) {
+        isW = 1;
+    };
+    if (turn == 0 and isW == 0) {
+        return 0;
+    };
+    if (turn == 1 and isW == 1) {
+        return 0;
+    };
+    {target} int = PeekByte(board, to);
+    if (target != 0) {
+        {tw} int = 0;
+        if (target <= 6) {
+            tw = 1;
+        };
+        if (tw == isW) {
+            return 0;
+        };
+    };
+    {fr} int = from / 8;
+    {ff} int = from % 8;
+    {tr} int = to / 8;
+    {tf} int = to % 8;
+    {dr} int = tr - fr;
+    {df} int = tf - ff;
+    {absDr} int = absInt(dr);
+    {absDf} int = absInt(df);
+    {kind} int = piece;
+    if (piece > 6) {
+        kind = piece - 6;
+    };
+    if (kind == 1) {
+        {dir} int = 1;
+        {startR} int = 1;
+        if (isW == 0) {
+            dir = 0 - 1;
+            startR = 6;
+        };
+        if (df == 0 and target == 0) {
+            if (dr == dir) {
+                return 1;
+            };
+            if (dr == 2 * dir and fr == startR) {
+                if (PeekByte(board, from + dir * 8) == 0) {
+                    return 1;
+                };
+            };
+        };
+        if (absDf == 1 and dr == dir and target != 0) {
+            return 1;
+        };
+        return 0;
+    };
+    if (kind == 2) {
+        if (absDf == 1 and absDr == 2) {
+            return 1;
+        };
+        if (absDf == 2 and absDr == 1) {
+            return 1;
+        };
+        return 0;
+    };
+    if (kind == 3) {
+        if (absDf == absDr) {
+            return clearPath(board, from, to);
+        };
+        return 0;
+    };
+    if (kind == 4) {
+        if (df == 0 or dr == 0) {
+            return clearPath(board, from, to);
+        };
+        return 0;
+    };
+    if (kind == 5) {
+        if (absDf == absDr or df == 0 or dr == 0) {
+            return clearPath(board, from, to);
+        };
+        return 0;
+    };
+    if (kind == 6) {
+        if (absDf <= 1 and absDr <= 1) {
+            return 1;
+        };
+        return 0;
+    };
+    return 0;
+} int;
+
+nextChar = ({x} int) function {
+    {c} int = ReadChar();
+    loop until (c == 10 or c == 13 or c == 32 or c == 9) {
+        c = ReadChar();
+    };
+    return c;
+} int;
+
+readMove = ({x} int) function {
+    {c0} int = nextChar(0);
+    if (c0 == 113 or c0 < 0) {
+        return 0 - 1;
+    };
+    {c1} int = nextChar(0);
+    if (c1 < 0) {
+        return 0 - 1;
+    };
+    {c2} int = nextChar(0);
+    if (c2 < 0) {
+        return 0 - 1;
+    };
+    {c3} int = nextChar(0);
+    if (c3 < 0) {
+        return 0 - 1;
+    };
+    if (c0 < 97 or c0 > 104) {
+        return 0 - 2;
+    };
+    if (c2 < 97 or c2 > 104) {
+        return 0 - 2;
+    };
+    if (c1 < 49 or c1 > 56) {
+        return 0 - 2;
+    };
+    if (c3 < 49 or c3 > 56) {
+        return 0 - 2;
+    };
+    {ff} int = c0 - 97;
+    {fr} int = c1 - 49;
+    {tf} int = c2 - 97;
+    {tr} int = c3 - 49;
+    {from} int = fr * 8 + ff;
+    {to} int = tr * 8 + tf;
+    {enc} int = from * 100 + to;
+    return 10000 + enc;
+} int;
+
+main = ({x} int) function {
+    HelloWorldLine("=== minusC chess ===");
+    HelloWorldLine("Enter moves like e2e4 (from-square then to-square).");
+    HelloWorldLine("Enter q to quit. Capture the king to win.");
+    {board} adr = rent(64);
+    {s} int = setupBoard(board);
+    {turn} int = 0;
+    {running} int = 1;
+    loop until (running == 1) {
+        {p} int = printBoard(board);
+        if (turn == 0) {
+            HelloWorldLine("White to move:");
+        } else {
+            HelloWorldLine("Black to move:");
+        };
+        {mv} int = readMove(0);
+        if (mv == 0 - 1) {
+            HelloWorldLine("Goodbye.");
+            running = 0;
+        } else if (mv < 10000) {
+            HelloWorldLine("Bad input. Use squares a1..h8, like e2e4.");
+        } else {
+            {enc} int = mv - 10000;
+            {from} int = enc / 100;
+            {to} int = enc % 100;
+            {ok} int = legalMove(board, from, to, turn);
+            if (ok == 1) {
+                {captured} int = PeekByte(board, to);
+                {piece} int = PeekByte(board, from);
+                PokeByte(board, to, piece);
+                PokeByte(board, from, 0);
+                if (piece == 1 and to / 8 == 7) {
+                    PokeByte(board, to, 5);
+                };
+                if (piece == 7 and to / 8 == 0) {
+                    PokeByte(board, to, 11);
+                };
+                if (captured == 12) {
+                    {pb} int = printBoard(board);
+                    HelloWorldLine("White captured the king. White wins!");
+                    running = 0;
+                };
+                if (captured == 6) {
+                    {pb2} int = printBoard(board);
+                    HelloWorldLine("Black captured the king. Black wins!");
+                    running = 0;
+                };
+                turn = 1 - turn;
+            } else {
+                HelloWorldLine("Illegal move, try again.");
+            };
+        };
+    };
+    {fd} int = moveOut(board);
+    return 0;
+} int;

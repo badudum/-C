@@ -459,6 +459,17 @@ char * assemble_assignment(AST_t * ast, dynamic_list_t * list)
         int use_large = (var_abs > 255 || rhs_abs > 255);
         int binop = asm_compound_to_binop(ast->op);
 
+        /* Call results are pushed onto the expr stack, not stored to a slot;
+           spill into the slot the visitor reserved so slot-based combines work. */
+        if ((rhs->type == CALL_AST || rhs->type == DUPE_AST) && rhs->stack_index != 0) {
+            asm_append_pop_ptr_to_reg(&s, 0, "compound spill call rhs");
+            if (IS_NUMERIC_TYPE(ast->datatype) &&
+                (IS_FLOAT_TYPE(ast->datatype) || numeric_bit_width(ast->datatype) > 32))
+                asm_append_store_to_fp(&s, rhs_offset, 0, "compound spill call rhs store");
+            else
+                asm_append_store_w_to_fp(&s, rhs_offset, "compound spill call rhs store");
+        }
+
         if (IS_NUMERIC_TYPE(ast->datatype) &&
             (IS_FLOAT_TYPE(ast->datatype) || numeric_bit_width(ast->datatype) > 32 ||
              binop == CARET_TOKEN)) {
