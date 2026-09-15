@@ -1,0 +1,35 @@
+main = ({x} int) function {
+    {r} int = GuiOpen(480, 320, "minusC GUI demo");
+    if (r < 0) {
+        HelloWorldLine("GUI not available");
+        return 1;
+    };
+    {frames} int = 0;
+    {running} int = 1;
+    loop until (running == 1) {
+        {ev} int = GuiPoll();
+        if (ev == 1) {
+            running = 0;
+        };
+        if (ev == 2) {
+            if (GuiEventKey() == 113) {
+                running = 0;
+            };
+        };
+        GuiClear(2054456);
+        GuiRect(40, 40, 180, 100, 16733525);
+        GuiRect(260, 40, 180, 100, 5635925);
+        GuiRect(40, 180, 400, 60, 5592575);
+        GuiText(60, 60, "minusC", 16777215, 3);
+        GuiText(60, 200, "from scratch gui!", 0, 2);
+        GuiPresent();
+        GuiSleep(16);
+        frames++;
+        if (frames >= 300) {
+            running = 0;
+        };
+    };
+    {c} int = GuiClose();
+    HelloWorldLine("demo done, frames=", frames);
+    return 0;
+} int;
