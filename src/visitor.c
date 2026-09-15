@@ -530,7 +530,10 @@ AST_t* visit_compound(visitor_t * visitor, AST_t* node, dynamic_list_t* list, st
         block_frame->stack = 0;
     }
     if (compound->children->size == 1) {
-        compound->stack_index = ((AST_t*)compound->children->items[0])->stack_index;
+        AST_t *only = (AST_t *)compound->children->items[0];
+        compound->stack_index = only->stack_index;
+        compound->datatype = only->datatype;
+        compound->int_value = only->int_value;
     }
     return compound;
 }
@@ -696,6 +699,18 @@ AST_t* visit_assignment(visitor_t * visitor, AST_t* node, dynamic_list_t* list, 
         }
         if (!variable->datatype || variable->datatype == TYPE_UNKNOWN)
             variable->datatype = TYPE_INT;
+        /* Call results live on the expr stack; give them a frame slot so the
+           compound codegen can spill and reload them. */
+        {
+            AST_t *rhs = variable->parent;
+            while (rhs && rhs->type == COMP_AST && rhs->children && rhs->children->size == 1)
+                rhs = (AST_t *)rhs->children->items[0];
+            if (rhs && (rhs->type == CALL_AST || rhs->type == DUPE_AST) &&
+                rhs->stack_index == 0) {
+                visitor_enqueue_stack_slots(stackframe, 1);
+                rhs->stack_index = stackframe->stack->size;
+            }
+        }
         return variable;
     }
 
@@ -1217,7 +1232,9 @@ AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
     } else {
         for (int i = 0; i < node->parent->children->size; i++) {
             AST_t *child = (AST_t *)node->parent->children->items[i];
-            list_enqueue(arguments, visitor_visit(visitor, child, list, stackframe));
+            AST_t *visited = visitor_visit(visitor, child, list, stackframe);
+            node->parent->children->items[i] = visited;
+            list_enqueue(arguments, visited);
         }
         variable = function_lookup(visitor, list, node->name);
         if (!variable && !module_call) {
@@ -1331,6 +1348,13 @@ AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
              strcmp(node->name, "FileWrite") == 0 || strcmp(node->name, "FileClose") == 0 ||
              strcmp(node->name, "WriteFile") == 0)
         node->datatype = TYPE_INT;
+    else if (strcmp(node->name, "GuiOpen") == 0 || strcmp(node->name, "GuiClose") == 0 ||
+             strcmp(node->name, "GuiClear") == 0 || strcmp(node->name, "GuiRect") == 0 ||
+             strcmp(node->name, "GuiText") == 0 || strcmp(node->name, "GuiPresent") == 0 ||
+             strcmp(node->name, "GuiPoll") == 0 || strcmp(node->name, "GuiEventX") == 0 ||
+             strcmp(node->name, "GuiEventY") == 0 || strcmp(node->name, "GuiEventKey") == 0 ||
+             strcmp(node->name, "GuiSleep") == 0 || strcmp(node->name, "GuiSave") == 0)
+        node->datatype = TYPE_INT;
 
     if (node->parent && node->parent->children->size > 0) {
         AST_t *arg0 = (AST_t*)node->parent->children->items[0];
@@ -1441,6 +1465,7 @@ AST_t* visit_str(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stackfr
 static int is_string_node(AST_t* node, dynamic_list_t* list)
 {
     if (node->type == STRING_AST) return 1;
+    if (node->datatype == TYPE_STR) return 1;
     if (node->type == VAR_AST && node->name) {
         for (unsigned int j = 0; j < list->size; j++) {
             AST_t* def = (AST_t*)list->items[j];

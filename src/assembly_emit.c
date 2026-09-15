@@ -556,7 +556,15 @@ void asm_append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
             asm_append(s, mov);
         }
     } else if (dt == TYPE_INT) {
-        asm_append_load_from_fp(s, off, reg, comment);
+        int abs_off = off < 0 ? -off : off;
+        char instr[256];
+        if (abs_off <= 255)
+            snprintf(instr, sizeof(instr), "\n# %s\nldrsw x%d, [fp, #%d]\n",
+                     comment, reg, off);
+        else
+            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldrsw x%d, [x4]\n",
+                     comment, abs_off, reg);
+        asm_append(s, instr);
     } else {
         asm_append_load_from_fp(s, off, reg, comment);
     }
@@ -1430,6 +1438,22 @@ void assembly_patch_linux_output(char *ass)
     patch_str(ass, "bl _FileClose", "bl FileClose");
     patch_str(ass, "call _WriteFile", "call WriteFile");
     patch_str(ass, "bl _WriteFile", "bl WriteFile");
+    {
+        static const char *gui_syms[] = {
+            "GuiOpen", "GuiClose", "GuiClear", "GuiRect", "GuiText",
+            "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
+            "GuiEventKey", "GuiSleep", "GuiSave", 0
+        };
+        char from[64], to[64];
+        for (int gi = 0; gui_syms[gi]; gi++) {
+            snprintf(from, sizeof(from), "call _%s", gui_syms[gi]);
+            snprintf(to, sizeof(to), "call %s", gui_syms[gi]);
+            patch_str(ass, from, to);
+            snprintf(from, sizeof(from), "bl _%s", gui_syms[gi]);
+            snprintf(to, sizeof(to), "bl %s", gui_syms[gi]);
+            patch_str(ass, from, to);
+        }
+    }
     patch_str(ass, "call _ArenaCreate", "call ArenaCreate");
     patch_str(ass, "bl _ArenaCreate", "bl ArenaCreate");
     patch_str(ass, "call _arenaRent", "call arenaRent");
@@ -1505,6 +1529,22 @@ void assembly_patch_macos_runtime_symbols(char *ass)
     patch_str(ass, "call FileClose", "call _FileClose");
     patch_str(ass, "bl WriteFile", "bl _WriteFile");
     patch_str(ass, "call WriteFile", "call _WriteFile");
+    {
+        static const char *gui_syms[] = {
+            "GuiOpen", "GuiClose", "GuiClear", "GuiRect", "GuiText",
+            "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
+            "GuiEventKey", "GuiSleep", "GuiSave", 0
+        };
+        char from[64], to[64];
+        for (int gi = 0; gui_syms[gi]; gi++) {
+            snprintf(from, sizeof(from), "bl %s", gui_syms[gi]);
+            snprintf(to, sizeof(to), "bl _%s", gui_syms[gi]);
+            patch_str(ass, from, to);
+            snprintf(from, sizeof(from), "call %s", gui_syms[gi]);
+            snprintf(to, sizeof(to), "call _%s", gui_syms[gi]);
+            patch_str(ass, from, to);
+        }
+    }
     patch_str(ass, "bl ArenaCreate", "bl _ArenaCreate");
     patch_str(ass, "call ArenaCreate", "call _ArenaCreate");
     patch_str(ass, "bl arenaRent", "bl _arenaRent");

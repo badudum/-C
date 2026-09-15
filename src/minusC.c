@@ -26,21 +26,24 @@ static void link_object(assembly_target_t target)
     command("gcc -c src/runtime/numeric_rt.c -o numeric_rt.o -std=c99 -O2");
     command("gcc -c src/runtime/io_rt.c -o io_rt.o -std=c99 -O2");
     command("gcc -c src/runtime/arena_rt.c -o arena_rt.o -std=c99 -O2");
+    command("gcc -c src/runtime/gui_rt.c -o gui_rt.o -std=c99 -O2");
     if (assembly_os_get() == ASSEMBLY_OS_LINUX) {
         if (target == ASSEMBLY_TARGET_X86_64) {
             command("gcc -c mc.s -o mc.o");
-            command("gcc -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o -o mc.out -lpthread -lc -lm -e _start");
+            command("gcc -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm -e _start");
         } else {
             command("gcc -c mc.s -o mc.o");
-            command("gcc -nostdlib -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o -o mc.out -lpthread -lc -lm -e _start");
+            command("gcc -nostdlib -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm -e _start");
         }
     } else if (target == ASSEMBLY_TARGET_X86_64) {
         command("as -arch x86_64 mc.s -o mc.o");
-        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o -o mc.out -lSystem -lpthread -lm "
+        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lSystem -lpthread -lm "
+                  "-lobjc -framework Cocoa -framework QuartzCore -framework CoreGraphics "
                   "-syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch x86_64");
     } else {
         command("as -arch arm64 mc.s -o mc.o");
-        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o -o mc.out -lSystem -lpthread -lm "
+        command("ld -macos_version_min 15.0.0 mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lSystem -lpthread -lm "
+                  "-lobjc -framework Cocoa -framework QuartzCore -framework CoreGraphics "
                   "-syslibroot `xcrun -sdk macosx --show-sdk-path` -e _start -arch arm64");
     }
 }
@@ -94,6 +97,9 @@ void compile(char * src, const char *filename)
     }
 
     char * ass = assemble_root(optimized_root, init_list(sizeof(struct AST_S*)));
+
+    /* Symbol patching can grow the text in place; leave room. */
+    ass = realloc(ass, strlen(ass) + 8192);
 
     assembly_patch_linux_output(ass);
     assembly_patch_macos_x86_output(ass);

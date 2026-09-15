@@ -1,6 +1,8 @@
 exec = minusC.out
 sources = $(wildcard src/*.c)
 sources += $(wildcard src/*/*.c)
+# gui_rt.c is only linked into compiled minusC programs, not the compiler.
+sources := $(filter-out src/runtime/gui_rt.c,$(sources))
 flags = -g -std=gnu99
 archs = arm64 x86_64
 
@@ -8,7 +10,7 @@ archs = arm64 x86_64
 objects_arm64 = $(sources:.c=.arm64.o)
 objects_x86_64 = $(sources:.c=.x86_64.o)
 
-.PHONY: all clean install test-borrow test-cust test-oop test-heap-oop test-poly test-generic test-interface test-numeric test-feature test-io test-new-feature test-module test-advanced test-remaining test-all
+.PHONY: all clean install test-borrow test-cust test-oop test-heap-oop test-poly test-generic test-interface test-numeric test-softfloat test-feature test-io test-new-feature test-module test-advanced test-remaining test-all
 
 all: $(exec)
 
@@ -55,6 +57,9 @@ test-interface: $(exec)
 test-numeric: $(exec)
 	sh scripts/run_numeric_tests.sh --arm64
 
+test-softfloat:
+	sh scripts/run_softfloat_tests.sh
+
 test-feature: $(exec)
 	sh scripts/run_feature_tests.sh --arm64
 
@@ -74,6 +79,7 @@ test-remaining: $(exec)
 	sh scripts/run_remaining_tests.sh --arm64
 
 test-all: $(exec)
+	sh scripts/run_softfloat_tests.sh
 	sh scripts/run_all_tests.sh --arm64
 
 clean:
