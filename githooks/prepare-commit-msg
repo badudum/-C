@@ -1,0 +1,9 @@
+#!/bin/sh
+# Same strip as commit-msg, in case Cursor injects the trailer early.
+msgfile="$1"
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+commit_msg="$here/commit-msg"
+if [ -x "$commit_msg" ]; then
+    exec "$commit_msg" "$msgfile"
+fi
+exit 0

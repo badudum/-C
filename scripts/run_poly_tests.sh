@@ -4,7 +4,7 @@ TARGET="${1:---arm64}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-CC="./minusC.out $TARGET"
+CC="./minusC $TARGET"
 fail() { echo "FAIL: $1"; exit 1; }
 
 echo "=== Polymorphism positive (compile + run) ==="

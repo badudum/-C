@@ -1,0 +1,12 @@
+#!/bin/sh
+# Strip Cursor/cursoragent co-author trailers from a commit message on stdin.
+awk '
+{
+  line = $0
+  lower = tolower(line)
+  if (lower ~ /^[ \t]*(co-authored-by|co-developed-by|assisted-by|helped-by):[ \t].*(cursor|cursoragent)/) {
+    next
+  }
+  print line
+}
+'

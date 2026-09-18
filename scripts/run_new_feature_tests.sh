@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 cd "$(dirname "$0")/.."
-CC="./minusC.out"
+CC="./minusC"
 TARGET="${1:---arm64}"
 
 if [ ! -x "$CC" ]; then

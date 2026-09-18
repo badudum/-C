@@ -38,7 +38,7 @@
         },
         "minusc.compilerPath": {
           "type": "string",
-          "default": "minusC.out",
+          "default": "minusC",
           "description": "Path to minusC compiler for --check diagnostics on save."
         }
       }

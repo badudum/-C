@@ -1,0 +1,25 @@
+#!/bin/sh
+# Block pushing any commit whose message still names Cursor as a co-author.
+zero=0000000000000000000000000000000000000000
+fail=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue
+    if [ "$remote_sha" = "$zero" ]; then
+        range="$local_sha"
+    else
+        range="${remote_sha}..${local_sha}"
+    fi
+    if git log "$range" --format='%B' | awk '
+        { lower = tolower($0) }
+        lower ~ /^[ \t]*(co-authored-by|co-developed-by|assisted-by|helped-by):[ \t].*(cursor|cursoragent)/ { found = 1 }
+        END { exit found ? 0 : 1 }
+    '
+    then
+        echo "pre-push: refusing $local_ref — Cursor co-author trailer still in commit messages." >&2
+        echo "Strip the trailer and recreate the commit (do not use git commit from Cursor)." >&2
+        fail=1
+    fi
+done
+
+exit "$fail"

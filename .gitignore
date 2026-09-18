@@ -1,17 +1,45 @@
+# Cursor (local editor/agent config — not part of the language)
+.cursor/
+
+# Editor
 **/.DS_Store
 **/.vscode
-*.o
-*.arm64.o
-*.x86_64.o
+
+# Compiler binary
+minusC
 minusC.out
 minusC.arm64
 minusC.x86_64
+minusC.dSYM/
+minusC.out.dSYM/
+*.dSYM/
+minusC.asan
+minusC.asan.dSYM/
+minusC_asan
+minusC_asan.dSYM/
+
+# Object files
+*.o
+*.arm64.o
+*.x86_64.o
+*.obj
+
+# Compiled program / assembler output
+mc
+mc2
+mc_test
 mc.out
 mc.o
 mc.s
 mc.s.txt
 mc.expanded.minusc
-minusC.asan
-minusC.asan.dSYM/
-minusC_asan
-minusC_asan.dSYM/
+numeric_rt.o
+io_rt.o
+arena_rt.o
+gui_rt.o
+gui_metal.o
+
+# Scratch / packaged binaries
+1
+*.vsix
+test_assembly/

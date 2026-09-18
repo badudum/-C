@@ -10,12 +10,12 @@ The compiler preprocesses source files, builds an AST, runs type and borrow chec
 make
 ```
 
-This produces a universal `minusC.out` (ARM64 + x86_64). Pass a codegen target when compiling programs:
+This produces a host `minusC` executable. Pass a codegen target when compiling programs:
 
 ```bash
-./minusC.out --arm64 example/main.minusc    # default on Apple Silicon
-./minusC.out --x86_64 example/main.minusc   # Intel macOS
-./minusC.out --target arm64 example/main.minusc
+./minusC --arm64 example/main.minusc    # default on Apple Silicon
+./minusC --x86_64 example/main.minusc   # Intel macOS / Linux x86_64
+./minusC --target arm64 example/main.minusc
 ```
 
 Supported targets today: **macOS ARM64** and **macOS x86_64** (Linux x86_64 codegen exists but is not fully documented/tested in CI).
@@ -25,14 +25,14 @@ Supported targets today: **macOS ARM64** and **macOS x86_64** (Linux x86_64 code
 The compiler writes `mc.s`, assembles, and links automatically:
 
 ```bash
-./minusC.out example/main.minusc
+./minusC example/main.minusc
 ./mc.out
 ```
 
 Manual assemble/link (equivalent):
 
 ```bash
-./minusC.out example/main.minusc
+./minusC example/main.minusc
 as -arch arm64 mc.s -o mc.o
 ld -e _start -macos_version_min 11.0.0 -L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib -lSystem -lpthread -o mc_test mc.o
 ./mc_test

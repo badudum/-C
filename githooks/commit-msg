@@ -1,0 +1,30 @@
+#!/bin/sh
+# Drop Cursor co-author trailers from the commit message file.
+msgfile="$1"
+if [ -z "$msgfile" ] || [ ! -f "$msgfile" ]; then
+    exit 0
+fi
+
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+filter="$here/filter-cursor-coauthor"
+if [ ! -x "$filter" ]; then
+    filter="$(CDPATH= cd -- "$here/../../githooks" 2>/dev/null && pwd)/filter-cursor-coauthor"
+fi
+if [ ! -x "$filter" ]; then
+    echo "commit-msg: missing filter-cursor-coauthor" >&2
+    exit 1
+fi
+
+tmp="${msgfile}.minusc.$$"
+if ! "$filter" < "$msgfile" > "$tmp"; then
+    rm -f "$tmp"
+    echo "commit-msg: failed to filter Cursor co-author trailers" >&2
+    exit 1
+fi
+if [ ! -s "$tmp" ]; then
+    rm -f "$tmp"
+    echo "commit-msg: commit message empty after stripping Cursor trailers" >&2
+    exit 1
+fi
+mv "$tmp" "$msgfile"
+exit 0

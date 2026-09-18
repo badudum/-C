@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
             printf("  x86_64  Intel / AMD 64-bit\n");
             printf("Host OS is detected at compiler build time (macOS or Linux).\n");
             printf("Linux x86_64: ELF output with _start entry; link via gcc -e _start.\n");
-            printf("macOS: Mach-O output with universal minusC.out (arm64 + x86_64).\n");
+            printf("macOS: Mach-O output (arm64 + x86_64).\n");
             return 0;
         }
         fprintf(stderr, "Unknown option: %s\n", argv[argi]);

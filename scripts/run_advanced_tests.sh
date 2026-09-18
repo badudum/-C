@@ -2,7 +2,7 @@
 set -e
 cd "$(dirname "$0")/.."
 TARGET="${1:---arm64}"
-COMPILER="./minusC.out ${TARGET}"
+COMPILER="./minusC ${TARGET}"
 
 echo "=== Advanced feature tests (compile + run) ==="
 $COMPILER example/advanced_tests.minusc

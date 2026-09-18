@@ -4,6 +4,7 @@
 #include "../include/interface.h"
 #include "../include/numeric.h"
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 

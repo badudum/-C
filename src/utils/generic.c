@@ -5,6 +5,7 @@
 #include "../include/types.h"
 #include "../include/parser.h"
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 

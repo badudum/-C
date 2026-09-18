@@ -2,7 +2,7 @@
 # Run feature checklist tests (mod, compound assign, break/continue, switch).
 set -e
 cd "$(dirname "$0")/.."
-CC="./minusC.out"
+CC="./minusC"
 TARGET="${1:---arm64}"
 
 if [ ! -x "$CC" ]; then

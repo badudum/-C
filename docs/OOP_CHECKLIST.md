@@ -268,7 +268,7 @@ These are not OOP features but reduce work for later phases.
 - [x] Borrow checker — move semantics, `&adr` / `&mut adr`, block/`if` scope, per-field `cust` `adr`
 - [x] Free functions as interim behavior (`takeAdr(buf)`, etc.)
 - [x] Compiler pipeline: preprocess → lexer → parser → visitor → assembly → link
-- [x] Cross-compilation: universal `minusC.out` (arm64 + x86_64)
+- [x] Cross-compilation: host `minusC` binary (arm64 + x86_64)
 - [x] Integration test driver: `example/main.minusc`
 - [x] Focused suites: `make test-all` (borrow, cust, oop, heap-oop, poly, generic, interface, module, numeric, feature, io, new-feature)
 

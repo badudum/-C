@@ -2,7 +2,7 @@
 # Run heap OOP tests: positive runtime suite + negative compile-fail cases.
 set -e
 cd "$(dirname "$0")/.."
-CC="./minusC.out"
+CC="./minusC"
 TARGET="${1:---arm64}"
 
 if [ ! -x "$CC" ]; then

@@ -1,0 +1,35 @@
+#!/bin/sh
+# If Cursor injects a co-author trailer after commit-msg, rewrite HEAD without it.
+[ -n "$MINUSC_STRIPPING_CURSOR" ] && exit 0
+
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+filter="$here/filter-cursor-coauthor"
+[ -x "$filter" ] || exit 0
+
+msg=$(git log -1 --format=%B)
+filtered=$(printf '%s\n' "$msg" | "$filter")
+[ -n "$filtered" ] || exit 0
+
+msg_norm=$(printf '%s\n' "$msg")
+filt_norm=$(printf '%s\n' "$filtered")
+[ "$msg_norm" = "$filt_norm" ] && exit 0
+
+tree=$(git rev-parse 'HEAD^{tree}')
+parent_args=
+for p in $(git rev-list --parents -n 1 HEAD | cut -d' ' -f2-); do
+    parent_args="$parent_args -p $p"
+done
+
+export MINUSC_STRIPPING_CURSOR=1
+export GIT_AUTHOR_NAME="$(git log -1 --format=%an)"
+export GIT_AUTHOR_EMAIL="$(git log -1 --format=%ae)"
+export GIT_AUTHOR_DATE="$(git log -1 --format=%ad --date=raw)"
+export GIT_COMMITTER_NAME="$(git log -1 --format=%cn)"
+export GIT_COMMITTER_EMAIL="$(git log -1 --format=%ce)"
+export GIT_COMMITTER_DATE="$(git log -1 --format=%cd --date=raw)"
+
+# shellcheck disable=SC2086
+new=$(printf '%s\n' "$filtered" | git commit-tree "$tree" $parent_args) || exit 0
+git update-ref HEAD "$new"
+echo "post-commit: removed Cursor co-author trailer from HEAD" >&2
+exit 0

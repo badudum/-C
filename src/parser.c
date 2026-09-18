@@ -11,6 +11,7 @@
 #include "include/errors.h"
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 

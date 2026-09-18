@@ -2,7 +2,7 @@
 set -e
 cd "$(dirname "$0")/.."
 TARGET="${1:---arm64}"
-COMPILER="./minusC.out ${TARGET}"
+COMPILER="./minusC ${TARGET}"
 
 echo "=== Remaining feature tests (compile + run) ==="
 $COMPILER example/remaining_tests.minusc

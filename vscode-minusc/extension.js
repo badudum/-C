@@ -85,7 +85,7 @@ function formatMinuscDocument(text, indentSize) {
 
 function resolveCompilerPath() {
   const cfg = vscode.workspace.getConfiguration("minusc");
-  return cfg.get("compilerPath") || "minusC.out";
+  return cfg.get("compilerPath") || "minusC";
 }
 
 function parseCompilerErrors(text, fallbackFile) {
