@@ -992,7 +992,7 @@ char * assemble_int(AST_t * ast, dynamic_list_t * list)
             snprintf(s, 512,
                      "\n# int literal\nmovz x0, #0x%x\nmovk x0, #0x%x, lsl #16\n"
                      "movk x0, #0x%x, lsl #32\nmovk x0, #0x%x, lsl #48\n"
-                     "sub x4, fp, #%d\nstr x0, [x4]\n",
+                     "sub x9, fp, #%d\nstr x0, [x9]\n",
                      w0, w1, w2, w3, abs_offset);
         }
     }
@@ -1028,7 +1028,7 @@ char * assemble_float(AST_t * ast, dynamic_list_t * list)
             snprintf(s, 512,
                      "\n# float literal\nmovz x0, #0x%x\nmovk x0, #0x%x, lsl #16\n"
                      "movk x0, #0x%x, lsl #32\nmovk x0, #0x%x, lsl #48\n"
-                     "sub x4, fp, #%d\nstr x0, [x4]\n",
+                     "sub x9, fp, #%d\nstr x0, [x9]\n",
                      w0, w1, w2, w3, abs_offset);
         }
     }

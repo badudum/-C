@@ -5,6 +5,7 @@ typedef struct {
     float x, y, z;
     float nx, ny, nz;
     float r, g, b, a;
+    float u, v;
 } mc_mtl_vtx;
 
 int mc_mtl_init(void *nsview, int w, int h);

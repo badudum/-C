@@ -13,11 +13,13 @@ static const char *k_shader =
     "  float3 pos [[attribute(0)]];\n"
     "  float3 nrm [[attribute(1)]];\n"
     "  float4 col [[attribute(2)]];\n"
+    "  float2 uv [[attribute(3)]];\n"
     "};\n"
     "struct VOut {\n"
     "  float4 pos [[position]];\n"
     "  float3 nrm;\n"
     "  float4 col;\n"
+    "  float2 uv;\n"
     "};\n"
     "struct Uniforms {\n"
     "  float4x4 mvp;\n"
@@ -29,15 +31,19 @@ static const char *k_shader =
     "  o.pos = u.mvp * float4(in.pos, 1.0);\n"
     "  o.nrm = in.nrm;\n"
     "  o.col = in.col;\n"
+    "  o.uv = in.uv;\n"
     "  return o;\n"
     "}\n"
-    "fragment float4 f3d(VOut in [[stage_in]], constant Uniforms &u [[buffer(1)]]) {\n"
+    "fragment float4 f3d(VOut in [[stage_in]], constant Uniforms &u [[buffer(1)]],\n"
+    "                     texture2d<float> atlas [[texture(0)]],\n"
+    "                     sampler samp [[sampler(0)]]) {\n"
     "  float3 L = normalize(u.light.xyz);\n"
     "  float ndl = max(dot(normalize(in.nrm), L), 0.0);\n"
     "  float amb = 0.28;\n"
     "  float spec = pow(max(ndl, 0.0), 8.0) * 0.18;\n"
     "  float lit = amb + ndl * 0.72 + spec;\n"
-    "  return float4(in.col.rgb * lit, in.col.a);\n"
+    "  float4 tex = atlas.sample(samp, in.uv);\n"
+    "  return float4(in.col.rgb * tex.rgb * lit, in.col.a);\n"
     "}\n"
     "vertex VOut v2d(VIn in [[stage_in]], constant Uniforms &u [[buffer(1)]]) {\n"
     "  VOut o;\n"
@@ -47,6 +53,7 @@ static const char *k_shader =
     "  o.pos = float4(x, y, 0.0, 1.0);\n"
     "  o.nrm = in.nrm;\n"
     "  o.col = in.col;\n"
+    "  o.uv = in.uv;\n"
     "  return o;\n"
     "}\n"
     "fragment float4 f2d(VOut in [[stage_in]]) {\n"
@@ -68,12 +75,119 @@ static id<MTLDepthStencilState> g_nodepth;
 static id<MTLTexture> g_dtex;
 static id<MTLBuffer> g_ubuf;
 static id<MTLBuffer> g_readbuf;
+static id<MTLTexture> g_atlas;
+static id<MTLSamplerState> g_atlas_samp;
 static CAMetalLayer *g_layer;
 static int g_w, g_h;
 static int g_ready;
 static int g_clear_rgb = 0x1a1a22;
 static mc_uniforms g_u;
 static id<MTLTexture> g_last_color;
+
+#define MC_TILE 16
+#define MC_TILES 10
+#define MC_ATLAS_W (MC_TILE * MC_TILES)
+#define MC_ATLAS_H MC_TILE
+
+static unsigned mc_atlas_hash(int x, int y, int seed)
+{
+    unsigned n = (unsigned)x * 374761393u + (unsigned)y * 668265263u +
+                 (unsigned)seed * 2246822519u;
+    n = (n ^ (n >> 13)) * 1274126177u;
+    return n ^ (n >> 16);
+}
+
+static void mc_atlas_put(unsigned char *buf, int tile, int x, int y,
+                          unsigned char r, unsigned char g, unsigned char b)
+{
+    int px = tile * MC_TILE + x;
+    int idx = (y * MC_ATLAS_W + px) * 4;
+    buf[idx] = r; buf[idx + 1] = g; buf[idx + 2] = b; buf[idx + 3] = 255;
+}
+
+static void mc_speckle(unsigned char *buf, int tile, int x, int y, int seed,
+                        int br, int bg, int bb, int dev)
+{
+    unsigned h = mc_atlas_hash(x, y, seed);
+    int v = (int)(h % (unsigned)(dev * 2 + 1)) - dev;
+    int r = br + v, g = bg + v, b = bb + v;
+    if (r < 0) r = 0; if (r > 255) r = 255;
+    if (g < 0) g = 0; if (g > 255) g = 255;
+    if (b < 0) b = 0; if (b > 255) b = 255;
+    mc_atlas_put(buf, tile, x, y, (unsigned char)r, (unsigned char)g, (unsigned char)b);
+}
+
+static unsigned char *mc_build_atlas(void)
+{
+    unsigned char *buf = (unsigned char *)calloc(1, (size_t)MC_ATLAS_W * MC_ATLAS_H * 4);
+    if (!buf)
+        return NULL;
+    for (int y = 0; y < MC_TILE; y++) {
+        for (int x = 0; x < MC_TILE; x++) {
+            /* tile 0: white, used by untextured (flat-color) boxes */
+            mc_atlas_put(buf, 0, x, y, 255, 255, 255);
+            /* tile 1: grass top */
+            mc_speckle(buf, 1, x, y, 101, 92, 156, 60, 18);
+            /* tile 2: grass side (green cap over dirt) */
+            if (y < 4)
+                mc_speckle(buf, 2, x, y, 102, 92, 156, 60, 18);
+            else
+                mc_speckle(buf, 2, x, y, 103, 121, 85, 58, 16);
+            /* tile 3: dirt */
+            mc_speckle(buf, 3, x, y, 104, 121, 85, 58, 16);
+            /* tile 4: stone */
+            mc_speckle(buf, 4, x, y, 105, 130, 130, 133, 14);
+            /* tile 5: wood side (bark stripes) */
+            {
+                int stripe = (x / 3) & 1;
+                int br = stripe ? 101 : 87, bg = stripe ? 73 : 62, bb = stripe ? 47 : 38;
+                mc_speckle(buf, 5, x, y, 106, br, bg, bb, 8);
+            }
+            /* tile 6: wood top (rings) */
+            {
+                int dx = x - 8, dy = y - 8;
+                int ring = (dx < 0 ? -dx : dx);
+                int ring2 = (dy < 0 ? -dy : dy);
+                if (ring2 > ring) ring = ring2;
+                int band = ring % 3;
+                int br = band == 0 ? 185 : (band == 1 ? 168 : 150);
+                mc_speckle(buf, 6, x, y, 107, br, br - 40, br - 90, 6);
+            }
+            /* tile 7: leaves */
+            mc_speckle(buf, 7, x, y, 108, 53, 110, 32, 22);
+            /* tile 8: sand */
+            mc_speckle(buf, 8, x, y, 109, 219, 205, 145, 14);
+            /* tile 9: bedrock */
+            mc_speckle(buf, 9, x, y, 110, 62, 62, 66, 20);
+        }
+    }
+    return buf;
+}
+
+static void mc_make_atlas(void)
+{
+    unsigned char *pixels = mc_build_atlas();
+    if (!pixels)
+        return;
+    MTLTextureDescriptor *td = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+                                     width:MC_ATLAS_W
+                                    height:MC_ATLAS_H
+                                 mipmapped:NO];
+    td.usage = MTLTextureUsageShaderRead;
+    g_atlas = [g_dev newTextureWithDescriptor:td];
+    MTLRegion region = MTLRegionMake2D(0, 0, MC_ATLAS_W, MC_ATLAS_H);
+    [g_atlas replaceRegion:region mipmapLevel:0 withBytes:pixels
+                bytesPerRow:(NSUInteger)MC_ATLAS_W * 4];
+    free(pixels);
+
+    MTLSamplerDescriptor *sd = [[MTLSamplerDescriptor alloc] init];
+    sd.minFilter = MTLSamplerMinMagFilterNearest;
+    sd.magFilter = MTLSamplerMinMagFilterNearest;
+    sd.sAddressMode = MTLSamplerAddressModeClampToEdge;
+    sd.tAddressMode = MTLSamplerAddressModeClampToEdge;
+    g_atlas_samp = [g_dev newSamplerStateWithDescriptor:sd];
+}
 
 static MTLVertexDescriptor *mc_vdesc(void)
 {
@@ -87,6 +201,9 @@ static MTLVertexDescriptor *mc_vdesc(void)
     vd.attributes[2].format = MTLVertexFormatFloat4;
     vd.attributes[2].offset = 24;
     vd.attributes[2].bufferIndex = 0;
+    vd.attributes[3].format = MTLVertexFormatFloat2;
+    vd.attributes[3].offset = 40;
+    vd.attributes[3].bufferIndex = 0;
     vd.layouts[0].stride = sizeof(mc_mtl_vtx);
     vd.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
     return vd;
@@ -180,6 +297,7 @@ int mc_mtl_init(void *nsview, int w, int h)
         g_readbuf = [g_dev newBufferWithLength:(NSUInteger)w * h * 4
                                        options:MTLResourceStorageModeShared];
         mc_make_depth();
+        mc_make_atlas();
         memset(&g_u, 0, sizeof(g_u));
         g_u.light = simd_make_float4(0.35f, 0.85f, 0.4f, 0);
         g_u.screen = simd_make_float4((float)w, (float)h, 0, 0);
@@ -203,6 +321,8 @@ void mc_mtl_shutdown(void)
     g_readbuf = nil;
     g_layer = nil;
     g_last_color = nil;
+    g_atlas = nil;
+    g_atlas_samp = nil;
 }
 
 void mc_mtl_set_mvp(const float *m)
@@ -288,6 +408,8 @@ int mc_mtl_present(void)
             [enc setVertexBuffer:vb offset:0 atIndex:0];
             [enc setVertexBuffer:g_ubuf offset:0 atIndex:1];
             [enc setFragmentBuffer:g_ubuf offset:0 atIndex:1];
+            [enc setFragmentTexture:g_atlas atIndex:0];
+            [enc setFragmentSamplerState:g_atlas_samp atIndex:0];
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0
                     vertexCount:(NSUInteger)g_n3];
         }

@@ -16,9 +16,12 @@
  *   GuiText(x, y, str, rgb, k)    -> 0 (k = integer scale, 8*k px glyphs)
  *   GuiPresent()                  -> 0
  *   GuiPoll()                     -> 0 none, 1 close, 2 keydown,
- *                                    3 mousedown, 4 mouseup, 5 mousemove
+ *                                    3 mousedown, 4 mouseup, 5 mousemove,
+ *                                    8 orbit-drag, 10 right-mousedown
  *   GuiEventX() / GuiEventY()     -> last event position
  *   GuiEventKey()                 -> last key (ASCII of pressed char)
+ *   GuiHeld(code)                 -> 1 if held (1=LMB, 2=RMB, else ASCII)
+ *   GuiFwdX() / GuiFwdZ()         -> camera forward on XZ, scaled *1000
  *   GuiSleep(ms)                  -> 0
  */
 
@@ -140,6 +143,9 @@ static int mc_ev_x;
 static int mc_ev_y;
 static int mc_ev_key;
 static int mc_clear_rgb;
+static unsigned char mc_keys[256];
+static int mc_btn_left;
+static int mc_btn_right;
 
 static void mc_fb_clear(int color)
 {
@@ -239,16 +245,45 @@ static void mc_rgb(int color, float *r, float *g, float *b)
     *b = (color & 255) / 255.0f;
 }
 
+/* Texture atlas layout mirrored from gui_metal.m: a 16px-tall strip of
+ * 16x16 tiles. Tile 0 is solid white so untextured/flat-color geometry
+ * (player, item drops, chess pieces, ...) renders unchanged. */
+#define MC_TILE 16
+#define MC_TILES 10
+#define MC_ATLAS_W (MC_TILE * MC_TILES)
+#define MC_ATLAS_H MC_TILE
+
+#define MC_TEX_WHITE   0
+#define MC_TEX_GRASSTOP 1
+#define MC_TEX_GRASSSIDE 2
+#define MC_TEX_DIRT    3
+#define MC_TEX_STONE   4
+#define MC_TEX_WOODSIDE 5
+#define MC_TEX_WOODTOP 6
+#define MC_TEX_LEAVES  7
+#define MC_TEX_SAND    8
+#define MC_TEX_BEDROCK 9
+
+static void mc_tex_rect(int tile, float *u0, float *v0, float *u1, float *v1)
+{
+    *u0 = ((float)(tile * MC_TILE) + 0.5f) / (float)MC_ATLAS_W;
+    *u1 = ((float)(tile * MC_TILE) + (float)MC_TILE - 0.5f) / (float)MC_ATLAS_W;
+    *v0 = 0.5f / (float)MC_ATLAS_H;
+    *v1 = ((float)MC_TILE - 0.5f) / (float)MC_ATLAS_H;
+}
+
 static void mc_push3(float x, float y, float z,
-                     float nx, float ny, float nz, int color)
+                     float nx, float ny, float nz, int color,
+                     float u, float v)
 {
     mc_grow_vtx(&mc_v3, &mc_cap3, mc_n3 + 1);
-    mc_mtl_vtx *v = &mc_v3[mc_n3++];
+    mc_mtl_vtx *vt = &mc_v3[mc_n3++];
     float r, g, b;
     mc_rgb(color, &r, &g, &b);
-    v->x = x; v->y = y; v->z = z;
-    v->nx = nx; v->ny = ny; v->nz = nz;
-    v->r = r; v->g = g; v->b = b; v->a = 1;
+    vt->x = x; vt->y = y; vt->z = z;
+    vt->nx = nx; vt->ny = ny; vt->nz = nz;
+    vt->r = r; vt->g = g; vt->b = b; vt->a = 1;
+    vt->u = u; vt->v = v;
 }
 
 static void mc_push2(float x, float y, int color)
@@ -260,6 +295,7 @@ static void mc_push2(float x, float y, int color)
     v->x = x; v->y = y; v->z = 0;
     v->nx = 0; v->ny = 0; v->nz = 1;
     v->r = r; v->g = g; v->b = b; v->a = 1;
+    v->u = 0; v->v = 0;
 }
 
 static void mc_quad2(int x, int y, int w, int h, int color)
@@ -274,14 +310,29 @@ static void mc_quad2(int x, int y, int w, int h, int color)
     mc_push2(x1, y0, color);
 }
 
-static void mc_tri3(float ax, float ay, float az,
-                    float bx, float by, float bz,
-                    float cx, float cy, float cz,
-                    float nx, float ny, float nz, int color)
+static void mc_tri3uv(float ax, float ay, float az, float au, float av,
+                      float bx, float by, float bz, float bu, float bv,
+                      float cx, float cy, float cz, float cu, float cv,
+                      float nx, float ny, float nz, int color)
 {
-    mc_push3(ax, ay, az, nx, ny, nz, color);
-    mc_push3(bx, by, bz, nx, ny, nz, color);
-    mc_push3(cx, cy, cz, nx, ny, nz, color);
+    mc_push3(ax, ay, az, nx, ny, nz, color, au, av);
+    mc_push3(bx, by, bz, nx, ny, nz, color, bu, bv);
+    mc_push3(cx, cy, cz, nx, ny, nz, color, cu, cv);
+}
+
+/* Quad face with a texture tile's UV rect mapped around the a->b->c->d loop. */
+static void mc_face_tex(float ax, float ay, float az,
+                        float bx, float by, float bz,
+                        float cx, float cy, float cz,
+                        float dx, float dy, float dz,
+                        float nx, float ny, float nz, int color, int tile)
+{
+    float u0, v0, u1, v1;
+    mc_tex_rect(tile, &u0, &v0, &u1, &v1);
+    mc_tri3uv(ax, ay, az, u0, v0, bx, by, bz, u1, v0, cx, cy, cz, u1, v1,
+             nx, ny, nz, color);
+    mc_tri3uv(ax, ay, az, u0, v0, cx, cy, cz, u1, v1, dx, dy, dz, u0, v1,
+             nx, ny, nz, color);
 }
 
 static void mc_face(float ax, float ay, float az,
@@ -290,8 +341,8 @@ static void mc_face(float ax, float ay, float az,
                     float dx, float dy, float dz,
                     float nx, float ny, float nz, int color)
 {
-    mc_tri3(ax, ay, az, bx, by, bz, cx, cy, cz, nx, ny, nz, color);
-    mc_tri3(ax, ay, az, cx, cy, cz, dx, dy, dz, nx, ny, nz, color);
+    mc_face_tex(ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz,
+               nx, ny, nz, color, MC_TEX_WHITE);
 }
 
 static void mc_m4_mul(float *o, const float *a, const float *b)
@@ -565,6 +616,9 @@ int GuiOpen(int w, int h, const char *title)
     mc_ev_x = 0;
     mc_ev_y = 0;
     mc_ev_key = 0;
+    memset(mc_keys, 0, sizeof(mc_keys));
+    mc_btn_left = 0;
+    mc_btn_right = 0;
     mc_orbit_user = 0;
     mc_orbit_drag = 0;
     return 0;
@@ -653,31 +707,52 @@ int GuiPoll(void)
     }
 
     int out = 0;
-    if (t == 10) { /* keyDown: capture, do not forward (avoids beep) */
+    if (t == 10 || t == 11) { /* keyDown / keyUp */
         id chars = ((mc_msg)objc_msgSend)(ev,
                                           mc_sel("charactersIgnoringModifiers"));
         if (chars) {
             const char *u = ((const char *(*)(id, SEL))objc_msgSend)(
                 chars, mc_sel("UTF8String"));
             mc_ev_key = (u && u[0]) ? (int)(unsigned char)u[0] : 0;
+            if (mc_ev_key >= 'A' && mc_ev_key <= 'Z')
+                mc_ev_key += 32;
+            if (mc_ev_key >= 0 && mc_ev_key < 256)
+                mc_keys[mc_ev_key] = (t == 10) ? 1 : 0;
         }
-        return 2;
+        if (t == 10)
+            return 2;
+        ((mc_msg_v)objc_msgSend)(mc_app, mc_sel("updateWindows"));
+        return 0;
     }
-    /* Middle (other) or right-button drag orbits the 3D camera. */
-    if (t == 25 || t == 3)
+    if (t == 1)
+        mc_btn_left = 1;
+    if (t == 2)
+        mc_btn_left = 0;
+    if (t == 3)
+        mc_btn_right = 1;
+    if (t == 4)
+        mc_btn_right = 0;
+    /* Middle-button drag orbits the 3D camera. */
+    if (t == 25)
         mc_orbit_drag = 1;
-    if (t == 26 || t == 4)
+    if (t == 26)
         mc_orbit_drag = 0;
-    if (mc_orbit_drag && (t == 7 || t == 27 || t == 5 || t == 6)) {
+    if (mc_orbit_drag && (t == 27 || t == 5 || t == 6)) {
         CGFloat dx = ((CGFloat (*)(id, SEL))objc_msgSend)(ev, mc_sel("deltaX"));
         CGFloat dy = ((CGFloat (*)(id, SEL))objc_msgSend)(ev, mc_sel("deltaY"));
         mc_orbit_drag_by((float)dx, (float)dy);
-        out = 8;
         ((mc_msg_v)objc_msgSend)(mc_app, mc_sel("updateWindows"));
-        return out;
+        return 8;
     }
-    if (t == 25 || t == 26 || t == 3 || t == 4) {
-        /* swallow so a right/middle click does not select a piece */
+    if (t == 25 || t == 26) {
+        ((mc_msg_v)objc_msgSend)(mc_app, mc_sel("updateWindows"));
+        return 0;
+    }
+    if (t == 3) {
+        ((mc_msg_v)objc_msgSend)(mc_app, mc_sel("updateWindows"));
+        return 10;
+    }
+    if (t == 4) {
         ((mc_msg_v)objc_msgSend)(mc_app, mc_sel("updateWindows"));
         return 0;
     }
@@ -780,6 +855,45 @@ int GuiText(int x, int y, const char *s, int color, int scale)
 int GuiEventX(void) { return mc_ev_x; }
 int GuiEventY(void) { return mc_ev_y; }
 int GuiEventKey(void) { return mc_ev_key; }
+
+int GuiHeld(int code)
+{
+    if (code == 1)
+        return mc_btn_left;
+    if (code == 2)
+        return mc_btn_right;
+    if (code >= 0 && code < 256)
+        return (int)mc_keys[code];
+    return 0;
+}
+
+int GuiFwdX(void)
+{
+#ifdef __APPLE__
+    float dx = mc_look[0] - mc_eye[0];
+    float dz = mc_look[2] - mc_eye[2];
+    float len = sqrtf(dx * dx + dz * dz);
+    if (len < 0.001f)
+        return 0;
+    return (int)(dx / len * 1000.0f);
+#else
+    return 0;
+#endif
+}
+
+int GuiFwdZ(void)
+{
+#ifdef __APPLE__
+    float dx = mc_look[0] - mc_eye[0];
+    float dz = mc_look[2] - mc_eye[2];
+    float len = sqrtf(dx * dx + dz * dz);
+    if (len < 0.001f)
+        return 0 - 1000;
+    return (int)(dz / len * 1000.0f);
+#else
+    return 0 - 1000;
+#endif
+}
 
 int GuiMask(int x, int y, const char *mask, int cols, int color, int scale)
 {
@@ -892,6 +1006,61 @@ int GuiBox(int x, int y, int z, int sx, int sy, int sz, int color)
     return 0;
 #else
     (void)x; (void)y; (void)z; (void)sx; (void)sy; (void)sz; (void)color;
+    return -1;
+#endif
+}
+
+/* Block kind -> (top, side, bottom) texture tiles. Kinds match minusC
+ * game's own block-type ids (1=grass .. 7=bedrock) so callers pass their
+ * existing type byte straight through with no translation. */
+static void mc_kind_tiles(int kind, int *top, int *side, int *bot)
+{
+    switch (kind) {
+    case 1: *top = MC_TEX_GRASSTOP; *side = MC_TEX_GRASSSIDE; *bot = MC_TEX_DIRT; break;
+    case 2: *top = *side = *bot = MC_TEX_DIRT; break;
+    case 3: *top = *side = *bot = MC_TEX_STONE; break;
+    case 4: *top = *bot = MC_TEX_WOODTOP; *side = MC_TEX_WOODSIDE; break;
+    case 5: *top = *side = *bot = MC_TEX_LEAVES; break;
+    case 6: *top = *side = *bot = MC_TEX_SAND; break;
+    case 7: *top = *side = *bot = MC_TEX_BEDROCK; break;
+    default: *top = *side = *bot = MC_TEX_WHITE; break;
+    }
+}
+
+/* Textured, always-cubic box: `kind` selects the top/side/bottom texture
+ * tiles (see mc_kind_tiles). `color` still tints the whole box, so the
+ * caller's existing selection/lighting-color math keeps working. */
+int GuiBoxTex(int x, int y, int z, int size, int color, int kind)
+{
+#ifdef __APPLE__
+    int top, side, bot;
+    mc_kind_tiles(kind, &top, &side, &bot);
+    float cx = (float)x, cy = (float)y, cz = (float)z;
+    float h = size * 0.5f;
+    if (h < 0.5f) h = 0.5f;
+    float x0 = cx - h, x1 = cx + h;
+    float y0 = cy - h, y1 = cy + h;
+    float z0 = cz - h, z1 = cz + h;
+    mc_face_tex(x0, y0, z1,  x1, y0, z1,  x1, y1, z1,  x0, y1, z1,  0, 0, 1, color, side);
+    mc_face_tex(x1, y0, z0,  x0, y0, z0,  x0, y1, z0,  x1, y1, z0,  0, 0, -1, color, side);
+    mc_face_tex(x0, y0, z0,  x0, y0, z1,  x0, y1, z1,  x0, y1, z0, -1, 0, 0, color, side);
+    mc_face_tex(x1, y0, z1,  x1, y0, z0,  x1, y1, z0,  x1, y1, z1,  1, 0, 0, color, side);
+    mc_face_tex(x0, y1, z1,  x1, y1, z1,  x1, y1, z0,  x0, y1, z0,  0, 1, 0, color, top);
+    mc_face_tex(x0, y0, z0,  x1, y0, z0,  x1, y0, z1,  x0, y0, z1,  0, -1, 0, color, bot);
+    if (mc_cur_id >= 0) {
+        if (mc_nhit >= mc_caphit) {
+            int n = mc_caphit ? mc_caphit * 2 : 128;
+            mc_hits = (mc_aabb *)realloc(mc_hits, (size_t)n * sizeof(mc_aabb));
+            mc_caphit = n;
+        }
+        mc_aabb *a = &mc_hits[mc_nhit++];
+        a->minx = x0; a->miny = y0; a->minz = z0;
+        a->maxx = x1; a->maxy = y1; a->maxz = z1;
+        a->id = mc_cur_id;
+    }
+    return 0;
+#else
+    (void)x; (void)y; (void)z; (void)size; (void)color; (void)kind;
     return -1;
 #endif
 }

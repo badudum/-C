@@ -108,6 +108,7 @@ void compile(char * src, const char *filename)
     assembly_patch_linux_output(ass);
     assembly_patch_macos_x86_output(ass);
     assembly_patch_macos_runtime_symbols(ass);
+    assembly_patch_arm64_wide_imm(&ass);
 
     write_file("mc.s", ass);
     write_file("mc.s.txt", ass);

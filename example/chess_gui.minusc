@@ -27,63 +27,89 @@ sqZ = ({r} int) function {
     return v;
 } int;
 
-drawPawn = ({x} int, {z} int, {c} int) function {
-    {a} int = GuiBox(x, 28, z, 42, 16, 42, c);
-    {b} int = GuiBox(x, 48, z, 18, 32, 18, c);
-    {d} int = GuiBox(x, 70, z, 28, 20, 28, c);
+drawPawn = ({x} int, {z} int, {c} int, {lift} int) function {
+    {y0} int = 28 + lift;
+    {y1} int = 48 + lift;
+    {y2} int = 70 + lift;
+    {a} int = GuiBox(x, y0, z, 42, 16, 42, c);
+    {b} int = GuiBox(x, y1, z, 18, 32, 18, c);
+    {d} int = GuiBox(x, y2, z, 28, 20, 28, c);
     return 0;
 } int;
 
-drawRook = ({x} int, {z} int, {c} int) function {
-    {a} int = GuiBox(x, 28, z, 46, 16, 46, c);
-    {b} int = GuiBox(x, 58, z, 32, 52, 32, c);
-    {d} int = GuiBox(x, 90, z, 46, 12, 46, c);
-    {e} int = GuiBox(x - 16, 102, z - 16, 12, 16, 12, c);
-    {f} int = GuiBox(x + 16, 102, z - 16, 12, 16, 12, c);
-    {g} int = GuiBox(x - 16, 102, z + 16, 12, 16, 12, c);
-    {h} int = GuiBox(x + 16, 102, z + 16, 12, 16, 12, c);
+drawRook = ({x} int, {z} int, {c} int, {lift} int) function {
+    {y0} int = 28 + lift;
+    {y1} int = 58 + lift;
+    {y2} int = 90 + lift;
+    {y3} int = 102 + lift;
+    {a} int = GuiBox(x, y0, z, 46, 16, 46, c);
+    {b} int = GuiBox(x, y1, z, 32, 52, 32, c);
+    {d} int = GuiBox(x, y2, z, 46, 12, 46, c);
+    {e} int = GuiBox(x - 16, y3, z - 16, 12, 16, 12, c);
+    {f} int = GuiBox(x + 16, y3, z - 16, 12, 16, 12, c);
+    {g} int = GuiBox(x - 16, y3, z + 16, 12, 16, 12, c);
+    {h} int = GuiBox(x + 16, y3, z + 16, 12, 16, 12, c);
     return 0;
 } int;
 
-drawKnight = ({x} int, {z} int, {c} int) function {
-    {a} int = GuiBox(x, 26, z, 44, 16, 40, c);
-    {b} int = GuiBox(x, 54, z + 4, 24, 44, 28, c);
-    {d} int = GuiBox(x, 78, z - 10, 22, 28, 36, c);
-    {e} int = GuiBox(x + 8, 92, z - 22, 14, 16, 16, c);
+drawKnight = ({x} int, {z} int, {c} int, {lift} int) function {
+    {y0} int = 26 + lift;
+    {y1} int = 54 + lift;
+    {y2} int = 78 + lift;
+    {y3} int = 92 + lift;
+    {a} int = GuiBox(x, y0, z, 44, 16, 40, c);
+    {b} int = GuiBox(x, y1, z + 4, 24, 44, 28, c);
+    {d} int = GuiBox(x, y2, z - 10, 22, 28, 36, c);
+    {e} int = GuiBox(x + 8, y3, z - 22, 14, 16, 16, c);
     return 0;
 } int;
 
-drawBishop = ({x} int, {z} int, {c} int) function {
-    {a} int = GuiBox(x, 26, z, 42, 14, 42, c);
-    {b} int = GuiBox(x, 52, z, 22, 40, 22, c);
-    {d} int = GuiBox(x, 82, z, 16, 28, 16, c);
-    {e} int = GuiBox(x, 102, z, 10, 16, 10, c);
-    {f} int = GuiBox(x, 114, z, 6, 10, 6, c);
+drawBishop = ({x} int, {z} int, {c} int, {lift} int) function {
+    {y0} int = 26 + lift;
+    {y1} int = 52 + lift;
+    {y2} int = 82 + lift;
+    {y3} int = 102 + lift;
+    {y4} int = 114 + lift;
+    {a} int = GuiBox(x, y0, z, 42, 14, 42, c);
+    {b} int = GuiBox(x, y1, z, 22, 40, 22, c);
+    {d} int = GuiBox(x, y2, z, 16, 28, 16, c);
+    {e} int = GuiBox(x, y3, z, 10, 16, 10, c);
+    {f} int = GuiBox(x, y4, z, 6, 10, 6, c);
     return 0;
 } int;
 
-drawQueen = ({x} int, {z} int, {c} int) function {
-    {a} int = GuiBox(x, 26, z, 46, 14, 46, c);
-    {b} int = GuiBox(x, 54, z, 24, 44, 24, c);
-    {d} int = GuiBox(x, 84, z, 36, 16, 36, c);
-    {e} int = GuiBox(x, 102, z, 8, 22, 8, c);
-    {f} int = GuiBox(x - 14, 98, z, 8, 16, 8, c);
-    {g} int = GuiBox(x + 14, 98, z, 8, 16, 8, c);
-    {h} int = GuiBox(x, 98, z - 14, 8, 16, 8, c);
-    {i} int = GuiBox(x, 98, z + 14, 8, 16, 8, c);
+drawQueen = ({x} int, {z} int, {c} int, {lift} int) function {
+    {y0} int = 26 + lift;
+    {y1} int = 54 + lift;
+    {y2} int = 84 + lift;
+    {y3} int = 102 + lift;
+    {y4} int = 98 + lift;
+    {a} int = GuiBox(x, y0, z, 46, 14, 46, c);
+    {b} int = GuiBox(x, y1, z, 24, 44, 24, c);
+    {d} int = GuiBox(x, y2, z, 36, 16, 36, c);
+    {e} int = GuiBox(x, y3, z, 8, 22, 8, c);
+    {f} int = GuiBox(x - 14, y4, z, 8, 16, 8, c);
+    {g} int = GuiBox(x + 14, y4, z, 8, 16, 8, c);
+    {h} int = GuiBox(x, y4, z - 14, 8, 16, 8, c);
+    {i} int = GuiBox(x, y4, z + 14, 8, 16, 8, c);
     return 0;
 } int;
 
-drawKing = ({x} int, {z} int, {c} int) function {
-    {a} int = GuiBox(x, 26, z, 46, 14, 46, c);
-    {b} int = GuiBox(x, 56, z, 26, 48, 26, c);
-    {d} int = GuiBox(x, 88, z, 34, 14, 34, c);
-    {e} int = GuiBox(x, 108, z, 8, 28, 8, c);
-    {f} int = GuiBox(x, 112, z, 24, 8, 8, c);
+drawKing = ({x} int, {z} int, {c} int, {lift} int) function {
+    {y0} int = 26 + lift;
+    {y1} int = 56 + lift;
+    {y2} int = 88 + lift;
+    {y3} int = 108 + lift;
+    {y4} int = 112 + lift;
+    {a} int = GuiBox(x, y0, z, 46, 14, 46, c);
+    {b} int = GuiBox(x, y1, z, 26, 48, 26, c);
+    {d} int = GuiBox(x, y2, z, 34, 14, 34, c);
+    {e} int = GuiBox(x, y3, z, 8, 28, 8, c);
+    {f} int = GuiBox(x, y4, z, 24, 8, 8, c);
     return 0;
 } int;
 
-drawPiece = ({x} int, {z} int, {piece} int) function {
+drawPiece = ({x} int, {z} int, {piece} int, {lift} int) function {
     {kind} int = piece;
     if (piece > 6) {
         kind = piece - 6;
@@ -93,23 +119,129 @@ drawPiece = ({x} int, {z} int, {piece} int) function {
         c = 15724527;
     };
     if (kind == 1) {
-        {p} int = drawPawn(x, z, c);
+        {p} int = drawPawn(x, z, c, lift);
     };
     if (kind == 2) {
-        {n} int = drawKnight(x, z, c);
+        {n} int = drawKnight(x, z, c, lift);
     };
     if (kind == 3) {
-        {b} int = drawBishop(x, z, c);
+        {b} int = drawBishop(x, z, c, lift);
     };
     if (kind == 4) {
-        {k} int = drawRook(x, z, c);
+        {k} int = drawRook(x, z, c, lift);
     };
     if (kind == 5) {
-        {q} int = drawQueen(x, z, c);
+        {q} int = drawQueen(x, z, c, lift);
     };
     if (kind == 6) {
-        {g} int = drawKing(x, z, c);
+        {g} int = drawKing(x, z, c, lift);
     };
+    return 0;
+} int;
+
+lerp100 = ({a} int, {b} int, {u} int) function {
+    if (u < 0) {
+        u = 0;
+    };
+    if (u > 100) {
+        u = 100;
+    };
+    if (b >= a) {
+        {d} int = b - a;
+        {p} int = d * u;
+        p = p / 100;
+        return a + p;
+    };
+    {d2} int = a - b;
+    {p2} int = d2 * u;
+    p2 = p2 / 100;
+    return a - p2;
+} int;
+
+ease100 = ({t} int) function {
+    {u} int = t;
+    if (u < 0) {
+        u = 0;
+    };
+    if (u > 100) {
+        u = 100;
+    };
+    {s} int = u * u;
+    {k} int = 300 - 2 * u;
+    s = s * k;
+    s = s / 10000;
+    return s;
+} int;
+
+drawAnimFrame = ({from} int, {to} int, {piece} int, {victim} int, {t} int, {dur} int, {mode} int) function {
+    {ff} int = from % 8;
+    {fr} int = from / 8;
+    {tf} int = to % 8;
+    {tr} int = to / 8;
+    {x0} int = sqX(ff);
+    {z0} int = sqZ(fr);
+    {x1} int = sqX(tf);
+    {z1} int = sqZ(tr);
+    {span} int = dur - 1;
+    if (span < 1) {
+        span = 1;
+    };
+    {raw} int = t * 100;
+    raw = raw / span;
+    {u} int = ease100(raw);
+    {mx} int = x0;
+    {mz} int = z0;
+    {hop} int = 0;
+    {vLift} int = 0;
+    {showV} int = 0;
+    if (mode == 1) {
+        mx = lerp100(x0, x1, u);
+        mz = lerp100(z0, z1, u);
+        hop = u * (100 - u);
+        hop = hop / 24;
+    };
+    if (mode == 2) {
+        if (u < 62) {
+            {tu} int = u * 100;
+            tu = tu / 62;
+            {teu} int = ease100(tu);
+            mx = lerp100(x0, x1, teu);
+            mz = lerp100(z0, z1, teu);
+            {arc} int = tu * (100 - tu);
+            arc = arc / 36;
+            hop = teu * 58;
+            hop = hop / 100;
+            hop = hop + arc;
+            showV = 1;
+            vLift = 0;
+        };
+        if (u >= 62) {
+            mx = x1;
+            mz = z1;
+            {su} int = u - 62;
+            su = su * 100;
+            su = su / 38;
+            if (su > 100) {
+                su = 100;
+            };
+            {seu} int = ease100(su);
+            hop = lerp100(58, 0 - 16, seu);
+            vLift = lerp100(8, 0 - 82, seu);
+            if (seu < 90) {
+                showV = 1;
+            };
+        };
+    };
+    {shad} int = GuiBox(mx, 16, mz, 48, 6, 48, 2631720);
+    if (mode == 2) {
+        if (showV == 1) {
+            {dv} int = drawPiece(x1, z1, victim, vLift);
+        };
+        if (u >= 62) {
+            {crush} int = GuiBox(x1, 14, z1, 100, 8, 100, 9050112);
+        };
+    };
+    {dm} int = drawPiece(mx, mz, piece, hop);
     return 0;
 } int;
 
@@ -255,7 +387,7 @@ legalMove = ({board} adr, {from} int, {to} int, {turn} int) function {
     return 0;
 } int;
 
-drawBoard = ({board} adr, {sel} int) function {
+drawBoard = ({board} adr, {sel} int, {skipA} int, {skipB} int) function {
     {bg} int = GuiClear(1710618);
     {cam} int = GuiCam(0, 620, 980, 0, 0, 40);
     {lit} int = GuiLight(40, 90, 55);
@@ -277,7 +409,15 @@ drawBoard = ({board} adr, {sel} int) function {
             {cell} int = GuiBox(cx, 10, cz, 100, 20, 100, color);
             {piece} int = PeekByte(board, sq);
             if (piece != 0) {
-                {dp} int = drawPiece(cx, cz, piece);
+                if (sq != skipA) {
+                    if (sq != skipB) {
+                        {lift} int = 0;
+                        if (sq == sel) {
+                            lift = 14;
+                        };
+                        {dp} int = drawPiece(cx, cz, piece, lift);
+                    };
+                };
             };
         };
     };
@@ -318,6 +458,13 @@ main = ({x} int) function {
     {sel} int = 0 - 1;
     {state} int = 0;
     {running} int = 1;
+    {anim} int = 0;
+    {animT} int = 0;
+    {animDur} int = 22;
+    {animFrom} int = 0;
+    {animTo} int = 0;
+    {animPiece} int = 0;
+    {animVictim} int = 0;
     loop until (running == 1) {
         {ev} int = GuiPoll();
         if (ev == 1) {
@@ -333,12 +480,14 @@ main = ({x} int) function {
                 turn = 0;
                 sel = 0 - 1;
                 state = 0;
+                anim = 0;
+                animT = 0;
             };
             if (key == 115) {
                 {sv} int = GuiSave("chess_shot.bmp");
             };
         };
-        if (ev == 3 and (state < 2 or state == 4)) {
+        if (ev == 3 and anim == 0 and (state < 2 or state == 4)) {
             if (state == 4) {
                 state = turn;
             };
@@ -369,25 +518,18 @@ main = ({x} int) function {
                     } else {
                         {ok} int = legalMove(board, sel, sq, turn);
                         if (ok == 1) {
-                            {captured} int = PeekByte(board, sq);
-                            {piece2} int = PeekByte(board, sel);
-                            PokeByte(board, sq, piece2);
-                            PokeByte(board, sel, 0);
-                            if (piece2 == 1 and sq / 8 == 7) {
-                                PokeByte(board, sq, 5);
-                            };
-                            if (piece2 == 7 and sq / 8 == 0) {
-                                PokeByte(board, sq, 11);
+                            animVictim = PeekByte(board, sq);
+                            animPiece = PeekByte(board, sel);
+                            animFrom = sel;
+                            animTo = sq;
+                            animT = 0;
+                            animDur = 26;
+                            anim = 1;
+                            if (animVictim != 0) {
+                                anim = 2;
+                                animDur = 38;
                             };
                             sel = 0 - 1;
-                            if (captured == 12) {
-                                state = 2;
-                            } else if (captured == 6) {
-                                state = 3;
-                            } else {
-                                turn = 1 - turn;
-                                state = turn;
-                            };
                         } else {
                             sel = 0 - 1;
                             state = 4;
@@ -396,7 +538,43 @@ main = ({x} int) function {
                 };
             };
         };
-        {d1} int = drawBoard(board, sel);
+        {skipA} int = 0 - 1;
+        {skipB} int = 0 - 1;
+        {hl} int = sel;
+        if (anim != 0) {
+            skipA = animFrom;
+            skipB = animTo;
+            hl = animTo;
+        };
+        {d1} int = drawBoard(board, hl, skipA, skipB);
+        if (anim != 0) {
+            {da} int = drawAnimFrame(animFrom, animTo, animPiece, animVictim, animT, animDur, anim);
+            animT++;
+            if (animT >= animDur) {
+                PokeByte(board, animTo, animPiece);
+                PokeByte(board, animFrom, 0);
+                if (animPiece == 1) {
+                    if (animTo / 8 == 7) {
+                        PokeByte(board, animTo, 5);
+                    };
+                };
+                if (animPiece == 7) {
+                    if (animTo / 8 == 0) {
+                        PokeByte(board, animTo, 11);
+                    };
+                };
+                if (animVictim == 12) {
+                    state = 2;
+                } else if (animVictim == 6) {
+                    state = 3;
+                } else {
+                    turn = 1 - turn;
+                    state = turn;
+                };
+                anim = 0;
+                animT = 0;
+            };
+        };
         {d2} int = drawStatus(state);
         GuiPresent();
         GuiSleep(16);

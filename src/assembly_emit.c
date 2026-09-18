@@ -36,7 +36,7 @@ static void asm_append_fp_mem(char **s, const char *op, const char *reg, int off
         snprintf(frag, sizeof(frag), "\n# %s\n%s %s, [fp, #%d]\n",
                  comment, op, reg, offset);
     } else {
-        snprintf(frag, sizeof(frag), "\n# %s\nsub x4, fp, #%d\n%s %s, [x4]\n",
+        snprintf(frag, sizeof(frag), "\n# %s\nsub x9, fp, #%d\n%s %s, [x9]\n",
                  comment, abs_off, op, reg);
     }
     asm_append(s, frag);
@@ -55,7 +55,7 @@ static void asm_append_fp_store_reg(char **s, const char *reg, int offset, const
         snprintf(frag, sizeof(frag), "\n# %s\nstr %s, [fp, #%d]\n",
                  comment, reg, offset);
     } else {
-        snprintf(frag, sizeof(frag), "\n# %s\nsub x4, fp, #%d\nstr %s, [x4]\n",
+        snprintf(frag, sizeof(frag), "\n# %s\nsub x9, fp, #%d\nstr %s, [x9]\n",
                  comment, abs_off, reg);
     }
     asm_append(s, frag);
@@ -164,7 +164,7 @@ void asm_append_load_from_fp(char **s, int offset, int reg, const char *comment)
         if (abs_off <= 255)
             snprintf(instr, sizeof(instr), "\n# %s\nldr x%d, [fp, #%d]\n", comment, reg, offset);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldr x%d, [x4]\n",
+            snprintf(instr, sizeof(instr), "\n# %s\nsub x9, fp, #%d\nldr x%d, [x9]\n",
                      comment, abs_off, reg);
     }
     asm_append(s, instr);
@@ -185,7 +185,7 @@ void asm_append_load_w_from_fp_reg(char **s, int offset, int reg, const char *co
     } else if (abs_off <= 255) {
         snprintf(instr, sizeof(instr), "\n# %s\nldr w%d, [fp, #%d]\n", comment, reg, offset);
     } else {
-        snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldr w%d, [x4]\n",
+        snprintf(instr, sizeof(instr), "\n# %s\nsub x9, fp, #%d\nldr w%d, [x9]\n",
                  comment, abs_off, reg);
     }
     asm_append(s, instr);
@@ -210,7 +210,7 @@ void asm_append_store_w_to_fp(char **s, int offset, const char *comment)
         if (abs_off <= 255)
             snprintf(instr, sizeof(instr), "\n# %s\nstr w0, [fp, #%d]\n", comment, offset);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nstr w0, [x4]\n",
+            snprintf(instr, sizeof(instr), "\n# %s\nsub x9, fp, #%d\nstr w0, [x9]\n",
                      comment, abs_off);
     }
     asm_append(s, instr);
@@ -232,7 +232,7 @@ void asm_append_load_b_from_fp_reg(char **s, int offset, int reg, const char *co
     } else if (abs_off <= 255) {
         snprintf(instr, sizeof(instr), "\n# %s\nldrb w%d, [fp, #%d]\n", comment, reg, offset);
     } else {
-        snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nldrb w%d, [x4]\n",
+        snprintf(instr, sizeof(instr), "\n# %s\nsub x9, fp, #%d\nldrb w%d, [x9]\n",
                  comment, abs_off, reg);
     }
     asm_append(s, instr);
@@ -258,7 +258,7 @@ void asm_append_store_b_to_fp(char **s, int offset, const char *comment)
         if (abs_off <= 255)
             snprintf(instr, sizeof(instr), "\n# %s\nstrb w0, [fp, #%d]\n", comment, offset);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nstrb w0, [x4]\n",
+            snprintf(instr, sizeof(instr), "\n# %s\nsub x9, fp, #%d\nstrb w0, [x9]\n",
                      comment, abs_off);
     }
     asm_append(s, instr);
@@ -280,7 +280,7 @@ void asm_append_store_to_fp(char **s, int offset, int reg, const char *comment)
         if (abs_off <= 255)
             snprintf(instr, sizeof(instr), "\n# %s\nstr x%d, [fp, #%d]\n", comment, reg, offset);
         else
-            snprintf(instr, sizeof(instr), "\n# %s\nsub x4, fp, #%d\nstr x%d, [x4]\n",
+            snprintf(instr, sizeof(instr), "\n# %s\nsub x9, fp, #%d\nstr x%d, [x9]\n",
                      comment, abs_off, reg);
     }
     asm_append(s, instr);
@@ -322,7 +322,7 @@ char *asm_store_to_fp_instr(int offset, int reg, const char *comment)
         if (abs_off <= 255)
             snprintf(buf, sizeof(buf), "\n# %s\nstr x%d, [fp, #%d]\n", comment, reg, offset);
         else
-            snprintf(buf, sizeof(buf), "\n# %s\nsub x4, fp, #%d\nstr x%d, [x4]\n",
+            snprintf(buf, sizeof(buf), "\n# %s\nsub x9, fp, #%d\nstr x%d, [x9]\n",
                      comment, abs_off, reg);
     }
     return strdup(buf);
@@ -514,7 +514,7 @@ void asm_append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
                          "\n# %s\nmovzx %s, byte ptr [rbp-%d]\n", comment, dest32, abs_off);
             else
                 snprintf(instr, sizeof(instr),
-                         "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmovzx %s, byte ptr [rcx]\n",
+                         "\n# %s\nmov r10, rbp\nsub r10, %d\nmovzx %s, byte ptr [r10]\n",
                          comment, abs_off, dest32);
         } else if (dt == TYPE_INT) {
             if (abs_off <= 255)
@@ -522,7 +522,7 @@ void asm_append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
                          "\n# %s\nmov %s, dword ptr [rbp-%d]\n", comment, dest32, abs_off);
             else
                 snprintf(instr, sizeof(instr),
-                         "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov %s, dword ptr [rcx]\n",
+                         "\n# %s\nmov r10, rbp\nsub r10, %d\nmov %s, dword ptr [r10]\n",
                          comment, abs_off, dest32);
         } else {
             if (abs_off <= 255)
@@ -530,7 +530,7 @@ void asm_append_load_call_arg_to_reg(char **s, AST_t *arg, int reg,
                          "\n# %s\nmov %s, [rbp-%d]\n", comment, dest64, abs_off);
             else
                 snprintf(instr, sizeof(instr),
-                         "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov %s, [rcx]\n",
+                         "\n# %s\nmov r10, rbp\nsub r10, %d\nmov %s, [r10]\n",
                          comment, abs_off, dest64);
         }
         asm_append(s, instr);
@@ -595,7 +595,7 @@ void asm_append_load_cust_receiver_to_reg(char **s, AST_t *arg, int reg, const c
                      "\n# %s\nsub x%d, fp, #%d\n", comment, reg, abs_off);
         else
             snprintf(instr, sizeof(instr),
-                     "\n# %s\nsub x4, fp, #%d\nmov x%d, x4\n", comment, abs_off, reg);
+                     "\n# %s\nsub x9, fp, #%d\nmov x%d, x9\n", comment, abs_off, reg);
     }
     asm_append(s, instr);
 }
@@ -622,7 +622,7 @@ void asm_append_load_cust_field_receiver_to_reg(char **s, int base_stack_index,
                      "\n# %s\nsub x%d, fp, #%d\n", comment, reg, abs_off);
         else
             snprintf(instr, sizeof(instr),
-                     "\n# %s\nsub x4, fp, #%d\nmov x%d, x4\n", comment, abs_off, reg);
+                     "\n# %s\nsub x9, fp, #%d\nmov x%d, x9\n", comment, abs_off, reg);
     }
     asm_append(s, instr);
 }
@@ -872,11 +872,15 @@ void asm_append_mov_word_reg(char **s, int dst, int src)
 
 void asm_append_int_return(char **s, int value)
 {
-    char buf[64];
+    char buf[160];
     if (is_x86())
         snprintf(buf, sizeof(buf), "\nmov eax, %d\n", value);
-    else
-        snprintf(buf, sizeof(buf), "\nmov w0, #%d\n", value);
+    else {
+        unsigned u = (unsigned)value;
+        snprintf(buf, sizeof(buf),
+                 "\nmovz w0, #0x%x\nmovk w0, #0x%x, lsl #16\n",
+                 u & 0xffffu, (u >> 16) & 0xffffu);
+    }
     asm_append(s, buf);
 }
 
@@ -1016,11 +1020,20 @@ void asm_append_store_param_to_fp(char **s, int var_offset, int param_index, con
 
 void asm_append_function_frame_reserve(char **s, int bytes)
 {
-    char buf[64];
+    char buf[160];
+    if (bytes < 0)
+        bytes = 0;
     if (is_x86())
         snprintf(buf, sizeof(buf), "\nsub rsp, %d\n", bytes);
-    else
+    else if (bytes <= 4095)
         snprintf(buf, sizeof(buf), "\nsub sp, sp, #%d\n", bytes);
+    else
+        snprintf(buf, sizeof(buf),
+                 "\nmovz x17, #0x%x\n"
+                 "movk x17, #0x%x, lsl #16\n"
+                 "sub sp, sp, x17\n",
+                 (unsigned)bytes & 0xffffu,
+                 ((unsigned)bytes >> 16) & 0xffffu);
     asm_append(s, buf);
 }
 
@@ -1058,7 +1071,7 @@ void asm_emit_binop_comparison(char **s, int op, int use_large,
                 "# comparison\n"
                 "cmp w0, w1\n"
                 "cset w0, %s\n"
-                "sub x4, fp, #%d\n%s w0, [x4]\n",
+                "sub x9, fp, #%d\n%s w0, [x9]\n",
                 suffix, result_abs, result_str);
         } else {
             snprintf(op_asm, sizeof(op_asm),
@@ -1120,12 +1133,12 @@ void asm_emit_binop_logical(char **s, int op, int use_large,
         if (use_large) {
             snprintf(op_asm, sizeof(op_asm),
                 "# logical op\n"
-                "sub x4, fp, #%d\n%s w0, [x4]\n"
-                "sub x4, fp, #%d\n%s w1, [x4]\n"
+                "sub x9, fp, #%d\n%s w0, [x9]\n"
+                "sub x9, fp, #%d\n%s w1, [x9]\n"
                 "cmp w0, #0\ncset w0, ne\n"
                 "cmp w1, #0\ncset w1, ne\n"
                 "%s w0, w0, w1\n"
-                "sub x4, fp, #%d\n%s w0, [x4]\n",
+                "sub x9, fp, #%d\n%s w0, [x9]\n",
                 left_abs, left_ldr, right_abs, right_ldr,
                 logic, result_abs, result_str);
         } else {
@@ -1176,10 +1189,10 @@ void asm_emit_binop_bitwise(char **s, int op, int use_large,
         if (use_large) {
             snprintf(op_asm, sizeof(op_asm),
                 "# bitwise op\n"
-                "sub x4, fp, #%d\nldr w0, [x4]\n"
-                "sub x4, fp, #%d\nldr w1, [x4]\n"
+                "sub x9, fp, #%d\nldr w0, [x9]\n"
+                "sub x9, fp, #%d\nldr w1, [x9]\n"
                 "%s w0, w0, w1\n"
-                "sub x4, fp, #%d\nstr w0, [x4]\n",
+                "sub x9, fp, #%d\nstr w0, [x9]\n",
                 left_abs, right_abs, bitop, result_abs);
         } else {
             snprintf(op_asm, sizeof(op_asm),
@@ -1368,7 +1381,7 @@ void asm_append_heap_vtable_init(char **s, int stack_index, const char *type_nam
         else
             snprintf(buf, sizeof(buf),
                      "\n# init heap vtable for %s\n"
-                     "sub x4, fp, #%d\nldr x0, [x4]\n"
+                     "sub x9, fp, #%d\nldr x0, [x9]\n"
                      "adrp x1, %s@PAGE\n"
                      "add x1, x1, %s@PAGEOFF\n"
                      "str x1, [x0]\n",
@@ -1442,8 +1455,9 @@ void assembly_patch_linux_output(char *ass)
         static const char *gui_syms[] = {
             "GuiOpen", "GuiClose", "GuiClear", "GuiRect", "GuiText",
             "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
-            "GuiEventKey", "GuiSleep", "GuiSave", "GuiMask",
-            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiHit", 0
+            "GuiEventKey", "GuiHeld", "GuiFwdX", "GuiFwdZ",
+            "GuiSleep", "GuiSave", "GuiMask",
+            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiBoxTex", "GuiHit", 0
         };
         char from[64], to[64];
         for (int gi = 0; gui_syms[gi]; gi++) {
@@ -1534,8 +1548,9 @@ void assembly_patch_macos_runtime_symbols(char *ass)
         static const char *gui_syms[] = {
             "GuiOpen", "GuiClose", "GuiClear", "GuiRect", "GuiText",
             "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
-            "GuiEventKey", "GuiSleep", "GuiSave", "GuiMask",
-            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiHit", 0
+            "GuiEventKey", "GuiHeld", "GuiFwdX", "GuiFwdZ",
+            "GuiSleep", "GuiSave", "GuiMask",
+            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiBoxTex", "GuiHit", 0
         };
         char from[64], to[64];
         for (int gi = 0; gui_syms[gi]; gi++) {
@@ -1565,6 +1580,68 @@ void assembly_patch_macos_runtime_symbols(char *ass)
     patch_str(ass, "call PoolDestroy", "call _PoolDestroy");
 }
 
+void assembly_patch_arm64_wide_imm(char **pss)
+{
+    if (!pss || !*pss)
+        return;
+    if (assembly_target_get() != ASSEMBLY_TARGET_AARCH64)
+        return;
+    char *src = *pss;
+    size_t extra = 65536;
+    size_t cap = strlen(src) + extra + 1;
+    char *out = calloc(1, cap);
+    if (!out)
+        return;
+    char *w = out;
+    char *p = src;
+    while (*p) {
+        char *nl = strchr(p, '\n');
+        size_t linelen = nl ? (size_t)(nl - p) : strlen(p);
+        char dst[16], sreg[16];
+        int imm = 0;
+        int matched = 0;
+        if (linelen < 200) {
+            char tmp[256];
+            memcpy(tmp, p, linelen);
+            tmp[linelen] = '\0';
+            char *line = tmp;
+            while (*line == ' ' || *line == '\t')
+                line++;
+            int is_add = 0;
+            if (strncmp(line, "add ", 4) == 0)
+                is_add = 1;
+            if ((strncmp(line, "sub ", 4) == 0 || is_add) &&
+                sscanf(line + 4, "%15[^,], %15[^,], #%d", dst, sreg, &imm) == 3 &&
+                imm > 4095) {
+                int n = snprintf(w, cap - (size_t)(w - out),
+                    "movz x17, #0x%x\n"
+                    "movk x17, #0x%x, lsl #16\n"
+                    "%s %s, %s, x17\n",
+                    (unsigned)imm & 0xffffu,
+                    ((unsigned)imm >> 16) & 0xffffu,
+                    is_add ? "add" : "sub",
+                    dst, sreg);
+                if (n > 0)
+                    w += n;
+                matched = 1;
+            }
+        }
+        if (!matched) {
+            memcpy(w, p, linelen);
+            w += linelen;
+            if (nl) {
+                *w++ = '\n';
+            }
+        }
+        p = nl ? nl + 1 : p + linelen;
+        if (!nl)
+            break;
+    }
+    *w = '\0';
+    free(src);
+    *pss = out;
+}
+
 static int rt_err_site_seq = 0;
 
 void asm_append_runtime_err_site(char **s, const AST_t *ast, const char *kind,
@@ -1580,11 +1657,12 @@ void asm_append_runtime_err_site(char **s, const AST_t *ast, const char *kind,
     snprintf(msg, sizeof(msg), "Runtime Error: %s at %s:%d\\n", kind, file, line);
     char frag[768];
     snprintf(frag, sizeof(frag),
-             "b %s\n"
+             "%s %s\n"
              "%s:\n"
              ".asciz \"%s\"\n"
              ".p2align 2\n"
              "%s:\n",
+             is_x86() ? "jmp" : "b",
              skip_label, label_buf, msg, skip_label);
     asm_append(s, frag);
 }
@@ -1960,7 +2038,7 @@ void asm_emit_div_zero_check(char **s, int right_off, int right_abs, AST_t *site
     } else if (right_abs > 255) {
         asm_append_load_rt_err_ptr(s, err_label, 1);
         snprintf(div_chk, sizeof(div_chk),
-                 "\n# div-by-zero check\nsub x4, fp, #%d\nldr w0, [x4]\nbl rt_div_zero_check\n",
+                 "\n# div-by-zero check\nsub x9, fp, #%d\nldr w0, [x9]\nbl rt_div_zero_check\n",
                  right_abs);
     } else {
         asm_append_load_rt_err_ptr(s, err_label, 1);
@@ -2005,7 +2083,7 @@ void asm_append_store_x_to_fp(char **s, int offset, const char *comment)
     else if (abs <= 255)
         snprintf(frag, sizeof(frag), "\n# %s\nstr x0, [fp, #%d]\n", comment, offset);
     else
-        snprintf(frag, sizeof(frag), "\n# %s\nsub x4, fp, #%d\nstr x0, [x4]\n", comment, abs);
+        snprintf(frag, sizeof(frag), "\n# %s\nsub x9, fp, #%d\nstr x0, [x9]\n", comment, abs);
     asm_append(s, frag);
 }
 
@@ -2018,7 +2096,7 @@ void asm_append_load_x_from_fp(char **s, int offset, const char *comment)
     else if (abs <= 255)
         snprintf(frag, sizeof(frag), "\n# %s\nldr x0, [fp, #%d]\n", comment, offset);
     else
-        snprintf(frag, sizeof(frag), "\n# %s\nsub x4, fp, #%d\nldr x0, [x4]\n", comment, abs);
+        snprintf(frag, sizeof(frag), "\n# %s\nsub x9, fp, #%d\nldr x0, [x9]\n", comment, abs);
     asm_append(s, frag);
 }
 

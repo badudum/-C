@@ -9,12 +9,12 @@ static const char assemble_mod_aarch64[] =
 
 static const char assemble_mod_large_offset_aarch64[] =
 "# modulus\n"
-"sub x4, fp, #%d\n"
-"ldr w0, [x4]\n"
-"sub x4, fp, #%d\n"
-"ldr w1, [x4]\n"
+"sub x9, fp, #%d\n"
+"ldr w0, [x9]\n"
+"sub x9, fp, #%d\n"
+"ldr w1, [x9]\n"
 "sdiv w2, w0, w1\n"
 "msub w0, w2, w1, w0\n"
-"sub x4, fp, #%d\n"
-"str w0, [x4]\n";
+"sub x9, fp, #%d\n"
+"str w0, [x9]\n";
 #define assemble_mod_large_offset_aarch64_len (sizeof(assemble_mod_large_offset_aarch64) - 1)

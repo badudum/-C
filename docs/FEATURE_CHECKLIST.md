@@ -116,7 +116,7 @@ Legend matches `docs/OOP_CHECKLIST.md`: **done** · **partial** · **not started
 
 - [x] Closures with captures (implicit; call-site by-value; no escaping/return yet)
 - [x] Full 1024-bit soft-float (IEEE 754 soft-float for 64–1024 bit widths; f64 fast path when upper limbs zero; canonical encode/decode for wide IEEE ops)
-- [x] Built-in GUI library, zero dependencies (`Gui*` builtins: AppKit window, Metal 2D/3D renderer on macOS with software fallback, `GuiCam`/`GuiBox`/`GuiHit` for 3D games, bitmap font, mouse/keyboard; Linux backend pending — see `example/gui_demo.minusc`, `example/chess_gui.minusc`)
+- [x] Built-in GUI library, zero dependencies (`Gui*` builtins: AppKit window, Metal 2D/3D renderer on macOS with software fallback, `GuiCam`/`GuiBox`/`GuiHit` for 3D games, bitmap font, mouse/keyboard; Linux backend pending — see `example/gui_demo.minusc`, `example/chess_gui.minusc`, `example/minecraft.minusc`)
 - [~] Cross-platform runtime and CI (macOS universal binary; Linux codegen partial)
 - [~] Rich compile diagnostics + LSP (inline errors on save; go-to-def/rename deferred)
 

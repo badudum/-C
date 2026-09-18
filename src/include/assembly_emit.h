@@ -97,6 +97,7 @@ void asm_append_heap_vtable_init(char **s, int stack_index, const char *type_nam
 void assembly_patch_linux_output(char *ass);
 void assembly_patch_macos_x86_output(char *ass);
 void assembly_patch_macos_runtime_symbols(char *ass);
+void assembly_patch_arm64_wide_imm(char **ass);
 
 /* Emit a unique runtime error string label; returns label name in label_buf. */
 void asm_append_runtime_err_site(char **s, const AST_t *ast, const char *kind,

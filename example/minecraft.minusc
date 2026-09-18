@@ -1,0 +1,756 @@
+absInt = ({v} int) function {
+    if (v < 0) {
+        return 0 - v;
+    };
+    return v;
+} int;
+
+wrapN = ({v} int, {m} int) function {
+    if (m < 1) {
+        return 0;
+    };
+    {q} int = v / m;
+    {p} int = q * m;
+    {r} int = v - p;
+    if (r < 0) {
+        r = r + m;
+    };
+    return r;
+} int;
+
+hash2 = ({x} int, {z} int) function {
+    {n} int = x * 374761;
+    n = n + z * 668265;
+    n = n + 1934963;
+    if (n < 0) {
+        n = 0 - n;
+    };
+    return n;
+} int;
+
+blkX = ({id} int) function {
+    return wrapN(id, 16);
+} int;
+
+blkZ = ({id} int) function {
+    {t} int = id / 16;
+    return wrapN(t, 16);
+} int;
+
+blkY = ({id} int) function {
+    return id / 256;
+} int;
+
+blockIndex = ({x} int, {y} int, {z} int) function {
+    {i} int = y * 256;
+    i = i + z * 16;
+    i = i + x;
+    return i;
+} int;
+
+inWorld = ({x} int, {y} int, {z} int) function {
+    if (x < 0 or x > 15) {
+        return 0;
+    };
+    if (z < 0 or z > 15) {
+        return 0;
+    };
+    if (y < 0 or y > 11) {
+        return 0;
+    };
+    return 1;
+} int;
+
+wxOf = ({x} int) function {
+    return x * 40 - 300;
+} int;
+
+wyOf = ({y} int) function {
+    return y * 40 + 20;
+} int;
+
+wzOf = ({z} int) function {
+    return z * 40 - 300;
+} int;
+
+toBlk = ({w} int) function {
+    {u} int = w + 320;
+    if (u < 0) {
+        return 0 - 1;
+    };
+    return u / 40;
+} int;
+
+blockCol = ({t} int) function {
+    {c} int = 16777215;
+    if (t == 1) {
+        c = 5481785;
+    };
+    if (t == 2) {
+        c = 9127187;
+    };
+    if (t == 3) {
+        c = 7895160;
+    };
+    if (t == 4) {
+        c = 8346142;
+    };
+    if (t == 5) {
+        c = 2458934;
+    };
+    if (t == 6) {
+        c = 15781212;
+    };
+    if (t == 7) {
+        c = 3552822;
+    };
+    return c;
+} int;
+
+blockHard = ({t} int) function {
+    if (t == 7) {
+        return 999;
+    };
+    if (t == 3) {
+        return 18;
+    };
+    if (t == 4) {
+        return 14;
+    };
+    if (t == 5) {
+        return 6;
+    };
+    return 9;
+} int;
+
+dropOf = ({t} int) function {
+    if (t == 7) {
+        return 0;
+    };
+    if (t == 1) {
+        return 2;
+    };
+    return t;
+} int;
+
+heightAt = ({x} int, {z} int) function {
+    {cx} int = x / 4;
+    {cz} int = z / 4;
+    {hill} int = hash2(cx, cz);
+    hill = wrapN(hill, 5);
+    {a} int = hash2(x, z);
+    a = wrapN(a, 4);
+    {b} int = hash2(x + 1, z);
+    b = wrapN(b, 4);
+    {c} int = hash2(x, z + 1);
+    c = wrapN(c, 4);
+    {d} int = hash2(x + 2, z + 3);
+    d = wrapN(d, 4);
+    {detail} int = a + b;
+    detail = detail + c + d;
+    detail = detail / 4;
+    {h} int = 3 + hill;
+    h = h + detail;
+    if (h < 2) {
+        h = 2;
+    };
+    if (h > 10) {
+        h = 10;
+    };
+    return h;
+} int;
+
+setLeaf = ({world} adr, {x} int, {y} int, {z} int) function {
+    if (inWorld(x, y, z) == 1) {
+        if (PeekByte(world, blockIndex(x, y, z)) == 0) {
+            PokeByte(world, blockIndex(x, y, z), 5);
+        };
+    };
+    return 0;
+} int;
+
+plantTree = ({world} adr, {x} int, {z} int, {h} int) function {
+    {y} int = h;
+    loop until (y < h + 4) {
+        if (inWorld(x, y, z) == 1) {
+            PokeByte(world, blockIndex(x, y, z), 4);
+        };
+        y++;
+    };
+    {top} int = h + 3;
+    {a} int = setLeaf(world, x, top, z);
+    {b} int = setLeaf(world, x + 1, top, z);
+    {c} int = setLeaf(world, x - 1, top, z);
+    {d} int = setLeaf(world, x, top, z + 1);
+    {e} int = setLeaf(world, x, top, z - 1);
+    {f} int = setLeaf(world, x, top + 1, z);
+    return 0;
+} int;
+
+genWorld = ({world} adr) function {
+    Memset(world, 0, 3072);
+    loop until ({x} int = 0; x < 16; x++) {
+        loop until ({z} int = 0; z < 16; z++) {
+            {h} int = heightAt(x, z);
+            loop until ({y} int = 0; y < 12; y++) {
+                {t} int = 0;
+                if (y == 0) {
+                    t = 7;
+                } else if (y < h - 2) {
+                    t = 3;
+                } else if (y < h - 1) {
+                    t = 2;
+                } else if (y < h) {
+                    t = 1;
+                    if (h <= 3) {
+                        t = 6;
+                    };
+                };
+                PokeByte(world, blockIndex(x, y, z), t);
+            };
+        };
+    };
+    loop until ({tx} int = 2; tx < 14; tx++) {
+        loop until ({tz} int = 2; tz < 14; tz++) {
+            {hh} int = hash2(tx, tz);
+            hh = wrapN(hh, 47);
+            if (hh == 5) {
+                if (tx != 8 or tz != 8) {
+                    {th} int = heightAt(tx, tz);
+                    if (th >= 4) {
+                        {tr} int = plantTree(world, tx, tz, th);
+                    };
+                };
+            };
+        };
+    };
+    return 0;
+} int;
+
+spawnY = ({world} adr, {x} int, {z} int) function {
+    {y} int = 11;
+    loop until (y >= 0) {
+        if (PeekByte(world, blockIndex(x, y, z)) != 0) {
+            return (y + 1) * 40;
+        };
+        y = y - 1;
+    };
+    return 80;
+} int;
+
+isSolid = ({world} adr, {wx} int, {wy} int, {wz} int) function {
+    {x} int = toBlk(wx);
+    {z} int = toBlk(wz);
+    {y} int = wy / 40;
+    if (wy < 0) {
+        return 1;
+    };
+    if (inWorld(x, y, z) == 0) {
+        if (y > 11) {
+            return 0;
+        };
+        return 1;
+    };
+    if (PeekByte(world, blockIndex(x, y, z)) != 0) {
+        return 1;
+    };
+    return 0;
+} int;
+
+collides = ({world} adr, {px} int, {py} int, {pz} int) function {
+    {x0} int = px - 10;
+    {x1} int = px + 10;
+    {z0} int = pz - 10;
+    {z1} int = pz + 10;
+    {y0} int = py + 4;
+    {y1} int = py + 62;
+    if (isSolid(world, x0, y0, z0) == 1) {
+        return 1;
+    };
+    if (isSolid(world, x1, y0, z0) == 1) {
+        return 1;
+    };
+    if (isSolid(world, x0, y0, z1) == 1) {
+        return 1;
+    };
+    if (isSolid(world, x1, y0, z1) == 1) {
+        return 1;
+    };
+    if (isSolid(world, x0, y1, z0) == 1) {
+        return 1;
+    };
+    if (isSolid(world, x1, y1, z0) == 1) {
+        return 1;
+    };
+    if (isSolid(world, x0, y1, z1) == 1) {
+        return 1;
+    };
+    if (isSolid(world, x1, y1, z1) == 1) {
+        return 1;
+    };
+    return 0;
+} int;
+
+addItem = ({invT} adr, {invC} adr, {kind} int) function {
+    if (kind == 0) {
+        return 0;
+    };
+    loop until ({i} int = 0; i < 9; i++) {
+        if (PeekByte(invT, i) == kind) {
+            {c} int = PeekByte(invC, i);
+            if (c < 64) {
+                PokeByte(invC, i, c + 1);
+                return 1;
+            };
+        };
+    };
+    loop until ({j} int = 0; j < 9; j++) {
+        if (PeekByte(invT, j) == 0) {
+            PokeByte(invT, j, kind);
+            PokeByte(invC, j, 1);
+            return 1;
+        };
+    };
+    return 0;
+} int;
+
+takeSlot = ({invT} adr, {invC} adr, {slot} int) function {
+    {kind} int = PeekByte(invT, slot);
+    if (kind == 0) {
+        return 0;
+    };
+    {c} int = PeekByte(invC, slot);
+    if (c <= 1) {
+        PokeByte(invT, slot, 0);
+        PokeByte(invC, slot, 0);
+    } else {
+        PokeByte(invC, slot, c - 1);
+    };
+    return kind;
+} int;
+
+spawnDrop = ({drops} adr, {wx} int, {wy} int, {wz} int, {kind} int) function {
+    if (kind == 0) {
+        return 0;
+    };
+    loop until ({i} int = 0; i < 16; i++) {
+        {off} int = i * 20;
+        if (PeekInt(drops, off + 12) == 0) {
+            PokeInt(drops, off, wx);
+            PokeInt(drops, off + 4, wy);
+            PokeInt(drops, off + 8, wz);
+            PokeInt(drops, off + 12, kind);
+            PokeInt(drops, off + 16, 0);
+            return 1;
+        };
+    };
+    return 0;
+} int;
+
+tickDrops = ({drops} adr, {invT} adr, {invC} adr, {px} int, {py} int, {pz} int) function {
+    loop until ({i} int = 0; i < 16; i++) {
+        {off} int = i * 20;
+        {kind} int = PeekInt(drops, off + 12);
+        if (kind != 0) {
+            {age} int = PeekInt(drops, off + 16);
+            age = age + 1;
+            PokeInt(drops, off + 16, age);
+            {dx} int = PeekInt(drops, off) - px;
+            {dy} int = PeekInt(drops, off + 4) - (py + 30);
+            {dz} int = PeekInt(drops, off + 8) - pz;
+            {d} int = dx * dx + dy * dy + dz * dz;
+            if (age > 12) {
+                if (d < 3600) {
+                    {ok} int = addItem(invT, invC, kind);
+                    if (ok == 1) {
+                        PokeInt(drops, off + 12, 0);
+                    };
+                };
+            };
+        };
+    };
+    return 0;
+} int;
+
+drawDrops = ({drops} adr) function {
+    loop until ({i} int = 0; i < 16; i++) {
+        {off} int = i * 20;
+        {kind} int = PeekInt(drops, off + 12);
+        if (kind != 0) {
+            {age} int = PeekInt(drops, off + 16);
+            {bob} int = wrapN(age, 20);
+            if (bob > 10) {
+                bob = 20 - bob;
+            };
+            {c} int = GuiId(0 - 1);
+            {b} int = GuiBoxTex(PeekInt(drops, off), PeekInt(drops, off + 4) + bob, PeekInt(drops, off + 8), 14, 16777215, kind);
+        };
+    };
+    return 0;
+} int;
+
+drawWorld = ({world} adr, {sel} int, {mineT} int) function {
+    loop until ({y} int = 0; y < 12; y++) {
+        loop until ({z} int = 0; z < 16; z++) {
+            loop until ({x} int = 0; x < 16; x++) {
+                {id} int = blockIndex(x, y, z);
+                {t} int = PeekByte(world, id);
+                if (t != 0) {
+                    {tint} int = 16777215;
+                    {g} int = GuiId(id);
+                    {cx} int = wxOf(x);
+                    {cy} int = wyOf(y);
+                    {cz} int = wzOf(z);
+                    {s} int = 40;
+                    if (id == sel) {
+                        tint = 16777150;
+                        if (mineT > 0) {
+                            s = 40 - mineT;
+                            if (s < 18) {
+                                s = 18;
+                            };
+                            {shade} int = 255 - mineT * 10;
+                            if (shade < 70) {
+                                shade = 70;
+                            };
+                            tint = shade * 65536 + shade * 256 + shade;
+                        };
+                    };
+                    {box} int = GuiBoxTex(cx, cy, cz, s, tint, t);
+                };
+            };
+        };
+    };
+    {clr} int = GuiId(0 - 1);
+    return 0;
+} int;
+
+drawPlayer = ({px} int, {py} int, {pz} int, {moving} int, {phase} int) function {
+    {swing} int = 0;
+    if (moving == 1) {
+        if (phase == 0) {
+            swing = 6;
+        } else {
+            swing = 0 - 6;
+        };
+    };
+    {legL} int = GuiBox(px - 4, py + 13, pz + swing, 6, 26, 6, 2964590);
+    {legR} int = GuiBox(px + 4, py + 13, pz - swing, 6, 26, 6, 2964590);
+    {torso} int = GuiBox(px, py + 36, pz, 16, 20, 8, 3968150);
+    {armL} int = GuiBox(px - 11, py + 36, pz - swing, 6, 20, 6, 14724222);
+    {armR} int = GuiBox(px + 11, py + 36, pz + swing, 6, 20, 6, 14724222);
+    {head} int = GuiBox(px, py + 54, pz, 16, 16, 16, 14724222);
+    {hair} int = GuiBox(px, py + 61, pz, 17, 4, 17, 3942425);
+    return 0;
+} int;
+
+drawHud = ({invT} adr, {invC} adr, {slot} int, {sel} int) function {
+    GuiRect(0, 640, 800, 40, 1973790);
+    loop until ({i} int = 0; i < 9; i++) {
+        {x} int = 16 + i * 52;
+        {bg} int = 3552822;
+        if (i == slot) {
+            bg = 10122009;
+        };
+        GuiRect(x, 646, 48, 28, bg);
+        {kind} int = PeekByte(invT, i);
+        if (kind != 0) {
+            GuiRect(x + 6, 650, 16, 16, blockCol(kind));
+            {n} int = PeekByte(invC, i);
+            if (n > 1) {
+                if (n >= 10) {
+                    GuiText(x + 24, 654, "++", 16777215, 1);
+                } else {
+                    GuiText(x + 28, 654, "+", 16777215, 1);
+                };
+            };
+        };
+    };
+    GuiText(490, 652, "LMB MINE  RMB PLACE", 12632256, 1);
+    GuiText(490, 664, "WASD  SPACE  MMB LOOK", 9013641, 1);
+    return 0;
+} int;
+
+tryPlace = ({world} adr, {hit} int, {px} int, {py} int, {pz} int, {kind} int) function {
+    if (hit < 0) {
+        return 0 - 1;
+    };
+    if (kind == 0) {
+        return 0 - 1;
+    };
+    {hx} int = blkX(hit);
+    {hz} int = blkZ(hit);
+    {hy} int = blkY(hit);
+    {best} int = 0 - 1;
+    {bestD} int = 999999999;
+    loop until ({n} int = 0; n < 6; n++) {
+        {nx} int = hx;
+        {ny} int = hy;
+        {nz} int = hz;
+        if (n == 0) {
+            nx = hx + 1;
+        };
+        if (n == 1) {
+            nx = hx - 1;
+        };
+        if (n == 2) {
+            ny = hy + 1;
+        };
+        if (n == 3) {
+            ny = hy - 1;
+        };
+        if (n == 4) {
+            nz = hz + 1;
+        };
+        if (n == 5) {
+            nz = hz - 1;
+        };
+        if (inWorld(nx, ny, nz) == 1) {
+            {id} int = blockIndex(nx, ny, nz);
+            if (PeekByte(world, id) == 0) {
+                {bx} int = wxOf(nx);
+                {by} int = wyOf(ny);
+                {bz} int = wzOf(nz);
+                {dx} int = bx - px;
+                {dy} int = by - (py + 30);
+                {dz} int = bz - pz;
+                {d} int = dx * dx + dy * dy + dz * dz;
+                if (d < bestD) {
+                    bestD = d;
+                    best = id;
+                };
+            };
+        };
+    };
+    if (best < 0) {
+        return 0 - 1;
+    };
+    {fx} int = wxOf(blkX(best));
+    {fy} int = wyOf(blkY(best));
+    {fz} int = wzOf(blkZ(best));
+    if (absInt(fx - px) < 22) {
+        if (absInt(fz - pz) < 22) {
+            if (fy >= py) {
+                if (fy <= py + 70) {
+                    return 0 - 1;
+                };
+            };
+        };
+    };
+    PokeByte(world, best, kind);
+    return best;
+} int;
+
+breakBlock = ({world} adr, {drops} adr, {id} int) function {
+    if (id < 0) {
+        return 0;
+    };
+    {t} int = PeekByte(world, id);
+    if (t == 0) {
+        return 0;
+    };
+    if (t == 7) {
+        return 0;
+    };
+    PokeByte(world, id, 0);
+    {kind} int = dropOf(t);
+    {x} int = blkX(id);
+    {z} int = blkZ(id);
+    {y} int = blkY(id);
+    {d} int = spawnDrop(drops, wxOf(x), wyOf(y), wzOf(z), kind);
+    return 1;
+} int;
+
+main = ({x} int) function {
+    {r} int = GuiOpen(800, 680, "minusC minecraft");
+    if (r < 0) {
+        HelloWorldLine("GUI not available on this platform");
+        return 1;
+    };
+    {world} adr = rent(3072);
+    {invT} adr = rent(9);
+    {invC} adr = rent(9);
+    {drops} adr = rent(320);
+    Memset(invT, 0, 9);
+    Memset(invC, 0, 9);
+    Memset(drops, 0, 320);
+    PokeByte(invT, 0, 2);
+    PokeByte(invC, 0, 16);
+    PokeByte(invT, 1, 3);
+    PokeByte(invC, 1, 8);
+    {g} int = genWorld(world);
+    {px} int = wxOf(8);
+    {pz} int = wzOf(8);
+    {py} int = spawnY(world, 8, 8);
+    {vy} int = 0;
+    {slot} int = 0;
+    {mineId} int = 0 - 1;
+    {mineT} int = 0;
+    {mx} int = 400;
+    {my} int = 300;
+    {running} int = 1;
+    {onG} int = 0;
+    {walkPhase} int = 0;
+    loop until (running == 1) {
+        {pump} int = 1;
+        {doPlace} int = 0;
+        loop until (pump == 1) {
+            {ev} int = GuiPoll();
+            if (ev == 0) {
+                pump = 0;
+            };
+            if (ev == 1) {
+                running = 0;
+                pump = 0;
+            };
+            if (ev == 2) {
+                {key} int = GuiEventKey();
+                if (key == 113) {
+                    running = 0;
+                };
+                if (key == 114) {
+                    {rs} int = genWorld(world);
+                    Memset(invT, 0, 9);
+                    Memset(invC, 0, 9);
+                    Memset(drops, 0, 320);
+                    PokeByte(invT, 0, 2);
+                    PokeByte(invC, 0, 16);
+                    PokeByte(invT, 1, 3);
+                    PokeByte(invC, 1, 8);
+                    px = wxOf(8);
+                    pz = wzOf(8);
+                    py = spawnY(world, 8, 8);
+                    vy = 0;
+                    slot = 0;
+                };
+                if (key == 32) {
+                    if (onG == 1) {
+                        vy = 14;
+                        onG = 0;
+                    };
+                };
+                if (key >= 49) {
+                    if (key <= 57) {
+                        slot = key - 49;
+                    };
+                };
+            };
+            if (ev == 3 or ev == 5 or ev == 10) {
+                mx = GuiEventX();
+                my = GuiEventY();
+            };
+            if (ev == 10) {
+                doPlace = 1;
+            };
+        };
+        {fx} int = GuiFwdX();
+        {fz} int = GuiFwdZ();
+        {rx} int = 0 - fz;
+        {rz} int = fx;
+        {spd} int = 6;
+        {dx} int = 0;
+        {dz} int = 0;
+        if (GuiHeld(119) == 1) {
+            dx = dx + fx * spd / 1000;
+            dz = dz + fz * spd / 1000;
+        };
+        if (GuiHeld(115) == 1) {
+            dx = dx - fx * spd / 1000;
+            dz = dz - fz * spd / 1000;
+        };
+        if (GuiHeld(100) == 1) {
+            dx = dx + rx * spd / 1000;
+            dz = dz + rz * spd / 1000;
+        };
+        if (GuiHeld(97) == 1) {
+            dx = dx - rx * spd / 1000;
+            dz = dz - rz * spd / 1000;
+        };
+        {nx} int = px + dx;
+        if (collides(world, nx, py, pz) == 0) {
+            px = nx;
+        };
+        {nz} int = pz + dz;
+        if (collides(world, px, py, nz) == 0) {
+            pz = nz;
+        };
+        {moving} int = 0;
+        if (dx != 0 or dz != 0) {
+            moving = 1;
+            walkPhase = walkPhase + 1;
+        } else {
+            walkPhase = 0;
+        };
+        {walkStep} int = walkPhase / 6;
+        {phase} int = walkStep % 2;
+        vy = vy - 1;
+        if (vy < 0 - 12) {
+            vy = 0 - 12;
+        };
+        {ny} int = py + vy;
+        onG = 0;
+        if (collides(world, px, ny, pz) == 0) {
+            py = ny;
+        } else {
+            if (vy < 0) {
+                onG = 1;
+            };
+            vy = 0;
+        };
+        {hit} int = 0 - 1;
+        if (my < 640) {
+            hit = GuiHit(mx, my);
+        } else {
+            if (GuiHeld(1) == 1) {
+                {hs} int = (mx - 16) / 52;
+                if (hs >= 0) {
+                    if (hs < 9) {
+                        slot = hs;
+                    };
+                };
+            };
+        };
+        if (GuiHeld(1) == 1) {
+            if (hit >= 0) {
+                if (hit == mineId) {
+                    mineT = mineT + 1;
+                    {ht} int = PeekByte(world, hit);
+                    if (mineT >= blockHard(ht)) {
+                        {br} int = breakBlock(world, drops, hit);
+                        mineT = 0;
+                        mineId = 0 - 1;
+                    };
+                } else {
+                    mineId = hit;
+                    mineT = 0;
+                };
+            };
+        } else {
+            mineId = 0 - 1;
+            mineT = 0;
+        };
+        if (doPlace == 1) {
+            {pk} int = PeekByte(invT, slot);
+            {pl} int = tryPlace(world, hit, px, py, pz, pk);
+            if (pl >= 0) {
+                {tk} int = takeSlot(invT, invC, slot);
+            };
+        };
+        {td} int = tickDrops(drops, invT, invC, px, py, pz);
+        GuiClear(8900331);
+        {cam} int = GuiCam(px, py + 240, pz + 380, px, py + 36, pz);
+        {lit} int = GuiLight(35, 90, 50);
+        {dw} int = drawWorld(world, hit, mineT);
+        {dd} int = drawDrops(drops);
+        {dp} int = drawPlayer(px, py, pz, moving, phase);
+        {dh} int = drawHud(invT, invC, slot, hit);
+        GuiPresent();
+        GuiSleep(16);
+    };
+    {c} int = GuiClose();
+    {m1} int = moveOut(world);
+    {m2} int = moveOut(invT);
+    {m3} int = moveOut(invC);
+    {m4} int = moveOut(drops);
+    return 0;
+} int;
