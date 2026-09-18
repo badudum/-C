@@ -30,7 +30,7 @@ static void link_object(assembly_target_t target)
     if (assembly_os_get() == ASSEMBLY_OS_LINUX) {
         if (target == ASSEMBLY_TARGET_X86_64) {
             command("gcc -c mc.s -o mc.o");
-            command("gcc -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm -e _start");
+            command("gcc -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm");
         } else {
             command("gcc -c mc.s -o mc.o");
             command("gcc -nostdlib -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm -e _start");

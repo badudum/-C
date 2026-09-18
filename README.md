@@ -10,7 +10,9 @@ The compiler preprocesses source files, builds an AST, runs type and borrow chec
 make
 ```
 
-This produces a host `minusC` executable. Pass a codegen target when compiling programs:
+`make` detects the host CPU (`x86_64` or `arm64`) and builds a native `minusC` for that machine. On macOS it passes `-arch`; on Linux it uses the host gcc target. Override with `make HOST_ARCH=x86_64` or `make HOST_ARCH=arm64` if needed.
+
+Pass a codegen target when compiling programs:
 
 ```bash
 ./minusC --arm64 example/main.minusc    # default on Apple Silicon

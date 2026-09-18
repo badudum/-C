@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include "../include/io_rt.h"
 #include <errno.h>
 #include <fcntl.h>

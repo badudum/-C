@@ -30,6 +30,11 @@
 #include "include/assembly_emit.h"
 #include "include/assembly_target.h"
 
+static int asm_gp_arg_regs(void)
+{
+    return assembly_target_get() == ASSEMBLY_TARGET_X86_64 ? 6 : 8;
+}
+
 static int asm_is_compound_assign(int op)
 {
     return op == PLUS_EQUALS_TOKEN || op == MINUS_EQUALS_TOKEN ||
@@ -281,8 +286,8 @@ static void asm_append_iface_stack_cust_arg(char **s, AST_t *arg, int reg,
 
     char load[128];
     if (assembly_target_get() == ASSEMBLY_TARGET_X86_64) {
-        static const char *regs[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
-        const char *dest = regs[reg < 8 ? reg : 0];
+        static const char *regs[] = {"rdi", "rsi", "rdx", "rcx", "r8", "r9"};
+        const char *dest = regs[(reg >= 0 && reg < 6) ? reg : 0];
         snprintf(load, sizeof(load), "\n# %s pass iface buffer ptr\nmov %s, rsp\n", comment, dest);
     } else {
         snprintf(load, sizeof(load), "\n# %s pass iface buffer ptr\nmov x%d, sp\n", comment, reg);
@@ -745,9 +750,10 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
     int is_hello_world_line = (strcmp(ast->name, "HelloWorldLine") == 0);
 
     unsigned int num_args = ast->parent->children->size;
+    unsigned int gp_regs = (unsigned int)asm_gp_arg_regs();
 
-    // Calculate stack space needed for arguments beyond the first 8
-    unsigned int stack_args = (num_args > 8) ? (num_args - 8) : 0;
+    // Stack space for arguments beyond the register-passed set (8 on ARM, 6 on x86).
+    unsigned int stack_args = (num_args > gp_regs) ? (num_args - gp_regs) : 0;
     unsigned int total_arg_size = stack_args * 16;
     unsigned int extra_iface_stack = 0;
 
@@ -924,15 +930,15 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
                 unsigned int aligned = (unsigned int)((obj_size + 15) & ~15);
                 extra_iface_stack += aligned;
                 snprintf(cmt, sizeof(cmt), "stack iface arg %u", i);
-                if (i < 8)
+                if (i < gp_regs)
                     asm_append_iface_stack_cust_arg(&s, arg, (int)i, list, cmt);
                 else {
                     asm_append_iface_stack_cust_arg(&s, arg, 0, list, cmt);
-                    asm_append_store_stack_arg(&s, (int)(i - 8) * 16);
+                    asm_append_store_stack_arg(&s, (int)(i - gp_regs) * 16);
                 }
                 continue;
             }
-            if (i < 8) {
+            if (i < gp_regs) {
                 snprintf(cmt, sizeof(cmt), "load arg %u into x%u", i, i);
                 if (ast->id && i == 0 && arg)
                     asm_append_method_receiver_to_reg(&s, arg, (int)i, list, cmt);
@@ -944,7 +950,7 @@ char * assemble_call(AST_t * ast, dynamic_list_t * list)
                     asm_append_method_receiver_to_reg(&s, arg, 0, list, cmt);
                 else
                     asm_append_load_call_arg_to_reg(&s, arg, 0, list, cmt);
-                asm_append_store_stack_arg(&s, (int)(i - 8) * 16);
+                asm_append_store_stack_arg(&s, (int)(i - gp_regs) * 16);
             }
         }
 
@@ -1524,7 +1530,7 @@ char * assemble_slice(AST_t * ast, dynamic_list_t * list)
     asm_append_runtime_err_site(&s, ast, "Null string access", err_label, sizeof(err_label));
     asm_append_load_from_fp(&s, base_offset, 0, "load string for SmolString");
     asm_append_load_rt_err_ptr(&s, err_label, 1);
-    asm_append_frag(&s, "bl rt_null_str_check\n", "call rt_null_str_check\n");
+    asm_append_frag(&s, "bl rt_null_str_check\n", "mov rdi, rax\ncall rt_null_str_check\n");
     asm_append_push_expr_ptr(&s);
     int start_off = start_expr->stack_index * -16;
     int end_off = end_expr->stack_index * -16;
@@ -1603,7 +1609,7 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
         asm_append_runtime_err_site(&s, ast, "Invalid heap address", err_label, sizeof(err_label));
         asm_append_load_from_fp(&s, base_offset, 0, "load adr for PeekByte");
         asm_append_load_rt_err_ptr(&s, err_label, 1);
-        asm_append_frag(&s, "bl rt_heap_adr_check\n", "call rt_heap_adr_check\n");
+        asm_append_frag(&s, "bl rt_heap_adr_check\n", "mov rdi, rax\ncall rt_heap_adr_check\n");
         asm_append_push_expr_ptr(&s);
         asm_append_load_w_from_fp(&s, idx_offset, "load offset for PeekByte");
         if (assembly_target_get() == ASSEMBLY_TARGET_X86_64) {
@@ -1674,6 +1680,7 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
                 "mov rax, [rcx]\n",
                 stride_bytes, stride_bytes);
             asm_append(&s, access_asm);
+            asm_append_store_to_fp(&s, ast->stack_index * -16, 0, "access result slot");
             asm_append_push_expr_ptr(&s);
         } else {
             char access_asm[256];
@@ -1689,13 +1696,14 @@ char * assemble_access(AST_t * ast, dynamic_list_t * list)
                 "str x0, [sp, #-16]!\n",
                 stride_bytes, stride_bytes);
             asm_append(&s, access_asm);
+            asm_append_store_to_fp(&s, ast->stack_index * -16, 0, "access result slot");
         }
     } else {
         char err_label[32];
         asm_append_runtime_err_site(&s, ast, "Null string access", err_label, sizeof(err_label));
         asm_append_load_from_fp(&s, base_offset, 0, "load string for CharAt");
         asm_append_load_rt_err_ptr(&s, err_label, 1);
-        asm_append_frag(&s, "bl rt_null_str_check\n", "call rt_null_str_check\n");
+        asm_append_frag(&s, "bl rt_null_str_check\n", "mov rdi, rax\ncall rt_null_str_check\n");
         asm_append_push_expr_ptr(&s);
         int idx_offset = ast->left->stack_index * -16;
         asm_append_load_w_from_fp(&s, idx_offset, "load index for CharAt");
@@ -1810,15 +1818,16 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
     dynamic_list_t *param_list = closure_cap_count > 0 ? assembly_value->left->children
                                                      : assembly_value->children;
 
-    // Set up function parameters - first 8 parameters in registers x0-x7, rest on stack
+    // Register-passed parameters (x0-x7 on ARM, rdi-r9 on x86); the rest arrive on the stack.
     /* Use a local list for function body to avoid heap corruption from shared list mutation */
     dynamic_list_t* body_list = init_list(sizeof(struct AST_S*));
+    unsigned int gp_regs = (unsigned int)asm_gp_arg_regs();
     for (unsigned int i = 0; i < param_list->size; i++)
     {
         AST_t* function_arg = (AST_t*) param_list->items[i];
         list_enqueue(body_list, function_arg);
 
-        if (i < 8)
+        if (i < gp_regs)
         {
             char param_comment[128];
             snprintf(param_comment, sizeof(param_comment), "load parameter %s", function_arg->name);
@@ -1849,7 +1858,7 @@ char * assemble_function(AST_t* ast, dynamic_list_t* list)
         }
         else
         {
-            int stack_offset = 16 + (i - 8) * 16;
+            int stack_offset = 16 + (int)(i - gp_regs) * 16;
             int var_offset = function_arg->stack_index * -16;
             char param_buf[256];
             if (assembly_target_get() == ASSEMBLY_TARGET_X86_64)

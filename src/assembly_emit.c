@@ -574,20 +574,33 @@ void asm_append_load_cust_receiver_to_reg(char **s, AST_t *arg, int reg, const c
 {
     if (IS_HEAP_CUST_VAR(arg->datatype, arg->int_value)) {
         int off = arg->stack_index * -16;
+        if (is_x86()) {
+            const char *dest = x86_arg_reg(reg);
+            int abs_off = arg->stack_index * 16;
+            char instr[256];
+            if (abs_off <= 255)
+                snprintf(instr, sizeof(instr),
+                         "\n# %s\nmov %s, [rbp-%d]\n", comment, dest, abs_off);
+            else
+                snprintf(instr, sizeof(instr),
+                         "\n# %s\nmov r11, rbp\nsub r11, %d\nmov %s, [r11]\n",
+                         comment, abs_off, dest);
+            asm_append(s, instr);
+            return;
+        }
         asm_append_load_from_fp(s, off, reg, comment);
         return;
     }
     int abs_off = arg->stack_index * 16;
     char instr[256];
     if (is_x86()) {
-        static const char *regs[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
-        const char *dest = regs[reg < 8 ? reg : 0];
+        const char *dest = x86_arg_reg(reg);
         if (abs_off <= 255)
             snprintf(instr, sizeof(instr),
                      "\n# %s\nlea %s, [rbp-%d]\n", comment, dest, abs_off);
         else
             snprintf(instr, sizeof(instr),
-                     "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov %s, rcx\n",
+                     "\n# %s\nmov r11, rbp\nsub r11, %d\nmov %s, r11\n",
                      comment, abs_off, dest);
     } else {
         if (abs_off <= 255)
@@ -607,14 +620,13 @@ void asm_append_load_cust_field_receiver_to_reg(char **s, int base_stack_index,
     int abs_off = base_stack_index * 16 - field_byte_offset;
     char instr[256];
     if (is_x86()) {
-        static const char *regs[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
-        const char *dest = regs[reg < 8 ? reg : 0];
+        const char *dest = x86_arg_reg(reg);
         if (abs_off <= 255)
             snprintf(instr, sizeof(instr),
                      "\n# %s\nlea %s, [rbp-%d]\n", comment, dest, abs_off);
         else
             snprintf(instr, sizeof(instr),
-                     "\n# %s\nmov rcx, rbp\nsub rcx, %d\nmov %s, rcx\n",
+                     "\n# %s\nmov r11, rbp\nsub r11, %d\nmov %s, r11\n",
                      comment, abs_off, dest);
     } else {
         if (abs_off <= 255)
@@ -634,11 +646,10 @@ void asm_append_load_heap_cust_field_receiver_to_reg(char **s, int base_stack_in
     int base_off = base_stack_index * -16;
     char instr[256];
     if (is_x86()) {
-        static const char *regs[] = {"rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11"};
-        const char *dest = regs[reg < 8 ? reg : 0];
+        const char *dest = x86_arg_reg(reg);
         int abs_base = base_stack_index * 16;
         snprintf(instr, sizeof(instr),
-                 "\n# %s\nmov rcx, [rbp-%d]\nlea %s, [rcx+%d]\n",
+                 "\n# %s\nmov r11, [rbp-%d]\nlea %s, [r11+%d]\n",
                  comment, abs_base, dest, field_byte_offset);
     } else {
         if (field_byte_offset == 0)
@@ -840,7 +851,7 @@ void asm_append_store_stack_arg(char **s, int stack_offset)
 {
     char buf[128];
     if (is_x86())
-        snprintf(buf, sizeof(buf), "\n# store arg on stack\nmov [rsp+%d], rax\n", stack_offset);
+        snprintf(buf, sizeof(buf), "\n# store arg on stack\nmov [rsp+%d], rdi\n", stack_offset);
     else
         snprintf(buf, sizeof(buf), "\n# store arg on stack\nstr x0, [sp, #%d]\n", stack_offset);
     asm_append(s, buf);
@@ -1332,8 +1343,8 @@ void asm_append_virtual_method_call(char **s, int vtable_slot)
     if (is_x86()) {
         snprintf(buf, sizeof(buf),
                  "\n# virtual method call slot %d\n"
-                 "mov rcx, [rax]\n"
-                 "call [rcx + %d]\n",
+                 "mov r11, [rdi]\n"
+                 "call qword ptr [r11 + %d]\n",
                  vtable_slot, off);
     } else {
         snprintf(buf, sizeof(buf),
@@ -1433,6 +1444,8 @@ void assembly_patch_linux_output(char *ass)
     patch_str(ass, "bl _mc_wide_float_print_bits", "bl mc_wide_float_print_bits");
     patch_str(ass, "call _mc_wide_float_binop_bits", "call mc_wide_float_binop_bits");
     patch_str(ass, "bl _mc_wide_float_binop_bits", "bl mc_wide_float_binop_bits");
+    patch_str(ass, "call _mc_wide_int_binop_bits", "call mc_wide_int_binop_bits");
+    patch_str(ass, "bl _mc_wide_int_binop_bits", "bl mc_wide_int_binop_bits");
     patch_str(ass, "call _ReadLine", "call ReadLine");
     patch_str(ass, "bl _ReadLine", "bl ReadLine");
     patch_str(ass, "call _ReadChar", "call ReadChar");
@@ -1500,6 +1513,7 @@ void assembly_patch_linux_output(char *ass)
     patch_str(ass, ".extern _mc_ftos", ".extern mc_ftos");
     patch_str(ass, ".extern _mc_wide_float_print_bits", ".extern mc_wide_float_print_bits");
     patch_str(ass, ".extern _mc_wide_float_binop_bits", ".extern mc_wide_float_binop_bits");
+    patch_str(ass, ".extern _mc_wide_int_binop_bits", ".extern mc_wide_int_binop_bits");
     patch_str(ass, ".extern _ReadLine", ".extern ReadLine");
     patch_str(ass, ".extern _ReadChar", ".extern ReadChar");
     patch_str(ass, ".extern _KeyAvailable", ".extern KeyAvailable");
