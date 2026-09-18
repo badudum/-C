@@ -77,6 +77,8 @@ static id<MTLBuffer> g_ubuf;
 static id<MTLBuffer> g_readbuf;
 static id<MTLTexture> g_atlas;
 static id<MTLSamplerState> g_atlas_samp;
+static unsigned char *g_atlas_cpu;
+static int g_atlas_dirty;
 static CAMetalLayer *g_layer;
 static int g_w, g_h;
 static int g_ready;
@@ -84,102 +86,81 @@ static int g_clear_rgb = 0x1a1a22;
 static mc_uniforms g_u;
 static id<MTLTexture> g_last_color;
 
-#define MC_TILE 16
-#define MC_TILES 10
-#define MC_ATLAS_W (MC_TILE * MC_TILES)
-#define MC_ATLAS_H MC_TILE
-
-static unsigned mc_atlas_hash(int x, int y, int seed)
-{
-    unsigned n = (unsigned)x * 374761393u + (unsigned)y * 668265263u +
-                 (unsigned)seed * 2246822519u;
-    n = (n ^ (n >> 13)) * 1274126177u;
-    return n ^ (n >> 16);
-}
+#define GUI_TILE GUI_TILE_PX
+#define GUI_TILES GUI_TILE_COUNT
 
 static void mc_atlas_put(unsigned char *buf, int tile, int x, int y,
                           unsigned char r, unsigned char g, unsigned char b)
 {
-    int px = tile * MC_TILE + x;
-    int idx = (y * MC_ATLAS_W + px) * 4;
+    if (!buf || tile < 0 || tile >= GUI_TILES)
+        return;
+    if (x < 0 || x >= GUI_TILE || y < 0 || y >= GUI_TILE)
+        return;
+    int px = tile * GUI_TILE + x;
+    int idx = (y * GUI_ATLAS_W + px) * 4;
     buf[idx] = r; buf[idx + 1] = g; buf[idx + 2] = b; buf[idx + 3] = 255;
-}
-
-static void mc_speckle(unsigned char *buf, int tile, int x, int y, int seed,
-                        int br, int bg, int bb, int dev)
-{
-    unsigned h = mc_atlas_hash(x, y, seed);
-    int v = (int)(h % (unsigned)(dev * 2 + 1)) - dev;
-    int r = br + v, g = bg + v, b = bb + v;
-    if (r < 0) r = 0; if (r > 255) r = 255;
-    if (g < 0) g = 0; if (g > 255) g = 255;
-    if (b < 0) b = 0; if (b > 255) b = 255;
-    mc_atlas_put(buf, tile, x, y, (unsigned char)r, (unsigned char)g, (unsigned char)b);
 }
 
 static unsigned char *mc_build_atlas(void)
 {
-    unsigned char *buf = (unsigned char *)calloc(1, (size_t)MC_ATLAS_W * MC_ATLAS_H * 4);
+    unsigned char *buf = (unsigned char *)calloc(1, (size_t)GUI_ATLAS_W * GUI_ATLAS_H * 4);
     if (!buf)
         return NULL;
-    for (int y = 0; y < MC_TILE; y++) {
-        for (int x = 0; x < MC_TILE; x++) {
-            /* tile 0: white, used by untextured (flat-color) boxes */
+    for (int y = 0; y < GUI_TILE; y++) {
+        for (int x = 0; x < GUI_TILE; x++) {
+            /* Tile 0 stays white so untextured GuiBox geometry is unchanged.
+             * Remaining tiles start black until GuiTex writes them. */
             mc_atlas_put(buf, 0, x, y, 255, 255, 255);
-            /* tile 1: grass top */
-            mc_speckle(buf, 1, x, y, 101, 92, 156, 60, 18);
-            /* tile 2: grass side (green cap over dirt) */
-            if (y < 4)
-                mc_speckle(buf, 2, x, y, 102, 92, 156, 60, 18);
-            else
-                mc_speckle(buf, 2, x, y, 103, 121, 85, 58, 16);
-            /* tile 3: dirt */
-            mc_speckle(buf, 3, x, y, 104, 121, 85, 58, 16);
-            /* tile 4: stone */
-            mc_speckle(buf, 4, x, y, 105, 130, 130, 133, 14);
-            /* tile 5: wood side (bark stripes) */
-            {
-                int stripe = (x / 3) & 1;
-                int br = stripe ? 101 : 87, bg = stripe ? 73 : 62, bb = stripe ? 47 : 38;
-                mc_speckle(buf, 5, x, y, 106, br, bg, bb, 8);
-            }
-            /* tile 6: wood top (rings) */
-            {
-                int dx = x - 8, dy = y - 8;
-                int ring = (dx < 0 ? -dx : dx);
-                int ring2 = (dy < 0 ? -dy : dy);
-                if (ring2 > ring) ring = ring2;
-                int band = ring % 3;
-                int br = band == 0 ? 185 : (band == 1 ? 168 : 150);
-                mc_speckle(buf, 6, x, y, 107, br, br - 40, br - 90, 6);
-            }
-            /* tile 7: leaves */
-            mc_speckle(buf, 7, x, y, 108, 53, 110, 32, 22);
-            /* tile 8: sand */
-            mc_speckle(buf, 8, x, y, 109, 219, 205, 145, 14);
-            /* tile 9: bedrock */
-            mc_speckle(buf, 9, x, y, 110, 62, 62, 66, 20);
         }
     }
     return buf;
 }
 
+static void mc_upload_atlas(void)
+{
+    if (!g_atlas || !g_atlas_cpu)
+        return;
+    MTLRegion region = MTLRegionMake2D(0, 0, GUI_ATLAS_W, GUI_ATLAS_H);
+    [g_atlas replaceRegion:region mipmapLevel:0 withBytes:g_atlas_cpu
+                bytesPerRow:(NSUInteger)GUI_ATLAS_W * 4];
+    g_atlas_dirty = 0;
+}
+
+int mc_mtl_tex(int tile, int x, int y, int rgb)
+{
+    if (!g_atlas_cpu)
+        return -1;
+    if (tile < 0 || tile >= GUI_TILES || x < 0 || x >= GUI_TILE ||
+        y < 0 || y >= GUI_TILE)
+        return -1;
+    mc_atlas_put(g_atlas_cpu, tile, x, y,
+                 (unsigned char)((rgb >> 16) & 255),
+                 (unsigned char)((rgb >> 8) & 255),
+                 (unsigned char)(rgb & 255));
+    g_atlas_dirty = 1;
+    return 0;
+}
+
+void mc_mtl_tex_flush(void)
+{
+    if (g_atlas_dirty)
+        mc_upload_atlas();
+}
+
 static void mc_make_atlas(void)
 {
-    unsigned char *pixels = mc_build_atlas();
-    if (!pixels)
+    free(g_atlas_cpu);
+    g_atlas_cpu = mc_build_atlas();
+    if (!g_atlas_cpu)
         return;
     MTLTextureDescriptor *td = [MTLTextureDescriptor
         texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-                                     width:MC_ATLAS_W
-                                    height:MC_ATLAS_H
+                                     width:GUI_ATLAS_W
+                                    height:GUI_ATLAS_H
                                  mipmapped:NO];
     td.usage = MTLTextureUsageShaderRead;
     g_atlas = [g_dev newTextureWithDescriptor:td];
-    MTLRegion region = MTLRegionMake2D(0, 0, MC_ATLAS_W, MC_ATLAS_H);
-    [g_atlas replaceRegion:region mipmapLevel:0 withBytes:pixels
-                bytesPerRow:(NSUInteger)MC_ATLAS_W * 4];
-    free(pixels);
+    mc_upload_atlas();
 
     MTLSamplerDescriptor *sd = [[MTLSamplerDescriptor alloc] init];
     sd.minFilter = MTLSamplerMinMagFilterNearest;
@@ -323,6 +304,9 @@ void mc_mtl_shutdown(void)
     g_last_color = nil;
     g_atlas = nil;
     g_atlas_samp = nil;
+    free(g_atlas_cpu);
+    g_atlas_cpu = 0;
+    g_atlas_dirty = 0;
 }
 
 void mc_mtl_set_mvp(const float *m)

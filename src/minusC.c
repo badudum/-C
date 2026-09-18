@@ -28,13 +28,9 @@ static void link_object(assembly_target_t target)
     command("gcc -c src/runtime/arena_rt.c -o arena_rt.o -std=c99 -O2");
     command("gcc -c src/runtime/gui_rt.c -o gui_rt.o -std=c99 -O2");
     if (assembly_os_get() == ASSEMBLY_OS_LINUX) {
-        if (target == ASSEMBLY_TARGET_X86_64) {
-            command("gcc -c mc.s -o mc.o");
-            command("gcc -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm");
-        } else {
-            command("gcc -c mc.s -o mc.o");
-            command("gcc -nostdlib -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o -o mc.out -lpthread -lc -lm -e _start");
-        }
+        command("gcc -c mc.s -o mc.o");
+        command("gcc -c src/runtime/gui_vk.c -o gui_vk.o -std=c99 -O2 -I src");
+        command("gcc -no-pie mc.o numeric_rt.o io_rt.o arena_rt.o gui_rt.o gui_vk.o -o mc.out -lpthread -lc -lm -lvulkan -lX11");
     } else if (target == ASSEMBLY_TARGET_X86_64) {
         command("clang -c src/runtime/gui_metal.m -o gui_metal.o -fobjc-arc -O2 -arch x86_64 -I src");
         command("as -arch x86_64 mc.s -o mc.o");

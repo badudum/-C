@@ -1153,8 +1153,13 @@ char * assemble_root(AST_t* ast, dynamic_list_t * list)
         bootstrap = assembly_bootstrap_x86_64;
         bootstrap_len = assembly_bootstrap_x86_64_len;
     } else {
-        section = assemble_root_aarch64;
-        section_len = assemble_root_aarch64_len;
+        if (assembly_os_get() == ASSEMBLY_OS_LINUX) {
+            section = assemble_root_aarch64_linux;
+            section_len = assemble_root_aarch64_linux_len;
+        } else {
+            section = assemble_root_aarch64;
+            section_len = assemble_root_aarch64_len;
+        }
         bootstrap = assembly_bootstrap_aarch64;
         bootstrap_len = assembly_bootstrap_aarch64_len;
     }

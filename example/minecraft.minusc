@@ -28,6 +28,107 @@ hash2 = ({x} int, {z} int) function {
     return n;
 } int;
 
+clampByte = ({v} int) function {
+    if (v < 0) {
+        return 0;
+    };
+    if (v > 255) {
+        return 255;
+    };
+    return v;
+} int;
+
+texRgb = ({r} int, {g} int, {b} int) function {
+    return clampByte(r) * 65536 + clampByte(g) * 256 + clampByte(b);
+} int;
+
+speckle = ({tile} int, {x} int, {y} int, {seed} int, {br} int, {bg} int, {bb} int) function {
+    {h} int = hash2(x + seed, y + seed * 3);
+    {v} int = wrapN(h, 33) - 16;
+    GuiTex(tile, x, y, texRgb(br + v, bg + v, bb + v));
+    return 0;
+} int;
+
+packFaces = ({top} int, {side} int, {bot} int) function {
+    return top + side * 256 + bot * 65536;
+} int;
+
+facesOf = ({kind} int) function {
+    if (kind == 1) {
+        return packFaces(1, 2, 3);
+    };
+    if (kind == 2) {
+        return packFaces(3, 3, 3);
+    };
+    if (kind == 3) {
+        return packFaces(4, 4, 4);
+    };
+    if (kind == 4) {
+        return packFaces(6, 5, 6);
+    };
+    if (kind == 5) {
+        return packFaces(7, 7, 7);
+    };
+    if (kind == 6) {
+        return packFaces(8, 8, 8);
+    };
+    if (kind == 7) {
+        return packFaces(9, 9, 9);
+    };
+    return 0;
+} int;
+
+boxTex = ({x} int, {y} int, {z} int, {s} int, {color} int, {kind} int) function {
+    return GuiBoxTex(x, y, z, s, color, facesOf(kind));
+} int;
+
+paintTiles = ({n} int) function {
+    loop until ({y} int = 0; y < 16; y++) {
+        loop until ({x} int = 0; x < 16; x++) {
+            GuiTex(0, x, y, 16777215);
+            {a} int = speckle(1, x, y, 101, 92, 156, 60);
+            if (y < 4) {
+                {b} int = speckle(2, x, y, 102, 92, 156, 60);
+            } else {
+                {c} int = speckle(2, x, y, 103, 121, 85, 58);
+            };
+            {d} int = speckle(3, x, y, 104, 121, 85, 58);
+            {e} int = speckle(4, x, y, 105, 130, 130, 133);
+            {stripe} int = wrapN(x / 3, 2);
+            if (stripe == 1) {
+                {f} int = speckle(5, x, y, 106, 101, 73, 47);
+            } else {
+                {g} int = speckle(5, x, y, 106, 87, 62, 38);
+            };
+            {dx} int = x - 8;
+            {dy} int = y - 8;
+            if (dx < 0) {
+                dx = 0 - dx;
+            };
+            if (dy < 0) {
+                dy = 0 - dy;
+            };
+            {ring} int = dx;
+            if (dy > ring) {
+                ring = dy;
+            };
+            {band} int = wrapN(ring, 3);
+            {br} int = 150;
+            if (band == 0) {
+                br = 185;
+            };
+            if (band == 1) {
+                br = 168;
+            };
+            {h} int = speckle(6, x, y, 107, br, br - 40, br - 90);
+            {i} int = speckle(7, x, y, 108, 53, 110, 32);
+            {j} int = speckle(8, x, y, 109, 219, 205, 145);
+            {k} int = speckle(9, x, y, 110, 62, 62, 66);
+        };
+    };
+    return 0;
+} int;
+
 blkX = ({id} int) function {
     return wrapN(id, 16);
 } int;
@@ -383,7 +484,7 @@ drawDrops = ({drops} adr) function {
                 bob = 20 - bob;
             };
             {c} int = GuiId(0 - 1);
-            {b} int = GuiBoxTex(PeekInt(drops, off), PeekInt(drops, off + 4) + bob, PeekInt(drops, off + 8), 14, 16777215, kind);
+            {b} int = boxTex(PeekInt(drops, off), PeekInt(drops, off + 4) + bob, PeekInt(drops, off + 8), 14, 16777215, kind);
         };
     };
     return 0;
@@ -416,7 +517,7 @@ drawWorld = ({world} adr, {sel} int, {mineT} int) function {
                             tint = shade * 65536 + shade * 256 + shade;
                         };
                     };
-                    {box} int = GuiBoxTex(cx, cy, cz, s, tint, t);
+                    {box} int = boxTex(cx, cy, cz, s, tint, t);
                 };
             };
         };
@@ -567,6 +668,7 @@ main = ({x} int) function {
         HelloWorldLine("GUI not available on this platform");
         return 1;
     };
+    {tiles} int = paintTiles(0);
     {world} adr = rent(3072);
     {invT} adr = rent(9);
     {invC} adr = rent(9);

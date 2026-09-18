@@ -38,6 +38,7 @@ io_rt.o
 arena_rt.o
 gui_rt.o
 gui_metal.o
+gui_vk.o
 
 # Scratch / packaged binaries
 1

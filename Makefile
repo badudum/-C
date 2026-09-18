@@ -1,8 +1,9 @@
 exec = minusC
 sources = $(wildcard src/*.c)
 sources += $(wildcard src/*/*.c)
-# gui_rt.c is only linked into compiled minusC programs, not the compiler.
+# gui_rt.c / gui_vk.c are only linked into compiled minusC programs, not the compiler.
 sources := $(filter-out src/runtime/gui_rt.c,$(sources))
+sources := $(filter-out src/runtime/gui_vk.c,$(sources))
 objects = $(sources:.c=.o)
 
 UNAME_S := $(shell uname -s)

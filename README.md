@@ -1,6 +1,6 @@
 # -C
 
-A compiler for the **minusC** language targeting **native macOS binaries** (ARM64 and x86_64).
+A compiler for the **minusC** language targeting **native binaries** on **macOS** (ARM64 and x86_64) and **Linux x86_64**.
 
 The compiler preprocesses source files, builds an AST, runs type and borrow checks, emits assembly with an embedded runtime, and links a native binary. See `docs/ASSEMBLY_CONTROL_FLOW.md` for how control flow and the stack frame are lowered to assembly.
 
@@ -20,7 +20,7 @@ Pass a codegen target when compiling programs:
 ./minusC --target arm64 example/main.minusc
 ```
 
-Supported targets today: **macOS ARM64** and **macOS x86_64** (Linux x86_64 codegen exists but is not fully documented/tested in CI).
+Supported targets today: **macOS ARM64**, **macOS x86_64**, and **Linux x86_64**.
 
 ## Run
 
@@ -47,7 +47,7 @@ ld -e _start -macos_version_min 11.0.0 -L/Library/Developer/CommandLineTools/SDK
 3. **Parser** — builds the AST
 4. **Visitor** — assigns stack slots, type checks, borrow checking for `adr`
 5. **Assembler** — emits ARM64 + bootstrap runtime (I/O, strings, heap, threads)
-6. **Link** — `as` + `ld` with `-lSystem` and `-lpthread`
+6. **Link** — macOS: `as` + `ld` with `-lSystem`, `-lpthread`, and Metal; Linux: `gcc` with `-lpthread`, Vulkan, and X11. The graphics runtime is linked into `mc.out`, not into the `minusC` compiler.
 
 ## Language features
 
@@ -668,6 +668,111 @@ Stdin is typically **line-buffered** in cooked terminal mode: keys may not appea
 
 **I/O security:** File paths must be relative (no leading `/` unless `MC_IO_ALLOW_ABSOLUTE=1`), must not contain `..` or `~`, and are limited to 1024 characters. Sensitive system paths (`/etc`, `/proc`, `/dev`, etc.) are always rejected. Files open with `O_NOFOLLOW` where supported; new files are created mode `0600`. Reads and writes are capped at 8 MiB. This is **not a sandbox** — compiled programs run with your user privileges; treat untrusted minusC code like any native binary.
 
+### Graphics (`Gui*`)
+
+Graphics are **language builtins**, like `HelloWorld`. You do not `reference` a module, and you do not call Metal, Vulkan, or X11 from minusC. The compiler links a GPU backend into `mc.out` (Metal on macOS, Vulkan + X11 on Linux). If the GPU cannot start, 2D still presents through a software fallback when a window opened.
+
+All `Gui*` functions take and return `int` (string arguments are `str`). Colors are packed RGB: `r * 65536 + g * 256 + b` (each component 0–255). `16777215` is white.
+
+**Window and frame loop**
+
+| Builtin | Description |
+|---------|-------------|
+| `GuiOpen(w, h, title)` | Open a window. Size must be 32–4096. Returns `0` on success, `-1` if GUI is unavailable. |
+| `GuiClose()` | Close the window. |
+| `GuiClear(rgb)` | Clear the frame to `rgb` and reset the 3D draw list. Call once per frame before drawing. |
+| `GuiRect(x, y, w, h, rgb)` | Axis-aligned 2D rectangle. Origin is the **top-left** of the window. |
+| `GuiText(x, y, s, rgb, scale)` | Bitmap text. Glyphs are 8×8; `scale` is an integer pixel multiplier. |
+| `GuiMask(x, y, mask, cols, rgb, scale)` | Draw `#` cells from `mask` as pixels; wrap to the next row every `cols` characters. |
+| `GuiPresent()` | Submit the frame to the GPU / window. |
+| `GuiSleep(ms)` | Sleep `ms` milliseconds (use ~16 for ~60 fps). |
+| `GuiSave(path)` | Write the current frame as a 24-bit BMP. Same path rules as file I/O. |
+
+**Input** — call `GuiPoll()` once per event (drain it in a loop if you need every event this frame):
+
+| `GuiPoll()` | Meaning |
+|-------------|---------|
+| `0` | No event |
+| `1` | Window closed |
+| `2` | Key down — `GuiEventKey()` is the ASCII code (`113` is `q`) |
+| `3` | Left mouse down |
+| `4` | Left mouse up |
+| `5` | Mouse move |
+| `8` | Middle-button camera orbit |
+| `10` | Right mouse down |
+
+| Builtin | Description |
+|---------|-------------|
+| `GuiEventX()` / `GuiEventY()` | Mouse position of the last event, in window pixels. |
+| `GuiEventKey()` | Last key (ASCII). Letters are lowercase. |
+| `GuiHeld(code)` | `1` while held. `1` = left mouse, `2` = right mouse, otherwise an ASCII key (`119` = `w`). |
+
+**3D** — the runtime keeps a camera and a generic **16×16 tile atlas** (16 tiles in a strip). Tile 0 is white so untextured `GuiBox` is flat-colored. Your program paints every other tile with `GuiTex`; the toolchain does not ship game art.
+
+| Builtin | Description |
+|---------|-------------|
+| `GuiCam(ex, ey, ez, lx, ly, lz)` | Place the eye at `(ex,ey,ez)` looking at `(lx,ly,lz)`. |
+| `GuiLight(dx, dy, dz)` | Directional light vector (does not need to be unit length). |
+| `GuiBox(x, y, z, sx, sy, sz, rgb)` | Axis-aligned box centered at `(x,y,z)` with size `(sx,sy,sz)`. |
+| `GuiTex(tile, px, py, rgb)` | Write one atlas pixel. `tile` is `0..15`; `px`/`py` are `0..15` inside that tile. |
+| `GuiBoxTex(x, y, z, size, rgb, faces)` | Cube of side `size`. `faces` packs tile ids: `top + side * 256 + bot * 65536`. `rgb` tints the sample. |
+| `GuiId(id)` | Hit-test id for following `GuiBox` / `GuiBoxTex` calls. Pass `-1` to stop tagging. |
+| `GuiHit(mx, my)` | Ray pick at pixel `(mx,my)`. Returns the `GuiId` of the closest box, or `-1`. |
+| `GuiFwdX()` / `GuiFwdZ()` | Camera forward on the XZ plane, scaled by 1000 (for WASD-style movement). |
+
+Middle mouse drag orbits the camera. `GuiOpen` must succeed before any other `Gui*` call.
+
+```minusC
+rgb = ({r} int, {g} int, {b} int) function {
+    return r * 65536 + g * 256 + b;
+} int;
+
+main = ({x} int) function {
+    {ok} int = GuiOpen(480, 320, "minusC GUI");
+    if (ok < 0) {
+        HelloWorldLine("GUI not available");
+        return 1;
+    };
+
+    loop until ({i} int = 0; i < 16; i++) {
+        GuiTex(1, i, i, rgb(200, 40, 40));
+    };
+
+    {running} int = 1;
+    loop until (running == 1) {
+        {ev} int = GuiPoll();
+        if (ev == 1) {
+            running = 0;
+        };
+        if (ev == 2) {
+            if (GuiEventKey() == 113) {
+                running = 0;
+            };
+        };
+
+        GuiClear(rgb(26, 26, 34));
+        GuiCam(220, 160, 340, 0, 40, 0);
+        GuiLight(1, 2, 1);
+        GuiBox(0, 40, 0, 80, 80, 80, rgb(255, 85, 85));
+        GuiBoxTex(90, 40, 0, 48, 16777215, 1 * 256);
+        GuiRect(10, 10, 80, 24, 16777215);
+        GuiText(12, 12, "q to quit", 0, 1);
+        GuiPresent();
+        GuiSleep(16);
+    };
+
+    GuiClose();
+    return 0;
+} int;
+```
+
+```bash
+./minusC example/gui_demo.minusc
+./mc.out
+```
+
+On Linux the program needs a working display (`DISPLAY`) plus `libvulkan` and `libX11` at run time. See `example/gui_demo.minusc` (2D), `example/chess_gui.minusc` (3D boxes + picking), and `example/minecraft.minusc` (caller-painted `GuiTex` atlas).
+
 ### Heap memory (`adr`)
 
 Heap blocks are allocated with `rent` and freed with `moveOut`. Each `adr` variable owns its allocation; assigning one `adr` to another **moves** ownership (the source becomes invalid). The compiler enforces this at compile time (see borrow checking below).
@@ -815,6 +920,9 @@ Focused test suites (after `make`):
 | `example/poly_tests.minusc` | Virtual dispatch and inheritance |
 | `example/generic_tests.minusc` | Generic `Box<T>` monomorphization |
 | `example/interface_tests.minusc` | Interfaces and `implements` |
+| `example/gui_demo.minusc` | Window, 2D rects/text, `GuiPoll` loop |
+| `example/chess_gui.minusc` | 3D `GuiBox`, camera orbit, `GuiHit` picking |
+| `example/minecraft.minusc` | `GuiTex` atlas filled in minusC, `GuiBoxTex` |
 
 Implementation progress and design notes: `docs/OOP_CHECKLIST.md`.
 
@@ -824,6 +932,8 @@ The `vscode-minusc/` extension provides syntax highlighting and a document forma
 
 ## Platform notes
 
-- **Target:** ARM64 macOS (`arm64-apple-darwin`)
-- **Requirements:** Xcode Command Line Tools (`as`, `ld`, macOS SDK)
-- Cross-compilation to other platforms is not yet supported; the emitted assembly and bootstrap runtime are macOS-specific.
+- **Targets:** macOS ARM64, macOS x86_64, Linux x86_64
+- **macOS requirements:** Xcode Command Line Tools (`as`, `ld`, macOS SDK). GUI uses AppKit + Metal.
+- **Linux requirements:** `gcc`, `libvulkan`, `libX11`, and a running X11 display. GUI uses X11 + Vulkan.
+- Graphics builtins (`Gui*`) are the same on every supported OS; the GPU API is chosen at link time, not in minusC source.
+- Windows is not a GUI backend yet.

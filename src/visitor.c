@@ -284,6 +284,29 @@ static void visitor_check_const_index(AST_t *node, const char *arr_name, int ind
         compile_error_ast(node, "array index %d out of bounds for length %d", index, len);
 }
 
+/* Compile-time bounds check for arr[expr]. Never rewrite a VAR into INT_AST:
+ * assemble_int would store the folded literal into that variable's slot. */
+static void visitor_fold_access_index(AST_t *access, AST_t *idx_node, const char *arr_name,
+                                      dynamic_list_t *list)
+{
+    if (!idx_node)
+        return;
+    int idx;
+    int is_const = 0;
+    if (idx_node->type == INT_AST) {
+        idx = idx_node->int_value;
+        is_const = 1;
+    } else if (constexpr_eval_int(idx_node, list, &idx)) {
+        is_const = 1;
+        if (idx_node->type != VAR_AST) {
+            idx_node->type = INT_AST;
+            idx_node->int_value = idx;
+        }
+    }
+    if (is_const && arr_name)
+        visitor_check_const_index(access, arr_name, idx, list);
+}
+
 static int visitor_infer_datatype_from_rhs(AST_t *rhs)
 {
     if (!rhs)
@@ -1315,6 +1338,9 @@ AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
             }
         }
         node->datatype = variable->datatype;
+        if (func_ast && func_ast->type == FUNC_AST &&
+            func_ast->datatype && func_ast->datatype != TYPE_UNKNOWN)
+            node->datatype = func_ast->datatype;
     }
     else if (strcmp(node->name, "rent") == 0)
         node->datatype = TYPE_ADR;
@@ -1359,7 +1385,7 @@ AST_t* visit_caller(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
              strcmp(node->name, "GuiCam") == 0 ||
              strcmp(node->name, "GuiLight") == 0 || strcmp(node->name, "GuiId") == 0 ||
              strcmp(node->name, "GuiBox") == 0 || strcmp(node->name, "GuiHit") == 0 ||
-             strcmp(node->name, "GuiBoxTex") == 0)
+             strcmp(node->name, "GuiBoxTex") == 0 || strcmp(node->name, "GuiTex") == 0)
         node->datatype = TYPE_INT;
 
     if (node->parent && node->parent->children->size > 0) {
@@ -1547,13 +1573,7 @@ AST_t* visit_access(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
         node->stackframe = stackframe;
         if (node->left) {
             node->left = visitor_visit(visitor, node->left, list, stackframe);
-            int idx;
-            if (node->left->type != INT_AST && constexpr_eval_int(node->left, list, &idx)) {
-                node->left->type = INT_AST;
-                node->left->int_value = idx;
-            }
-            if (node->left->type == INT_AST && node->name)
-                visitor_check_const_index(node, node->name, node->left->int_value, list);
+            visitor_fold_access_index(node, node->left, node->name, list);
         }
         list_enqueue(stackframe->stack, mkstr("0"));
         node->stack_index = stackframe->stack->size;
@@ -1573,13 +1593,7 @@ AST_t* visit_access(visitor_t * visitor, AST_t* node, dynamic_list_t* list, stac
     node->int_value = base_index;
     if (node->left) {
         node->left = visitor_visit(visitor, node->left, list, stackframe);
-        int idx;
-        if (node->left->type != INT_AST && constexpr_eval_int(node->left, list, &idx)) {
-            node->left->type = INT_AST;
-            node->left->int_value = idx;
-        }
-        if (node->left->type == INT_AST && node->name)
-            visitor_check_const_index(node, node->name, node->left->int_value, list);
+        visitor_fold_access_index(node, node->left, node->name, list);
     }
     list_enqueue(stackframe->stack, mkstr("0"));
     node->stack_index = stackframe->stack->size;

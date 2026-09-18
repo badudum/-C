@@ -7,3 +7,7 @@ static const char assemble_root_aarch64[] =
 "mov x16, #1\n"
 "svc #0\n";
 #define assemble_root_aarch64_len (sizeof(assemble_root_aarch64) - 1)
+
+static const char assemble_root_aarch64_linux[] =
+".text\n";
+#define assemble_root_aarch64_linux_len (sizeof(assemble_root_aarch64_linux) - 1)

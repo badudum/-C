@@ -2,11 +2,11 @@
  * gui_rt.c — from-scratch GUI runtime for minusC. No third-party dependencies.
  *
  * macOS: window + input via the Objective-C runtime (objc_msgSend straight
- * into AppKit), pixels via a software framebuffer presented on the content
- * view's CALayer with CoreGraphics. Text uses an embedded public-domain
- * 8x8 bitmap font (Marcel Sondaar / Daniel Hepper, public domain).
+ * into AppKit). GPU submit is Metal (gui_metal.m).
  *
- * Other platforms: stubs returning -1 (GUI not supported yet).
+ * Linux: X11 window + input. GPU submit is Vulkan (gui_vk.c), same mc_mtl_*
+ * contract and generic 16x16 tile atlas as Metal. Programs paint tiles with
+ * GuiTex; this runtime does not ship game-specific artwork.
  *
  * minusC-facing API (all ints):
  *   GuiOpen(w, h, title)          -> 0 ok, -1 fail
@@ -22,15 +22,18 @@
  *   GuiEventKey()                 -> last key (ASCII of pressed char)
  *   GuiHeld(code)                 -> 1 if held (1=LMB, 2=RMB, else ASCII)
  *   GuiFwdX() / GuiFwdZ()         -> camera forward on XZ, scaled *1000
+ *   GuiBox / GuiBoxTex / GuiTex   -> 3D boxes + caller-filled atlas tiles
  *   GuiSleep(ms)                  -> 0
  */
 
+#define _DEFAULT_SOURCE
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__linux__)
+#define MC_GUI_GPU 1
 #include "../include/gui_mtl.h"
 #endif
 
@@ -198,9 +201,9 @@ static void mc_fb_text(int x, int y, const char *s, int color, int scale)
     }
 }
 
-/* ---------------- GPU batches + 3D (Metal on macOS) ---------------------- */
+/* ---------------- GPU batches + 3D (Metal / Vulkan) ---------------------- */
 
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
 static int mc_use_mtl;
 
 static mc_mtl_vtx *mc_v3;
@@ -245,31 +248,17 @@ static void mc_rgb(int color, float *r, float *g, float *b)
     *b = (color & 255) / 255.0f;
 }
 
-/* Texture atlas layout mirrored from gui_metal.m: a 16px-tall strip of
- * 16x16 tiles. Tile 0 is solid white so untextured/flat-color geometry
- * (player, item drops, chess pieces, ...) renders unchanged. */
-#define MC_TILE 16
-#define MC_TILES 10
-#define MC_ATLAS_W (MC_TILE * MC_TILES)
-#define MC_ATLAS_H MC_TILE
-
-#define MC_TEX_WHITE   0
-#define MC_TEX_GRASSTOP 1
-#define MC_TEX_GRASSSIDE 2
-#define MC_TEX_DIRT    3
-#define MC_TEX_STONE   4
-#define MC_TEX_WOODSIDE 5
-#define MC_TEX_WOODTOP 6
-#define MC_TEX_LEAVES  7
-#define MC_TEX_SAND    8
-#define MC_TEX_BEDROCK 9
-
+/* Generic atlas: 16x16 tiles in a strip. Tile 0 is white for GuiBox. */
 static void mc_tex_rect(int tile, float *u0, float *v0, float *u1, float *v1)
 {
-    *u0 = ((float)(tile * MC_TILE) + 0.5f) / (float)MC_ATLAS_W;
-    *u1 = ((float)(tile * MC_TILE) + (float)MC_TILE - 0.5f) / (float)MC_ATLAS_W;
-    *v0 = 0.5f / (float)MC_ATLAS_H;
-    *v1 = ((float)MC_TILE - 0.5f) / (float)MC_ATLAS_H;
+    if (tile < 0)
+        tile = 0;
+    if (tile >= GUI_TILE_COUNT)
+        tile = GUI_TILE_COUNT - 1;
+    *u0 = ((float)(tile * GUI_TILE_PX) + 0.5f) / (float)GUI_ATLAS_W;
+    *u1 = ((float)(tile * GUI_TILE_PX) + (float)GUI_TILE_PX - 0.5f) / (float)GUI_ATLAS_W;
+    *v0 = 0.5f / (float)GUI_ATLAS_H;
+    *v1 = ((float)GUI_TILE_PX - 0.5f) / (float)GUI_ATLAS_H;
 }
 
 static void mc_push3(float x, float y, float z,
@@ -342,7 +331,7 @@ static void mc_face(float ax, float ay, float az,
                     float nx, float ny, float nz, int color)
 {
     mc_face_tex(ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz,
-               nx, ny, nz, color, MC_TEX_WHITE);
+               nx, ny, nz, color, 0);
 }
 
 static void mc_m4_mul(float *o, const float *a, const float *b)
@@ -532,7 +521,7 @@ static void mc_batch_reset(void)
 }
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 /* ---------------- macOS backend: raw Objective-C runtime ----------------- */
 
@@ -645,6 +634,7 @@ int GuiPresent(void)
     if (mc_use_mtl) {
         if (!mc_have_cam)
             mc_rebuild_cam();
+        mc_mtl_tex_flush();
         mc_mtl_begin(mc_clear_rgb);
         mc_mtl_set_mvp(mc_mvp);
         mc_mtl_set_light(mc_light[0], mc_light[1], mc_light[2]);
@@ -780,7 +770,271 @@ int GuiSleep(int ms)
     return 0;
 }
 
-#else /* !__APPLE__ — stubs until an X11/Wayland backend exists */
+#else /* Linux X11 + Vulkan, or stubs on other OS */
+
+#if defined(__linux__)
+
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xatom.h>
+#include <unistd.h>
+
+static Display *mc_dpy;
+static Window mc_win;
+static GC mc_gc;
+static XImage *mc_ximg;
+static Atom mc_wm_del;
+static int mc_open;
+static int mc_last_mx, mc_last_my;
+
+int GuiOpen(int w, int h, const char *title)
+{
+    if (mc_open)
+        return -1;
+    if (w < 32 || h < 32 || w > 4096 || h > 4096)
+        return -1;
+
+    mc_dpy = XOpenDisplay(NULL);
+    if (!mc_dpy)
+        return -1;
+
+    int scr = DefaultScreen(mc_dpy);
+    Visual *vis = DefaultVisual(mc_dpy, scr);
+    int depth = DefaultDepth(mc_dpy, scr);
+    unsigned long black = BlackPixel(mc_dpy, scr);
+    mc_win = XCreateSimpleWindow(mc_dpy, RootWindow(mc_dpy, scr),
+                                 0, 0, (unsigned)w, (unsigned)h, 0, black, black);
+    if (!mc_win) {
+        XCloseDisplay(mc_dpy);
+        mc_dpy = 0;
+        return -1;
+    }
+    XStoreName(mc_dpy, mc_win, title ? title : "minusC");
+    {
+        XSizeHints hints;
+        memset(&hints, 0, sizeof(hints));
+        hints.flags = PMinSize | PMaxSize | PSize;
+        hints.min_width = hints.max_width = hints.width = w;
+        hints.min_height = hints.max_height = hints.height = h;
+        XSetWMNormalHints(mc_dpy, mc_win, &hints);
+    }
+    mc_wm_del = XInternAtom(mc_dpy, "WM_DELETE_WINDOW", False);
+    XSetWMProtocols(mc_dpy, mc_win, &mc_wm_del, 1);
+    XSelectInput(mc_dpy, mc_win,
+                 ExposureMask | KeyPressMask | KeyReleaseMask |
+                 ButtonPressMask | ButtonReleaseMask | PointerMotionMask |
+                 StructureNotifyMask);
+    mc_gc = XCreateGC(mc_dpy, mc_win, 0, 0);
+    XMapWindow(mc_dpy, mc_win);
+    for (;;) {
+        XEvent ev;
+        XNextEvent(mc_dpy, &ev);
+        if (ev.type == MapNotify)
+            break;
+    }
+
+    mc_fb = (uint32_t *)calloc((size_t)w * h, 4);
+    if (!mc_fb) {
+        XFreeGC(mc_dpy, mc_gc);
+        XDestroyWindow(mc_dpy, mc_win);
+        XCloseDisplay(mc_dpy);
+        mc_dpy = 0;
+        mc_win = 0;
+        mc_gc = 0;
+        return -1;
+    }
+    mc_fb_w = w;
+    mc_fb_h = h;
+    mc_ximg = XCreateImage(mc_dpy, vis, (unsigned)depth, ZPixmap, 0,
+                           (char *)mc_fb, (unsigned)w, (unsigned)h, 32, 0);
+    if (!mc_ximg) {
+        free(mc_fb);
+        mc_fb = 0;
+        XFreeGC(mc_dpy, mc_gc);
+        XDestroyWindow(mc_dpy, mc_win);
+        XCloseDisplay(mc_dpy);
+        mc_dpy = 0;
+        mc_win = 0;
+        mc_gc = 0;
+        return -1;
+    }
+
+    mc_use_mtl = 0;
+    mc_mtl_set_x11(mc_dpy, (unsigned long)mc_win);
+    if (mc_mtl_init(0, w, h) == 0)
+        mc_use_mtl = 1;
+
+    mc_open = 1;
+    mc_ev_x = 0;
+    mc_ev_y = 0;
+    mc_ev_key = 0;
+    memset(mc_keys, 0, sizeof(mc_keys));
+    mc_btn_left = 0;
+    mc_btn_right = 0;
+    mc_orbit_user = 0;
+    mc_orbit_drag = 0;
+    mc_last_mx = 0;
+    mc_last_my = 0;
+    return 0;
+}
+
+int GuiClose(void)
+{
+    if (!mc_open)
+        return 0;
+    if (mc_use_mtl)
+        mc_mtl_shutdown();
+    mc_use_mtl = 0;
+    if (mc_ximg) {
+        mc_ximg->data = 0;
+        XDestroyImage(mc_ximg);
+        mc_ximg = 0;
+    }
+    if (mc_gc)
+        XFreeGC(mc_dpy, mc_gc);
+    if (mc_win)
+        XDestroyWindow(mc_dpy, mc_win);
+    if (mc_dpy)
+        XCloseDisplay(mc_dpy);
+    mc_dpy = 0;
+    mc_win = 0;
+    mc_gc = 0;
+    free(mc_fb);
+    mc_fb = 0;
+    mc_open = 0;
+    return 0;
+}
+
+int GuiPresent(void)
+{
+    if (!mc_open || !mc_fb)
+        return -1;
+    if (mc_use_mtl) {
+        if (!mc_have_cam)
+            mc_rebuild_cam();
+        mc_mtl_tex_flush();
+        mc_mtl_begin(mc_clear_rgb);
+        mc_mtl_set_mvp(mc_mvp);
+        mc_mtl_set_light(mc_light[0], mc_light[1], mc_light[2]);
+        mc_mtl_draw3d(mc_v3, mc_n3);
+        mc_mtl_draw2d(mc_v2, mc_n2);
+        if (mc_mtl_present() == 0) {
+            mc_mtl_readback(mc_fb, mc_fb_w, mc_fb_h);
+            return 0;
+        }
+    }
+    if (mc_ximg && mc_dpy)
+        XPutImage(mc_dpy, mc_win, mc_gc, mc_ximg, 0, 0, 0, 0,
+                  (unsigned)mc_fb_w, (unsigned)mc_fb_h);
+    if (mc_dpy)
+        XFlush(mc_dpy);
+    return 0;
+}
+
+static int mc_key_from_x(XKeyEvent *kev)
+{
+    char buf[8];
+    KeySym ks = 0;
+    int n = XLookupString(kev, buf, (int)sizeof(buf) - 1, &ks, 0);
+    int k = 0;
+    if (n > 0)
+        k = (unsigned char)buf[0];
+    if (k >= 'A' && k <= 'Z')
+        k += 32;
+    return k;
+}
+
+static void mc_clamp_mouse(void)
+{
+    if (mc_ev_x < 0) mc_ev_x = 0;
+    if (mc_ev_y < 0) mc_ev_y = 0;
+    if (mc_fb_w > 0 && mc_ev_x >= mc_fb_w) mc_ev_x = mc_fb_w - 1;
+    if (mc_fb_h > 0 && mc_ev_y >= mc_fb_h) mc_ev_y = mc_fb_h - 1;
+}
+
+int GuiPoll(void)
+{
+    if (!mc_open || !mc_dpy)
+        return 1;
+    if (!XPending(mc_dpy))
+        return 0;
+    XEvent ev;
+    XNextEvent(mc_dpy, &ev);
+    if (ev.type == ClientMessage && (Atom)ev.xclient.data.l[0] == mc_wm_del)
+        return 1;
+    if (ev.type == DestroyNotify)
+        return 1;
+    if (ev.type == KeyPress || ev.type == KeyRelease) {
+        int k = mc_key_from_x(&ev.xkey);
+        mc_ev_key = k;
+        if (k >= 0 && k < 256)
+            mc_keys[k] = (ev.type == KeyPress) ? 1 : 0;
+        if (ev.type == KeyPress)
+            return 2;
+        return 0;
+    }
+    if (ev.type == ButtonPress || ev.type == ButtonRelease || ev.type == MotionNotify) {
+        if (ev.type == MotionNotify) {
+            mc_ev_x = ev.xmotion.x;
+            mc_ev_y = ev.xmotion.y;
+        } else {
+            mc_ev_x = ev.xbutton.x;
+            mc_ev_y = ev.xbutton.y;
+        }
+        mc_clamp_mouse();
+    }
+    if (ev.type == ButtonPress) {
+        if (ev.xbutton.button == Button1) {
+            mc_btn_left = 1;
+            return 3;
+        }
+        if (ev.xbutton.button == Button3) {
+            mc_btn_right = 1;
+            return 10;
+        }
+        if (ev.xbutton.button == Button2) {
+            mc_orbit_drag = 1;
+            mc_last_mx = mc_ev_x;
+            mc_last_my = mc_ev_y;
+            return 0;
+        }
+    }
+    if (ev.type == ButtonRelease) {
+        if (ev.xbutton.button == Button1) {
+            mc_btn_left = 0;
+            return 4;
+        }
+        if (ev.xbutton.button == Button3) {
+            mc_btn_right = 0;
+            return 0;
+        }
+        if (ev.xbutton.button == Button2) {
+            mc_orbit_drag = 0;
+            return 0;
+        }
+    }
+    if (ev.type == MotionNotify) {
+        if (mc_orbit_drag) {
+            float dx = (float)(mc_ev_x - mc_last_mx);
+            float dy = (float)(mc_last_my - mc_ev_y);
+            mc_last_mx = mc_ev_x;
+            mc_last_my = mc_ev_y;
+            mc_orbit_drag_by(dx, dy);
+            return 8;
+        }
+        return 5;
+    }
+    return 0;
+}
+
+int GuiSleep(int ms)
+{
+    if (ms > 0)
+        usleep((useconds_t)ms * 1000);
+    return 0;
+}
+
+#else /* other OS */
 
 int GuiOpen(int w, int h, const char *title)
 {
@@ -792,6 +1046,8 @@ int GuiPresent(void) { return -1; }
 int GuiPoll(void) { return 1; }
 int GuiSleep(int ms) { (void)ms; return 0; }
 
+#endif /* linux vs other */
+
 #endif
 
 /* ---------------- platform-independent drawing entry points -------------- */
@@ -802,7 +1058,7 @@ int GuiClear(int color)
         return -1;
     mc_fb_clear(color);
     mc_clear_rgb = color;
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     mc_batch_reset();
 #endif
     return 0;
@@ -813,7 +1069,7 @@ int GuiRect(int x, int y, int w, int h, int color)
     if (!mc_fb)
         return -1;
     mc_fb_rect(x, y, w, h, color);
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     if (mc_use_mtl)
         mc_quad2(x, y, w, h, color);
 #endif
@@ -825,7 +1081,7 @@ int GuiText(int x, int y, const char *s, int color, int scale)
     if (!mc_fb)
         return -1;
     mc_fb_text(x, y, s, color, scale);
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     if (mc_use_mtl && s) {
         if (scale < 1)
             scale = 1;
@@ -869,7 +1125,7 @@ int GuiHeld(int code)
 
 int GuiFwdX(void)
 {
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     float dx = mc_look[0] - mc_eye[0];
     float dz = mc_look[2] - mc_eye[2];
     float len = sqrtf(dx * dx + dz * dz);
@@ -883,7 +1139,7 @@ int GuiFwdX(void)
 
 int GuiFwdZ(void)
 {
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     float dx = mc_look[0] - mc_eye[0];
     float dz = mc_look[2] - mc_eye[2];
     float len = sqrtf(dx * dx + dz * dz);
@@ -905,7 +1161,7 @@ int GuiMask(int x, int y, const char *mask, int cols, int color, int scale)
     for (const char *p = mask; *p; p++) {
         if (*p == '#') {
             mc_fb_rect(x + cx * scale, y + cy * scale, scale, scale, color);
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
             if (mc_use_mtl)
                 mc_quad2(x + cx * scale, y + cy * scale, scale, scale, color);
 #endif
@@ -921,7 +1177,7 @@ int GuiMask(int x, int y, const char *mask, int cols, int color, int scale)
 
 int GuiCam(int ex, int ey, int ez, int lx, int ly, int lz)
 {
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     mc_look[0] = (float)lx;
     mc_look[1] = (float)ly;
     mc_look[2] = (float)lz;
@@ -949,7 +1205,7 @@ int GuiCam(int ex, int ey, int ez, int lx, int ly, int lz)
 
 int GuiLight(int dx, int dy, int dz)
 {
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     float len = sqrtf((float)(dx * dx + dy * dy + dz * dz));
     if (len < 1)
         len = 1;
@@ -965,7 +1221,7 @@ int GuiLight(int dx, int dy, int dz)
 
 int GuiId(int id)
 {
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     mc_cur_id = id;
     return 0;
 #else
@@ -976,7 +1232,7 @@ int GuiId(int id)
 
 int GuiBox(int x, int y, int z, int sx, int sy, int sz, int color)
 {
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     float cx = (float)x, cy = (float)y, cz = (float)z;
     float hx = sx * 0.5f, hy = sy * 0.5f, hz = sz * 0.5f;
     if (hx < 0.5f) hx = 0.5f;
@@ -1010,31 +1266,14 @@ int GuiBox(int x, int y, int z, int sx, int sy, int sz, int color)
 #endif
 }
 
-/* Block kind -> (top, side, bottom) texture tiles. Kinds match minusC
- * game's own block-type ids (1=grass .. 7=bedrock) so callers pass their
- * existing type byte straight through with no translation. */
-static void mc_kind_tiles(int kind, int *top, int *side, int *bot)
+/* Textured cube. `faces` is top | (side << 8) | (bot << 16) tile ids.
+ * `color` tints the sampled atlas (selection/lighting in the caller). */
+int GuiBoxTex(int x, int y, int z, int size, int color, int faces)
 {
-    switch (kind) {
-    case 1: *top = MC_TEX_GRASSTOP; *side = MC_TEX_GRASSSIDE; *bot = MC_TEX_DIRT; break;
-    case 2: *top = *side = *bot = MC_TEX_DIRT; break;
-    case 3: *top = *side = *bot = MC_TEX_STONE; break;
-    case 4: *top = *bot = MC_TEX_WOODTOP; *side = MC_TEX_WOODSIDE; break;
-    case 5: *top = *side = *bot = MC_TEX_LEAVES; break;
-    case 6: *top = *side = *bot = MC_TEX_SAND; break;
-    case 7: *top = *side = *bot = MC_TEX_BEDROCK; break;
-    default: *top = *side = *bot = MC_TEX_WHITE; break;
-    }
-}
-
-/* Textured, always-cubic box: `kind` selects the top/side/bottom texture
- * tiles (see mc_kind_tiles). `color` still tints the whole box, so the
- * caller's existing selection/lighting-color math keeps working. */
-int GuiBoxTex(int x, int y, int z, int size, int color, int kind)
-{
-#ifdef __APPLE__
-    int top, side, bot;
-    mc_kind_tiles(kind, &top, &side, &bot);
+#ifdef MC_GUI_GPU
+    int top = faces & 255;
+    int side = (faces >> 8) & 255;
+    int bot = (faces >> 16) & 255;
     float cx = (float)x, cy = (float)y, cz = (float)z;
     float h = size * 0.5f;
     if (h < 0.5f) h = 0.5f;
@@ -1060,14 +1299,24 @@ int GuiBoxTex(int x, int y, int z, int size, int color, int kind)
     }
     return 0;
 #else
-    (void)x; (void)y; (void)z; (void)size; (void)color; (void)kind;
+    (void)x; (void)y; (void)z; (void)size; (void)color; (void)faces;
+    return -1;
+#endif
+}
+
+int GuiTex(int tile, int x, int y, int rgb)
+{
+#ifdef MC_GUI_GPU
+    return mc_mtl_tex(tile, x, y, rgb);
+#else
+    (void)tile; (void)x; (void)y; (void)rgb;
     return -1;
 #endif
 }
 
 int GuiHit(int mx, int my)
 {
-#ifdef __APPLE__
+#ifdef MC_GUI_GPU
     if (!mc_have_cam)
         mc_rebuild_cam();
     if (mc_fb_w < 1 || mc_fb_h < 1)

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 /* Security-oriented limits (tune via env only for debugging, not documented API). */
@@ -184,7 +185,14 @@ int KeyAvailable(void)
     int r = poll(&pfd, 1, 0);
     if (r <= 0)
         return 0;
-    return (pfd.revents & POLLIN) ? 1 : 0;
+    if (!(pfd.revents & POLLIN))
+        return 0;
+    int n = 0;
+    if (ioctl(STDIN_FILENO, FIONREAD, &n) == 0)
+        return n > 0 ? 1 : 0;
+    /* Some redirected fds report POLLIN without a queued byte (EOF, agent
+     * pipes). Only treat as a key when FIONREAD can confirm data. */
+    return 0;
 }
 
 int PollKey(int timeout_ms)
@@ -201,6 +209,11 @@ int PollKey(int timeout_ms)
     int r = poll(&pfd, 1, timeout_ms);
     if (r <= 0 || !(pfd.revents & POLLIN))
         return -1;
+    {
+        int n = 0;
+        if (ioctl(STDIN_FILENO, FIONREAD, &n) == 0 && n <= 0)
+            return -1;
+    }
     return ReadChar();
 }
 

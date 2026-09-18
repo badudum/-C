@@ -18,9 +18,14 @@ static int ce_int_from_node(AST_t *node, dynamic_list_t *list, int *out)
     if (node->type == VAR_AST && node->name && list) {
         for (int j = (int)list->size - 1; j >= 0; j--) {
             AST_t *def = (AST_t *)list->items[j];
+            /* Only immportal bindings are compile-time constants. A mutable
+             * `{i} int = 0` used as arr[i] must load i each time; folding it
+             * rewrites the VAR into an INT and assemble_int stores 0 back
+             * into i's stack slot, so i++ never sticks. */
             if (def->type == ASSIGNEMENT_AST && def->name &&
                 strcmp(def->name, node->name) == 0 && def->parent &&
-                def->parent->type == INT_AST) {
+                def->parent->type == INT_AST &&
+                (def->int_value & AST_IMMPORTAL_FLAG)) {
                 *out = def->parent->int_value;
                 return 1;
             }

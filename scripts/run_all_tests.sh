@@ -4,9 +4,26 @@ set -e
 cd "$(dirname "$0")/.."
 TARGET="${1:---arm64}"
 
-for t in test-borrow test-cust test-oop test-heap-oop test-poly test-generic test-interface test-numeric test-feature test-io test-new-feature test-module test-advanced test-remaining; do
+for t in \
+    scripts/run_borrow_tests.sh \
+    scripts/run_cust_tests.sh \
+    scripts/run_oop_tests.sh \
+    scripts/run_heap_oop_tests.sh \
+    scripts/run_poly_tests.sh \
+    scripts/run_generic_tests.sh \
+    scripts/run_interface_tests.sh \
+    scripts/run_numeric_tests.sh \
+    scripts/run_feature_tests.sh \
+    scripts/run_io_tests.sh \
+    scripts/run_new_feature_tests.sh \
+    scripts/run_module_tests.sh \
+    scripts/run_advanced_tests.sh \
+    scripts/run_remaining_tests.sh \
+    scripts/run_softfloat_tests.sh
+do
     echo ""
-    make "$t" TARGET="$TARGET"
+    echo "######## $t ########"
+    sh "$t" "$TARGET"
 done
 echo ""
 echo "All test suites passed"

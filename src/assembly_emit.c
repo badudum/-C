@@ -1470,7 +1470,7 @@ void assembly_patch_linux_output(char *ass)
             "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
             "GuiEventKey", "GuiHeld", "GuiFwdX", "GuiFwdZ",
             "GuiSleep", "GuiSave", "GuiMask",
-            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiBoxTex", "GuiHit", 0
+            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiBoxTex", "GuiTex", "GuiHit", 0
         };
         char from[64], to[64];
         for (int gi = 0; gui_syms[gi]; gi++) {
@@ -1564,7 +1564,7 @@ void assembly_patch_macos_runtime_symbols(char *ass)
             "GuiPresent", "GuiPoll", "GuiEventX", "GuiEventY",
             "GuiEventKey", "GuiHeld", "GuiFwdX", "GuiFwdZ",
             "GuiSleep", "GuiSave", "GuiMask",
-            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiBoxTex", "GuiHit", 0
+            "GuiCam", "GuiLight", "GuiId", "GuiBox", "GuiBoxTex", "GuiTex", "GuiHit", 0
         };
         char from[64], to[64];
         for (int gi = 0; gui_syms[gi]; gi++) {

@@ -8,7 +8,7 @@ main = ({x} int) function {
     {ch} str = s[0];
     HelloWorldLine("s[0]: ", ch);
 
-    {sub} str = Substring(s, 1, 4);
+    {sub} str = SmolString(s, 1, 4);
     HelloWorldLine("s[1:4]: ", sub);
 
     {t} str = "foo bar baz";
@@ -16,8 +16,8 @@ main = ({x} int) function {
     HelloWorldLine("Change: ", r);
 
     {sp} str = "  trim me  ";
-    {sm} str = SmolString(sp);
-    HelloWorldLine("SmolString: ", sm);
+    {sm} str = Clipper(sp);
+    HelloWorldLine("Clipper: ", sm);
 
     {split} str = "a,b,c";
     {parts} str = SmolStrings(split, ",");

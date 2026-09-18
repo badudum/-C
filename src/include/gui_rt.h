@@ -23,7 +23,9 @@ int GuiCam(int ex, int ey, int ez, int lx, int ly, int lz);
 int GuiLight(int dx, int dy, int dz);
 int GuiId(int id);
 int GuiBox(int x, int y, int z, int sx, int sy, int sz, int color);
-int GuiBoxTex(int x, int y, int z, int size, int color, int kind);
+/* faces packs three 8-bit tile ids: top | (side << 8) | (bot << 16). */
+int GuiBoxTex(int x, int y, int z, int size, int color, int faces);
+int GuiTex(int tile, int x, int y, int rgb);
 int GuiHit(int mx, int my);
 
 #endif

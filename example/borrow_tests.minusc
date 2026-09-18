@@ -129,7 +129,7 @@ testBorrowMemcpy = ({x} int) function {
     return 0;
 } int;
 
-Blob = cust {
+BorrowBlob = cust {
     {data} adr;
     {tag} int;
 };
@@ -173,7 +173,7 @@ testBorrowMut = ({x} int) function {
 
 testBorrowCustField = ({x} int) function {
     HelloWorldLine("--- [borrow-11] per-field adr in cust ---");
-    {b} Blob = Blob{data=rent(16), tag=42};
+    {b} BorrowBlob = BorrowBlob{data=rent(16), tag=42};
     PokeInt(b.data, 0, 99);
     {v} int = PeekInt(b.data, 0);
     {t} int = b.tag;
@@ -250,7 +250,7 @@ testBorrowNestedIf = ({x} int) function {
 
 testBorrowCustFieldLoan = ({x} int) function {
     HelloWorldLine("--- [borrow-15] shared loan on cust adr field ---");
-    {b} Blob = Blob{data=rent(16), tag=7};
+    {b} BorrowBlob = BorrowBlob{data=rent(16), tag=7};
     PokeInt(b.data, 0, 3);
     {v} int = 0;
     if (Real) {
@@ -269,7 +269,7 @@ testBorrowCustFieldLoan = ({x} int) function {
 
 testBorrowCustFieldMutLoan = ({x} int) function {
     HelloWorldLine("--- [borrow-16] mut loan on cust adr field ---");
-    {b} Blob = Blob{data=rent(16), tag=8};
+    {b} BorrowBlob = BorrowBlob{data=rent(16), tag=8};
     PokeInt(b.data, 0, 0);
     if (Real) {
         {m} &mut adr = b.data;
@@ -330,8 +330,8 @@ testBorrowRebindAfterLoan = ({x} int) function {
 
 testBorrowDualCustFields = ({x} int) function {
     HelloWorldLine("--- [borrow-19] dual cust adr field borrows ---");
-    {a} Blob = Blob{data=rent(16), tag=10};
-    {b} Blob = Blob{data=rent(16), tag=20};
+    {a} BorrowBlob = BorrowBlob{data=rent(16), tag=10};
+    {b} BorrowBlob = BorrowBlob{data=rent(16), tag=20};
     PokeInt(a.data, 0, 100);
     PokeInt(b.data, 0, 200);
     {lv} int = 0;
